@@ -2,6 +2,9 @@ server:
   port: ${PORT:8080}
 
 spring:
+  mvc:
+    pathmatch:
+      matching-strategy: ant_path_matcher
   datasource:
     # Railway 환경 변수 사용 (개별 변수 조합, 더 안전함)
     url: jdbc:postgresql://${PGHOST}:${PGPORT}/${PGDATABASE} # 내부 통신은 5432가 기본값입니다. (28102는 외부 접속용)

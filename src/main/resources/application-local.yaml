@@ -2,6 +2,9 @@ server:
   port: 8080
 
 spring:
+  mvc:
+    pathmatch:
+      matching-strategy: ant_path_matcher
   datasource:
     url: jdbc:h2:mem:deokhugam;MODE=PostgreSQL # 메모리 모드 + PG 호환
     username: sa
@@ -29,7 +32,7 @@ spring:
     # data-h2.sql 실행을 JPA 초기화 이후로 지연시킴 (테이블 생성 후 데이터 삽입)
     defer-datasource-initialization: true
     hibernate:
-      ddl-auto: create # 시작 시 테이블 생성하고 종료 시 삭제
+      ddl-auto: none # 시작 시 테이블 생성하고 종료 시 삭제
     properties:
       hibernate:
         dialect: org.hibernate.dialect.H2Dialect
