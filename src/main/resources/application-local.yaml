@@ -1,0 +1,45 @@
+server:
+  port: 8080
+
+spring:
+  datasource:
+    url: jdbc:h2:mem:deokhugam;MODE=PostgreSQL # 메모리 모드 + PG 호환
+    username: sa
+    password:
+    driver-class-name: org.h2.Driver
+    hikari:
+      connection-init-sql: "" # H2에서는 초기화 SQL 실행 안 함
+
+  sql:
+    init:
+      mode: always
+      # 로컬에서는 schema.sql(DDL) 대신 data-h2.sql(DML)만 실행
+      # 테이블 생성은 JPA(ddl-auto: create)가 담당
+      schema-locations: classpath:data-h2.sql
+
+  h2:
+    console:
+      enabled: true
+      path: /h2-console # 접속 주소
+
+  jpa:
+    database: h2
+    database-platform: org.hibernate.dialect.H2Dialect
+    generate-ddl: true
+    # data-h2.sql 실행을 JPA 초기화 이후로 지연시킴 (테이블 생성 후 데이터 삽입)
+    defer-datasource-initialization: true
+    hibernate:
+      ddl-auto: create # 시작 시 테이블 생성하고 종료 시 삭제
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.H2Dialect
+        format_sql: true # SQL 예쁘게 출력하기
+        highlight_sql: true
+        use_sql_comments: true
+
+logging:
+  level:
+    # 실행되는 SQL 출력
+    org.hibernate.SQL: debug
+    # 바인딩되는 파라미터 출력
+    org.hibernate.orm.jdbc.bind: trace

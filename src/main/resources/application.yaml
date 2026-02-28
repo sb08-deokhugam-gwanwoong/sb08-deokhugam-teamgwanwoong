@@ -1,0 +1,18 @@
+spring:
+  application:
+    name: SB08-Deokhugam-teamGwanwoong
+  # ?? ??? ?? (?? ??? ? prod? ???? ?? ??)
+  profiles:
+    active: local
+
+# Actuator ??
+management:
+  endpoints:
+    web:
+      exposure:
+        # ??? ??? ????? ??
+        include: health,info,metrics,loggers
+  endpoint:
+    health:
+      show-details: when-authorized
+      show-components: always

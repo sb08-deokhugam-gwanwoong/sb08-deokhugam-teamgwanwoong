@@ -1,0 +1,24 @@
+server:
+  port: ${PORT:8080}
+
+spring:
+  datasource:
+    # Railway 환경 변수 사용 (개별 변수 조합, 더 안전함)
+    url: jdbc:postgresql://${PGHOST}:${PGPORT}/${PGDATABASE} # 내부 통신은 5432가 기본값입니다. (28102는 외부 접속용)
+    username: ${PGUSER}
+    password: ${PGPASSWORD}
+    driver-class-name: org.postgresql.Driver
+
+  jpa:
+    hibernate:
+      ddl-auto: none # validate는 타입(timestamptz vs timestamp)이 조금만 달라도 에러가 나므로, 수동 관리 시에는 none 권장
+    show-sql: false # 운영 환경에서는 SQL 로깅 최소화
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+        format_sql: false
+
+logging:
+  level:
+    org.hibernate.SQL: warn # 운영 환경에서는 SQL 로그 레벨을 warn 이상으로
+    org.hibernate.orm.jdbc.bind: warn
