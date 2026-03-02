@@ -39,3 +39,6 @@ out/
 
 # Logs
 .logs/
+
+# Querydsl
+src/main/generated/
