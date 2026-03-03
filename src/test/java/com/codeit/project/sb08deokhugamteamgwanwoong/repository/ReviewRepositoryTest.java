@@ -7,6 +7,8 @@ import com.codeit.project.sb08deokhugamteamgwanwoong.entity.Book;
 import com.codeit.project.sb08deokhugamteamgwanwoong.entity.Review;
 import com.codeit.project.sb08deokhugamteamgwanwoong.entity.User;
 import com.codeit.project.sb08deokhugamteamgwanwoong.repository.support.RepositoryTestSupport;
+
+import java.time.LocalDate;
 import java.util.List;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -27,7 +29,7 @@ public class ReviewRepositoryTest extends RepositoryTestSupport {
   void saveReviewTest() {
     //given
     User user = new User("test@codeit.com", "testUser", "testPassword!");
-    Book book = new Book("testBook", "testAuthor", "9788994492032", "testPublisher", "testDescription");
+    Book book = new Book("testBook", "testAuthor", "9788994492032", "testPublisher", LocalDate.now(), "testDescription", "testThumbnailUrl");
     entityManager.persist(user);
     entityManager.persist(book);
 
@@ -54,8 +56,8 @@ public class ReviewRepositoryTest extends RepositoryTestSupport {
     //given
     User user1 = new User("test@codeit.com", "testUser1", "testPassword!");
     User user2 = new User("test2@codeit.com", "testUser2", "testPassword!");
-    Book targetBook = new Book("testBook", "testAuthor", "9788994492032", "testPublisher", "testDescription");
-    Book otherBook = new Book("testOtherBook", "testAuthor2", "9788994492033", "testPublisher2", "testDescription2");
+    Book targetBook = new Book("testBook1", "testAuthor1", "9788994492032", "testPublisher", LocalDate.now(), "testDescription1", "testThumbnailUrl");
+    Book otherBook = new Book("testBook2", "testAuthor2", "9788994492033", "testPublisher", LocalDate.now(), "testDescription2", "testThumbnailUrl");
     entityManager.persist(user1);
     entityManager.persist(user2);
     entityManager.persist(targetBook);
@@ -102,7 +104,7 @@ public class ReviewRepositoryTest extends RepositoryTestSupport {
   void cannotWriteMultipleReviewsForSameBook() {
     //given
     User user = new User("test@codeit.com", "testUser", "testPassword!");
-    Book book = new Book("testBook", "testAuthor", "testISBN", "testPublisher", "testDescription");
+    Book book = new Book("testBook1", "testAuthor1", "9788994492032", "testPublisher", LocalDate.now(), "testDescription1", "testThumbnailUrl");
     entityManager.persist(user);
     entityManager.persist(book);
 
