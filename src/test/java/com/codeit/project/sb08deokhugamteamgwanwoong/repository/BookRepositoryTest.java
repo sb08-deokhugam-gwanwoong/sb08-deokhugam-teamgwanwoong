@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.codeit.project.sb08deokhugamteamgwanwoong.entity.Book;
 import com.codeit.project.sb08deokhugamteamgwanwoong.repository.support.RepositoryTestSupport;
+import java.time.LocalDate;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -24,6 +25,7 @@ public class BookRepositoryTest extends RepositoryTestSupport {
         .author("남궁성")
         .isbn("9788994492032")
         .publisher("도우출판")
+        .publishedDate(LocalDate.now())
         .description("자바의 정석 기초편")
         .build();
 
@@ -45,6 +47,7 @@ public class BookRepositoryTest extends RepositoryTestSupport {
         .author("남궁성")
         .isbn("9788994492032")
         .publisher("도우출판")
+        .publishedDate(LocalDate.now())
         .description("설명1")
         .build();
 
@@ -55,6 +58,7 @@ public class BookRepositoryTest extends RepositoryTestSupport {
         .author("남궁성")
         .isbn("9788994492032") // 같은 ISBN
         .publisher("도우출판")
+        .publishedDate(LocalDate.now())
         .description("설명2")
         .build();
 

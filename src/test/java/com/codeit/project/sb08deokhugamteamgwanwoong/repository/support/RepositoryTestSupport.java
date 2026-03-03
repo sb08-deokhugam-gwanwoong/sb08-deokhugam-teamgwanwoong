@@ -7,6 +7,7 @@ import org.springframework.test.context.ActiveProfiles;
 
 @DataJpaTest
 @Import(JpaConfig.class)
+@ActiveProfiles("test")
 public abstract class RepositoryTestSupport {
   /*
    * 이 Support 추상 클래스는 테스트 코드의 응집도, 결합도를 생각했을 때

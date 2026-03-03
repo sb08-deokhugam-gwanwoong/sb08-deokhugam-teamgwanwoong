@@ -14,7 +14,7 @@ spring:
         dialect: org.hibernate.dialect.H2Dialect
   sql:
     init:
-      mode: never # schema.sql 실행 방지 추가
+      mode: never # schema-pg.sql 실행 방지 추가
 logging:
   level:
     org.hibernate.SQL: DEBUG
