@@ -61,4 +61,53 @@ public class ReviewRepositoryTest {
         assertThat(savedReview.getRating()).isEqualTo(5);
         assertThat(savedReview.getContent()).isEqualTo("정말 재밌어요!!!");
     }
+
+    @Test
+    @DisplayName("책 ID에 해당하는 모든 리뷰를 가져올 수 있다.")
+    void findByBookIdReviewsTest() {
+        //given
+        User user1 = new User("testUser1");
+        User user2 = new User("testUser2");
+        Book targetBook = new Book("testBook");
+        Book otherBook = new Book("testOtherBook");
+        entityManager.persist(user1);
+        entityManager.persist(user2);
+        entityManager.persist(targetBook);
+        entityManager.persist(otherBook);
+
+        Review review1 = Review.builder()
+                .rating(5)
+                .content("정말 유익한 책입니다.")
+                .user(user1)
+                .book(targetBook)
+                .build();
+
+        Review review2 = Review.builder()
+                .rating(4)
+                .content("도움 되는 책이에요")
+                .user(user2)
+                .book(targetBook)
+                .build();
+
+        Review review3 = Review.builder()
+                .rating(1)
+                .content("돈이 아까워요....")
+                .user(user1)
+                .book(otherBook)
+                .build();
+        reviewRepository.save(review1);
+        reviewRepository.save(review2);
+        reviewRepository.save(review3);
+
+        entityManager.flush();
+        entityManager.clear();
+
+        //when
+        List<Review> reviews = reviewRepository.findAllByBookId(targetBook.getId());
+
+        //then
+        assertThat(reviews).hasSize(2);
+        assertThat(reviews.get(0).getRating()).isEqualTo(5);
+        assertThat(reviews.get(1).getContent()).isEqualTo("도움 되는 책이에요");
+    }
 }
