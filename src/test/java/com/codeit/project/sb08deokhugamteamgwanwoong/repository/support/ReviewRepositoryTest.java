@@ -53,6 +53,7 @@ public class ReviewRepositoryTest {
                 .build();
 
         //when
+        Review savedReview = reviewRepository.save(review);
 
         //then
         assertThat(savedReview.getId()).isNotNull();
