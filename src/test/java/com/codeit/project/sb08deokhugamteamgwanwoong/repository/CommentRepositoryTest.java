@@ -1,15 +1,18 @@
 package com.codeit.project.sb08deokhugamteamgwanwoong.repository;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.codeit.project.sb08deokhugamteamgwanwoong.entity.Book;
 import com.codeit.project.sb08deokhugamteamgwanwoong.entity.Comment;
 import com.codeit.project.sb08deokhugamteamgwanwoong.entity.Review;
 import com.codeit.project.sb08deokhugamteamgwanwoong.entity.User;
 import com.codeit.project.sb08deokhugamteamgwanwoong.repository.support.RepositoryTestSupport;
+import java.time.LocalDate;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.dao.DataIntegrityViolationException;
 
 public class CommentRepositoryTest extends RepositoryTestSupport {
 
@@ -38,6 +41,7 @@ public class CommentRepositoryTest extends RepositoryTestSupport {
         .author("남궁성")
         .isbn("9788994492032")
         .publisher("도우출판")
+        .publishedDate(LocalDate.now())
         .description("자바의 정석 기초편")
         .build();
     Book savedBook = bookRepository.save(book);
@@ -64,5 +68,45 @@ public class CommentRepositoryTest extends RepositoryTestSupport {
     //then
     assertThat(savedComment.getId()).isNotNull();
     assertThat(savedComment.getContent()).isEqualTo("테스트 comment 입니다");
+  }
+
+  @Test
+  @DisplayName("댓글 등록 시 내용이 없으면 에러가 발생해야 한다")
+  void saveCommentWithoutContentFail() {
+    //given
+    User user = User.builder()
+        .email("test12@test.com")
+        .nickname("테스터 박")
+        .password("testPass1234!")
+        .build();
+    User savedUser = userRepository.save(user);
+
+    Book book = Book.builder()
+        .title("자바의 정석")
+        .author("남궁성")
+        .isbn("9788994492032")
+        .publishedDate(LocalDate.now())
+        .publisher("도우출판")
+        .description("자바의 정석 기초편")
+        .build();
+    Book savedBook = bookRepository.save(book);
+
+    Review review = Review.builder()
+        .rating(5)
+        .content("정말 재밌어요!!!")
+        .user(user)
+        .book(book)
+        .build();
+    Review savedReview = reviewRepository.save(review);
+
+    Comment comment = Comment.builder()
+        .user(user)
+        .review(review)
+        .content(null) // 👈 일부러 null 넣기
+        .build();
+
+    //when & then
+    assertThatThrownBy(() -> commentRepository.saveAndFlush(comment))
+        .isInstanceOf(DataIntegrityViolationException.class);
   }
 }
