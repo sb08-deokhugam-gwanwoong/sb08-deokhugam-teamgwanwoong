@@ -102,7 +102,7 @@ public class CommentRepositoryTest extends RepositoryTestSupport {
     Comment comment = Comment.builder()
         .user(user)
         .review(review)
-        .content(null) // 👈 일부러 null 넣기
+        .content(null)
         .build();
 
     //when & then
