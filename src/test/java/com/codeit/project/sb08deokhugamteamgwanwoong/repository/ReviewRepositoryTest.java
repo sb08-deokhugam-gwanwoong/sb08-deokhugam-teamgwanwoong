@@ -156,7 +156,8 @@ public class ReviewRepositoryTest extends RepositoryTestSupport {
         entityManager.clear();
 
         //then
-        assertThat(foundReview.getRating()).isEqualTo(2);
-        assertThat(foundReview.getContent()).isEqualTo("읽어보니 별로에요...");
+        Review updatedReview = reviewRepository.findById(savedReview.getId()).orElseThrow();
+        assertThat(updatedReview.getRating()).isEqualTo(2);
+        assertThat(updatedReview.getContent()).isEqualTo("읽어보니 별로에요...");
     }
 }
