@@ -130,4 +130,33 @@ public class ReviewRepositoryTest extends RepositoryTestSupport {
             entityManager.flush();
         }).isInstanceOf(ConstraintViolationException.class);
     }
+
+    @Test
+    @DisplayName("작성된 리뷰는 새로운 내용으로 수정할 수 있다.")
+    void updateReviewTest() {
+        //given
+        User user = new User("test@codeit.com", "testUser", "testPassword!");
+        Book book = new Book("testBook", "testAuthor", "9788994492032", "testPublisher", LocalDate.now(), "testDescription", "testThumbnailUrl");
+        entityManager.persist(user);
+        entityManager.persist(book);
+
+        Review review = Review.builder()
+                .rating(5)
+                .content("초반 내용을 읽고 있는데 알찬 내용이 담겨있습니다.")
+                .user(user)
+                .book(book)
+                .build();
+
+        Review savedReview = reviewRepository.save(review);
+        Review foundReview = reviewRepository.findById(savedReview.getId()).orElseThrow();
+        //when
+        foundReview.update(2, "읽어보니 별로에요...");
+
+        entityManager.flush();
+        entityManager.clear();
+
+        //then
+        assertThat(foundReview.getRating()).isEqualTo(2);
+        assertThat(foundReview.getContent()).isEqualTo("읽어보니 별로에요...");
+    }
 }
