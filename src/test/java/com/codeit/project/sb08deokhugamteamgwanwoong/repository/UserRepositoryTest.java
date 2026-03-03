@@ -31,4 +31,25 @@ public class UserRepositoryTest extends RepositoryTestSupport {
     assertThat(savedUser.getEmail()).isEqualTo("test@test.com");
     assertThat(savedUser.getCreatedAt()).isNotNull();
   }
+
+  @Test
+  @DisplayName("사용자 조회: 저장된 유저 -> ID 조회하면 데이터가 일치해야 한다.")
+  void findUserByIdTest() {
+    // Given
+    User user = User.builder()
+        .email("test@test.com")
+        .nickname("테스터 one")
+        .password("testPass1234!")
+        .build();
+
+    User savedUser = userRepository.save(user);
+
+    // When
+    User findUser = userRepository.findById(savedUser.getId())
+        .orElseThrow(() -> new IllegalArgumentException("사용자를 찾을 수 없습니다."));
+
+    // Then
+    assertThat(findUser.getEmail()).isEqualTo("test@test.com");
+    assertThat(findUser.getNickname()).isEqualTo("테스터 one");
+  }
 }
