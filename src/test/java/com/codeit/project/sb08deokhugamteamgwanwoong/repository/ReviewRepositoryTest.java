@@ -126,7 +126,6 @@ public class ReviewRepositoryTest extends RepositoryTestSupport {
         .build();
     //then
     assertThatThrownBy(() -> {
-
       entityManager.flush();
     }).isInstanceOf(DataIntegrityViolationException.class);
   }
