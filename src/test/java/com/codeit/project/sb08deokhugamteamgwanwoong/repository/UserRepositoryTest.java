@@ -1,16 +1,14 @@
-package com.codeit.project.sb08deokhugamteamgwanwoong.repository.support;
+package com.codeit.project.sb08deokhugamteamgwanwoong.repository;
 
 import static org.assertj.core.api.Assertions.*;
 
 import com.codeit.project.sb08deokhugamteamgwanwoong.entity.User;
-import com.codeit.project.sb08deokhugamteamgwanwoong.repository.UserRepository;
+import com.codeit.project.sb08deokhugamteamgwanwoong.repository.support.RepositoryTestSupport;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
 
-@DataJpaTest
-public class UserRepositoryTest extends RepositoryTestSupport{
+public class UserRepositoryTest extends RepositoryTestSupport {
 
   @Autowired
   private UserRepository userRepository;
