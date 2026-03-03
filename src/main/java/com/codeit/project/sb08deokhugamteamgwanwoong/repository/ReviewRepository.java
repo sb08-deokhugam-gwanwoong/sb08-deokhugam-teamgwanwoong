@@ -15,8 +15,5 @@ public interface ReviewRepository extends JpaRepository<Review, Long> {
     List<Review> findAll();
 
     @Query("SELECT r FROM Review r JOIN FETCH r.user JOIN FETCH r.book WHERE r.book.id = :bookId")
-    List<Review> findByBookId(@Param("bookId") Long bookId);
-
-    @Query("SELECT r FROM Review r JOIN FETCH r.user JOIN FETCH r.book WHERE r.book.id = :bookId AND r.user.id = :userId")
-    boolean existsByBookIdAndUserId(@Param("bookId") Long bookId, @Param("userId") Long userId);
+    List<Review> findAllByBookId(@Param("bookId") Long bookId);
 }
