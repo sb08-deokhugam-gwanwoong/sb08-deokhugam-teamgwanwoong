@@ -10,7 +10,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
 
 @DataJpaTest
-public class UserRepositoryTest {
+public class UserRepositoryTest extends RepositoryTestSupport{
 
   @Autowired
   private UserRepository userRepository;
