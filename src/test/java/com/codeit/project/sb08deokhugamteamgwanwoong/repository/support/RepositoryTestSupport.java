@@ -6,7 +6,6 @@ import org.springframework.context.annotation.Import;
 import org.springframework.test.context.ActiveProfiles;
 
 @DataJpaTest
-@ActiveProfiles("test")
 @Import(JpaConfig.class)
 public abstract class RepositoryTestSupport {
   /*

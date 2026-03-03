@@ -1,7 +1,4 @@
 spring:
-  config:
-    activate:
-      on-profile: test
   datasource:
     url: jdbc:h2:mem:deokhugam;MODE=PostgreSQL;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE
     driver-class-name: org.h2.Driver
@@ -15,6 +12,9 @@ spring:
       hibernate:
         format_sql: true
         dialect: org.hibernate.dialect.H2Dialect
+  sql:
+    init:
+      mode: never # schema.sql 실행 방지 추가
 logging:
   level:
     org.hibernate.SQL: DEBUG
