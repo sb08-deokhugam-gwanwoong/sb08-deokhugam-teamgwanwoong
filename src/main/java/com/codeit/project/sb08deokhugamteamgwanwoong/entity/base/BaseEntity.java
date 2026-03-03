@@ -7,6 +7,7 @@ import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.MappedSuperclass;
 import java.time.Instant;
+import java.util.UUID;
 import lombok.Getter;
 import org.springframework.data.annotation.CreatedDate;
 import org.springframework.data.jpa.domain.support.AuditingEntityListener;
@@ -17,9 +18,9 @@ import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 public abstract class BaseEntity {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @GeneratedValue(strategy = GenerationType.UUID)
     @Column(updatable = false, nullable = false)
-    private Long id;
+    private UUID id;
 
     @Column(name = "created_at", updatable = false, nullable = false)
     @CreatedDate

@@ -3,6 +3,9 @@ package com.codeit.project.sb08deokhugamteamgwanwoong.entity;
 import com.codeit.project.sb08deokhugamteamgwanwoong.entity.base.BaseRemovableEntity;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.FetchType;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
 import lombok.AccessLevel;
 import lombok.Builder;
@@ -15,21 +18,22 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class Comment extends BaseRemovableEntity {
 
-  @Column(name = "user_id", nullable = false)
-  private Long userId;
+  @ManyToOne(fetch = FetchType.LAZY)
+  @JoinColumn(name = "user_id", nullable = false)
+  private User user;
 
-  @Column(name = "review_id", nullable = false)
-  private Long reviewId;
+  @ManyToOne(fetch = FetchType.LAZY)
+  @JoinColumn(name = "review_id", nullable = false)
+  private Review review;
 
   @Column(name = "content", nullable = false, columnDefinition = "TEXT")
   private String content;
 
   @Builder
-  private Comment(Long userId, Long reviewId, String content) {
-    this.userId = userId;
-    this.reviewId = reviewId;
+  private Comment(User user, Review review, String content) {
+    this.user = user;
+    this.review = review;
     this.content = content;
-
   }
 
   public void updateContent(String content) {
