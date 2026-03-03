@@ -2,8 +2,11 @@ spring:
   application:
     name: SB08-Deokhugam-teamGwanwoong
   # ?? ??? ?? (?? ??? ? prod? ???? ?? ??)
+  mvc:
+    pathmatch:
+      matching-strategy: ant_path_matcher
   profiles:
-    active: local
+    active: prod
 
 # Actuator ??
 management:
