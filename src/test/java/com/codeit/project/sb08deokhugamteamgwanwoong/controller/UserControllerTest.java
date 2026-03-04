@@ -8,6 +8,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import com.codeit.project.sb08deokhugamteamgwanwoong.controller.support.ControllerTestSupport;
 import com.codeit.project.sb08deokhugamteamgwanwoong.dto.user.UserDto;
+import com.codeit.project.sb08deokhugamteamgwanwoong.dto.user.UserLoginRequest;
 import com.codeit.project.sb08deokhugamteamgwanwoong.dto.user.UserRegisterRequest;
 import java.time.Instant;
 import java.util.UUID;
@@ -35,5 +36,28 @@ public class UserControllerTest extends ControllerTestSupport {
         .andExpect(status().isCreated())
         .andExpect(jsonPath("$.email").value("test@test.com"))
         .andExpect(jsonPath("$.nickname").value("Tester"));
+  }
+
+  @Test
+  @DisplayName("로그인: 가입된 정보로 로그인을 시도하면 성공하고, 200 응답을 반환해야 한다.")
+  void loginUserTest() throws Exception {
+    // Given
+    String email = "test@test.com";
+    String password = "password123!";
+    String nickname = "Tester";
+
+    UserLoginRequest request = new UserLoginRequest(email, password);
+    UserDto response = new UserDto(UUID.randomUUID(), email, nickname, Instant.now());
+
+    given(userService.login(any(UserLoginRequest.class))).willReturn(response);
+
+    // When & Then
+    mockMvc.perform(post("/api/users/login")
+        .contentType(MediaType.APPLICATION_JSON)
+        .content(objectMapper.writeValueAsString(request)))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.email").value(email))
+        .andExpect(jsonPath("$.nickname").value(nickname))
+        .andExpect(jsonPath("$.id").exists());
   }
 }
