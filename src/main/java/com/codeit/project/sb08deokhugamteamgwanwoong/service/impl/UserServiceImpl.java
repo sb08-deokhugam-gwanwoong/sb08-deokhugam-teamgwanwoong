@@ -9,6 +9,7 @@ import com.codeit.project.sb08deokhugamteamgwanwoong.exception.enums.UserErrorCo
 import com.codeit.project.sb08deokhugamteamgwanwoong.mapper.UserMapper;
 import com.codeit.project.sb08deokhugamteamgwanwoong.repository.UserRepository;
 import com.codeit.project.sb08deokhugamteamgwanwoong.service.UserService;
+import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -60,6 +61,22 @@ public class UserServiceImpl implements UserService {
         });
 
     log.info("[로그인 성공] userId: {}, email: {}", user.getId(), user.getEmail());
+
+    return userMapper.toDto(user);
+  }
+
+  @Override
+  public UserDto getUserById(UUID userId) {
+
+    log.info("[유저 조회 시작] userId: {}", userId);
+
+    User user = userRepository.findById(userId)
+        .orElseThrow(() -> {
+          log.warn("[유저 조회 실패] 해당 유저가 존재하지 않습니다. userId: {}", userId);
+          return new BusinessException(UserErrorCode.USER_NOT_FOUND);
+        });
+
+    log.info("[유저 조회 성공] userId: {}, email: {}", user.getId(), user.getEmail());
 
     return userMapper.toDto(user);
   }
