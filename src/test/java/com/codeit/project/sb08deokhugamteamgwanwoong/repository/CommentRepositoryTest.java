@@ -32,6 +32,7 @@ public class CommentRepositoryTest extends RepositoryTestSupport {
   @DisplayName("댓글이 정상적으로 등록되어야 한다")
   void saveCommentTest() {
 
+    //given
     User user = User.builder()
         .email("test@test.com")
         .nickname("테스터 one")
@@ -49,7 +50,6 @@ public class CommentRepositoryTest extends RepositoryTestSupport {
         .build();
     Book savedBook = bookRepository.save(book);
 
-
     Review review = Review.builder()
         .rating(5)
         .content("정말 재밌어요!!!")
@@ -58,7 +58,6 @@ public class CommentRepositoryTest extends RepositoryTestSupport {
         .build();
     Review savedReview = reviewRepository.save(review);
 
-    //given
     Comment comment = Comment.builder()
         .user(user)
         .review(review)
@@ -116,7 +115,7 @@ public class CommentRepositoryTest extends RepositoryTestSupport {
   @Test
   @DisplayName("댓글 내용을 수정하면 정상적으로 반영되어야 한다")
   void updateCommentTest() {
-    // given
+    //given
     User user = User.builder()
         .email("test12@test.com")
         .nickname("테스터 박")
@@ -149,14 +148,58 @@ public class CommentRepositoryTest extends RepositoryTestSupport {
         .build();
     commentRepository.save(comment);
 
-    // when
+    //when
     comment.updateContent("수정 후 내용입니다");
 
     commentRepository.flush();
     entityManager.clear();
 
-    // then
+    //then
     Comment updatedComment = commentRepository.findById(comment.getId()).orElseThrow();
     assertThat(updatedComment.getContent()).isEqualTo("수정 후 내용입니다");
+  }
+
+  @Test
+  @DisplayName("댓글 내용이 500자를 초과하면 예외가 발생해야 한다")
+  void saveCommentOverLengthFail() {
+    //given
+    User user = User.builder()
+        .email("test123@test.com")
+        .nickname("테스터 김")
+        .password("testPass1234!")
+        .build();
+    userRepository.save(user);
+
+    Book book = Book.builder()
+        .title("자바의 정석")
+        .author("남궁성")
+        .isbn("9788994492032")
+        .publishedDate(LocalDate.now())
+        .publisher("도우출판")
+        .description("자바의 정석 기초편")
+        .build();
+    bookRepository.save(book);
+
+    Review review = Review.builder()
+        .rating(5)
+        .content("정말 재밌어요!!!")
+        .user(user)
+        .book(book)
+        .build();
+    reviewRepository.save(review);
+
+    //when
+    String content = "a".repeat(501);
+    Comment comment = Comment.builder()
+        .user(user)
+        .review(review)
+        .content(content)
+        .build();
+
+    //then
+    assertThatThrownBy(() -> {
+      commentRepository.save(comment);
+      commentRepository.flush();
+    }).isInstanceOf(DataIntegrityViolationException.class);
   }
 }
