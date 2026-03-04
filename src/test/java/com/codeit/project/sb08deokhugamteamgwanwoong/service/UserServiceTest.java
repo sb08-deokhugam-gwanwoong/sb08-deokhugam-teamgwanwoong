@@ -1,6 +1,7 @@
 package com.codeit.project.sb08deokhugamteamgwanwoong.service;
 
 import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
+import static org.assertj.core.api.AssertionsForClassTypes.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.BDDMockito.given;
 
@@ -55,6 +56,22 @@ public class UserServiceTest {
     assertThat(result.id()).isEqualTo(uuid);
     assertThat(result.email()).isEqualTo(request.email());
     assertThat(result.nickname()).isEqualTo(request.nickname());
+  }
+
+  @Test
+  @DisplayName("회원가입: 이미 존재하는 이메일로 가입을 시도하면 예외가 발생해야 한다.")
+  void createUser_Fail_DuplicateEmail_Test() {
+    // Given
+    String email = "test@test.com";
+    UserRegisterRequest request = new UserRegisterRequest(email, "Tester", "password123!");
+
+    // Mocking - 해당 이메일은 존재한다는 가정
+    given(userRepository.existsByEmail(email)).willReturn(true);
+
+    // When & Then
+    assertThatThrownBy(() -> userService.create(request))
+        .isInstanceOf(IllegalArgumentException.class)
+        .hasMessage("이미 존재하는 이메일입니다.");
   }
 
 }
