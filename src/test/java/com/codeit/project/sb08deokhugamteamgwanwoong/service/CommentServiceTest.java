@@ -45,7 +45,6 @@ public class CommentServiceTest {
     //given
     UUID userId = UUID.randomUUID();
     UUID reviewId = UUID.randomUUID();
-
     CommentCreateRequest request = new CommentCreateRequest(reviewId, userId, "테스트 댓글입니다");
 
     User user = User.builder().email("test@test.com").nickname("웅제").build();
@@ -54,8 +53,17 @@ public class CommentServiceTest {
     Review review = Review.builder().content("좋은 책 입니다").build();
     ReflectionTestUtils.setField(review, "id", reviewId);
 
+    Comment comment = Comment.builder()
+        .content(request.content())
+        .user(user)
+        .review(review)
+        .build();
+    ReflectionTestUtils.setField(comment, "id", UUID.randomUUID());
+
+    //stubbing
     given(userRepository.findById(userId)).willReturn(Optional.of(user));
     given(reviewRepository.findById(reviewId)).willReturn(Optional.of(review));
+    given(commentRepository.save(any(Comment.class))).willReturn(comment);
 
     //when
     CommentDto result = commentService.create(request);
