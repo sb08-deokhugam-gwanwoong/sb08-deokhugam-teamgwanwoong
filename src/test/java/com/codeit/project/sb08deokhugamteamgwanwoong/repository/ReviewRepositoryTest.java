@@ -160,4 +160,31 @@ public class ReviewRepositoryTest extends RepositoryTestSupport {
         assertThat(updatedReview.getRating()).isEqualTo(2);
         assertThat(updatedReview.getContent()).isEqualTo("읽어보니 별로에요...");
     }
+
+    @Test
+    @DisplayName("작성된 리뷰는 삭제할 수 있다.")
+    void deleteReviewTest() {
+        //given
+        User user = new User("test@codeit.com", "testUser", "testPassword!");
+        Book book = new Book("testBook", "testAuthor", "9788994492032", "testPublisher", LocalDate.now(), "testDescription", "testThumbnailUrl");
+        entityManager.persist(user);
+        entityManager.persist(book);
+
+        Review review = Review.builder()
+                .rating(3)
+                .content("평범한 책이네요.")
+                .user(user)
+                .book(book)
+                .build();
+        Review savedReview = reviewRepository.save(review);
+
+        //when
+        reviewRepository.deleteById(savedReview.getId());
+        entityManager.flush();
+        entityManager.clear();
+
+        //then
+        boolean exists = reviewRepository.existsById(savedReview.getId());
+        assertThat(exists).isFalse();
+    }
 }

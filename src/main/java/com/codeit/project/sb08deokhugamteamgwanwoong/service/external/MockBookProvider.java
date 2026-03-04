@@ -1,6 +1,7 @@
 package com.codeit.project.sb08deokhugamteamgwanwoong.service.external;
 
 import com.codeit.project.sb08deokhugamteamgwanwoong.dto.book.BookDto;
+import java.time.LocalDate;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.annotation.Primary;
 import org.springframework.context.annotation.Profile;
@@ -9,8 +10,8 @@ import org.springframework.stereotype.Component;
 @Slf4j
 @Component
 @Primary // 개발 초기에는 이 녀석을 우선적으로 사용하게 설정 가능
-@Profile("dev") // dev 프로파일에서만 활성화
-public class MockBookProvider implements BookMetadataProvider {
+@Profile({"local", "test"}) // local, test 프로필에서만 활성화
+public class MockBookProvider implements BookMetadataProvider<BookDto> {
 
     @Override
     public BookDto getBookMetadata(String query) {
@@ -22,7 +23,8 @@ public class MockBookProvider implements BookMetadataProvider {
             .publisher("Mock Publisher")
             .isbn("1111111111")
             .description("This is a mock book description.")
-            .imageUrl("https://via.placeholder.com/150")
+            .thumbnailUrl("https://via.placeholder.com/150")
+            .publishedDate(LocalDate.now())
             .build();
     }
 }
