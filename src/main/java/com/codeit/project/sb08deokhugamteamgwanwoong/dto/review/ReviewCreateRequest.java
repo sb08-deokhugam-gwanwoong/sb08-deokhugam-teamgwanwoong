@@ -6,13 +6,15 @@ import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 
+import java.util.UUID;
+
 @Schema(description = "리뷰 생성 정보")
 public record ReviewCreateRequest(
         @NotNull(message = "책 아이디가 필요합니다.")
-        Long bookId,
+        UUID bookId,
 
         @NotNull(message = "유저 아이디가 필요합니다.")
-        Long userId,
+        UUID userId,
 
         @NotBlank(message = "리뷰 내용은 필수 정보입니다.")
         String content,
