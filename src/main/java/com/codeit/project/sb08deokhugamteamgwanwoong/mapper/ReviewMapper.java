@@ -13,7 +13,7 @@ public interface ReviewMapper {
     @Mapping(source = "thumbnail", target = "bookThumbnailUrl")
     @Mapping(source = "review.user.id", target = "userId")
     @Mapping(source = "review.user.nickname", target = "userNickname")
-    @Mapping(source = "review.createdAt", target="createdAt", dateFormat = "yyyy. M. d.")
-    @Mapping(source = "review.updatedAt", target="updatedAt", dateFormat = "yyyy. M. d.")
+    @Mapping(source = "review.createdAt", target="createdAt")
+    @Mapping(source = "review.updatedAt", target="updatedAt")
     ReviewDto toDto(Review review, boolean likedByMe, String thumbnail);
 }
