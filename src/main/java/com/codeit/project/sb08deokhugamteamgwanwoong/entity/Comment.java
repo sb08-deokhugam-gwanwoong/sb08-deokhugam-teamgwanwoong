@@ -26,7 +26,7 @@ public class Comment extends BaseRemovableEntity {
   @JoinColumn(name = "review_id", nullable = false)
   private Review review;
 
-  @Column(name = "content", nullable = false, columnDefinition = "TEXT")
+  @Column(name = "content", nullable = false, length = 500)
   private String content;
 
   @Builder
