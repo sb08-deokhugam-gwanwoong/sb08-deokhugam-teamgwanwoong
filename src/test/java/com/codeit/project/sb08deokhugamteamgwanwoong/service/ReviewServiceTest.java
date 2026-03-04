@@ -113,6 +113,63 @@ public class ReviewServiceTest {
         then(reviewRepository).should(never()).save(any());
     }
 
+    @Test
+    @DisplayName("리뷰 수정 테스트 - 성공")
+    void modify_review_success() {
+        //given
+        UUID reviewId = review.getId();
+        UUID currentUserId = user.getId();
+
+        given(reviewRepository.findById(reviewId)).willReturn(Optional.of(review));
+        given(reviewRepository.save(any(Review.class))).willReturn(review);
+        given(reviewMapper.toDto(any(), anyBoolean(), any()))
+                .willAnswer(invocation -> createReviewDto(invocation.getArgument(0)));
+
+        //when
+        ReviewDto result = reviewService.update(reviewId, updateRequest, currentUserId);
+
+        //then
+        assertThat(result.rating()).isEqualTo(updateRequest.rating());
+        assertThat(result.content()).isEqualTo(updateRequest.content());
+
+        then(reviewRepository).should().save(any(Review.class));
+    }
+
+    @Test
+    @DisplayName("리뷰 수정 테스트 - 실패(존재하지 않는 리뷰)")
+    void modify_review_fail_not_found() {
+        //given
+        UUID reviewId = review.getId();
+        UUID currentUserId = review.getUser().getId();
+
+        given(reviewRepository.findById(reviewId)).willReturn(Optional.empty());
+
+        //when
+        assertThatThrownBy(() -> reviewService.update(reviewId, updateRequest, currentUserId))
+                .isInstanceOf(BusinessException.class)
+                .hasFieldOrPropertyWithValue("errorCode", ReviewErrorCode.REVIEW_NOT_FOUND);
+
+        //then
+        then(reviewRepository).should(never()).save(any());
+    }
+
+    @Test
+    @DisplayName("리뷰 수정 테스트 - 실패(본인이 작성한 리뷰가 아닌 경우)")
+    void modify_review_fail_not_author() {
+        //given
+        UUID reviewId = review.getId();
+        UUID differentUserId = UUID.randomUUID();
+
+        given(reviewRepository.findById(reviewId)).willReturn(Optional.of(review));
+
+        //when
+        assertThatThrownBy(() -> reviewService.update(reviewId, updateRequest, differentUserId))
+                .isInstanceOf(BusinessException.class)
+                .hasFieldOrPropertyWithValue("errorCode", ReviewErrorCode.REVIEW_AUTHOR_MISMATCH);
+
+        then(reviewRepository).should(never()).save(any());
+    }
+
     private ReviewDto createReviewDto(Review review) {
         return new ReviewDto(
                 review.getId(),
@@ -130,4 +187,6 @@ public class ReviewServiceTest {
                 "2026. 3. 4."
         );
     }
+
+
 }
