@@ -1,6 +1,5 @@
 package com.codeit.project.sb08deokhugamteamgwanwoong.dto.book;
 
-import java.time.Instant;
 import lombok.Builder;
 
 @Builder
