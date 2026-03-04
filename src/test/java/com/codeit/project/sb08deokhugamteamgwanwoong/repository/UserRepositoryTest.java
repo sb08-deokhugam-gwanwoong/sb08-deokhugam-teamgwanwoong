@@ -6,6 +6,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import com.codeit.project.sb08deokhugamteamgwanwoong.entity.User;
 import com.codeit.project.sb08deokhugamteamgwanwoong.repository.support.RepositoryTestSupport;
 import java.util.Optional;
+import java.util.UUID;
 import org.hibernate.exception.ConstraintViolationException;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -90,5 +91,35 @@ public class UserRepositoryTest extends RepositoryTestSupport {
     // Then
     assertThat(findUser.getEmail()).isEqualTo("test@test.com");
     assertThat(findUser.getNickname()).isEqualTo("테스터 one");
+  }
+
+  @Test
+  @DisplayName("로그인: 가입된 email과 password 입력 시 해당 유저 객체를 반환해야 한다.")
+  void loginUserTest() {
+    // Given
+    String email = "test@test.com";
+    String password = "testPass1234";
+    String nickname = "테스터 one";
+
+    User user = User.builder()
+        .email(email)
+        .nickname(nickname)
+        .password(password)
+        .build();
+
+    em.persistAndFlush(user);
+    em.clear();
+
+    // When
+    Optional<User> result = userRepository.findByEmailAndPassword(email, password);
+
+    // Then
+    assertThat(result).isPresent(); // 결과가 존재하는가
+    assertThat(result.get().getId())
+        .isNotNull()                 // ID가 비어 있지 않은지 확인
+        .isInstanceOf(UUID.class);   // ID의 타입 -> UUID 확인
+    assertThat(result.get().getEmail()).isEqualTo(email);
+    assertThat(result.get().getNickname()).isEqualTo(nickname);
+    assertThat(result.get().getPassword()).isEqualTo(password);
   }
 }
