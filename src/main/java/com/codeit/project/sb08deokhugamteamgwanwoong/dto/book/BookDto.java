@@ -1,19 +1,22 @@
 package com.codeit.project.sb08deokhugamteamgwanwoong.dto.book;
 
+import java.time.Instant;
+import java.time.LocalDate;
+import java.util.UUID;
 import lombok.Builder;
 
 @Builder
 public record BookDto(
-    String id,
+    UUID id,
     String title,
     String author,
     String description,
     String publisher,
-    String publishedDate,
+    LocalDate publishedDate,
     String isbn,
     String thumbnailUrl,
     Integer reviewCount,
     Double rating,
-    String createdAt,
-    String updatedAt) {
+    Instant createdAt,
+    Instant updatedAt) {
 }
