@@ -8,6 +8,7 @@ import com.codeit.project.sb08deokhugamteamgwanwoong.entity.Comment;
 import com.codeit.project.sb08deokhugamteamgwanwoong.entity.Review;
 import com.codeit.project.sb08deokhugamteamgwanwoong.entity.User;
 import com.codeit.project.sb08deokhugamteamgwanwoong.repository.support.RepositoryTestSupport;
+import jakarta.persistence.EntityManager;
 import java.time.LocalDate;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -24,6 +25,8 @@ public class CommentRepositoryTest extends RepositoryTestSupport {
   private ReviewRepository reviewRepository;
   @Autowired
   private CommentRepository commentRepository;
+  @Autowired
+  private EntityManager entityManager;
 
   @Test
   @DisplayName("댓글이 정상적으로 등록되어야 한다")
@@ -144,11 +147,16 @@ public class CommentRepositoryTest extends RepositoryTestSupport {
         .review(review)
         .content("수정 전 내용입니다")
         .build();
+    commentRepository.save(comment);
 
     // when
     comment.updateContent("수정 후 내용입니다");
 
+    commentRepository.flush();
+    entityManager.clear();
+
     // then
-    assertThat(comment.getContent()).isEqualTo("수정 후 내용입니다");
+    Comment updatedComment = commentRepository.findById(comment.getId()).orElseThrow();
+    assertThat(updatedComment.getContent()).isEqualTo("수정 후 내용입니다");
   }
 }
