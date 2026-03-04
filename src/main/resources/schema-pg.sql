@@ -73,7 +73,7 @@ CREATE TABLE "comments" (
                             "id"            UUID            NOT NULL,
                             "user_id"       UUID            NOT NULL,
                             "review_id"     UUID            NOT NULL,
-                            "content"       TEXT            NOT NULL,
+                            "content"       VARCHAR(500)            NOT NULL,
                             "created_at"    TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP NOT NULL,
                             "updated_at"    TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP NOT NULL,
                             "deleted_at"    TIMESTAMP WITH TIME ZONE NULL,

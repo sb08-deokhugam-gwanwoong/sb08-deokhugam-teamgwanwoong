@@ -1,10 +1,16 @@
 package com.codeit.project.sb08deokhugamteamgwanwoong.service.external;
 
-import com.codeit.project.sb08deokhugamteamgwanwoong.dto.book.BookDto;
+import com.codeit.project.sb08deokhugamteamgwanwoong.dto.book.NaverBookDto;
+import com.codeit.project.sb08deokhugamteamgwanwoong.dto.external.naver.NaverApiResponse;
+import com.codeit.project.sb08deokhugamteamgwanwoong.dto.external.naver.NaverItem;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.cache.annotation.Cacheable;
+import org.springframework.http.HttpEntity;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpMethod;
+import org.springframework.http.ResponseEntity;
 import org.springframework.retry.annotation.Backoff;
 import org.springframework.retry.annotation.Retryable;
 import org.springframework.stereotype.Component;
@@ -13,7 +19,7 @@ import org.springframework.web.client.RestTemplate;
 @Slf4j
 @Component
 @RequiredArgsConstructor
-public class NaverBookProvider implements BookMetadataProvider {
+public class NaverBookProvider implements BookMetadataProvider<NaverBookDto> {
 
     private final RestTemplate restTemplate;
 
@@ -25,26 +31,48 @@ public class NaverBookProvider implements BookMetadataProvider {
 
     @Override
     @Retryable(
-        retryFor = { Exception.class }, // 특정 예외 지정 가능 (예: RestClientException)
+        retryFor = { Exception.class },
         maxAttempts = 3,
         backoff = @Backoff(delay = 1000)
     )
     @Cacheable(value = "bookMetadata", key = "#query", unless = "#result == null")
-    public BookDto getBookMetadata(String query) {
+    public NaverBookDto getBookMetadata(String query) {
         log.info("Fetching book metadata from Naver API for query: {}", query);
 
-        // TODO: 실제 네이버 API 호출 로직 구현
-        // HttpHeaders headers = new HttpHeaders();
-        // headers.set("X-Naver-Client-Id", clientId);
-        // headers.set("X-Naver-Client-Secret", clientSecret);
-        // HttpEntity<String> entity = new HttpEntity<>(headers);
-        // ResponseEntity<String> response = restTemplate.exchange(url, HttpMethod.GET, entity, String.class);
+        String url = "https://openapi.naver.com/v1/search/book.json?query=" + query + "&display=1";
 
-        // 임시 반환값
-        return BookDto.builder()
-            .title("Naver Book: " + query)
-            .author("Naver Author")
-            .isbn("1234567890")
-            .build();
+        HttpHeaders headers = new HttpHeaders();
+        headers.set("X-Naver-Client-Id", clientId);
+        headers.set("X-Naver-Client-Secret", clientSecret);
+
+        HttpEntity<String> entity = new HttpEntity<>(headers);
+
+        try {
+            ResponseEntity<NaverApiResponse> response = restTemplate.exchange(
+                url,
+                HttpMethod.GET,
+                entity,
+                NaverApiResponse.class
+            );
+
+            NaverApiResponse body = response.getBody();
+            if (body != null && body.getItems() != null && !body.getItems().isEmpty()) {
+                NaverItem item = body.getItems().get(0);
+                return NaverBookDto.builder()
+                    .title(item.getTitle())
+                    .author(item.getAuthor())
+                    .publisher(item.getPublisher())
+                    .isbn(item.getIsbn())
+                    .description(item.getDescription())
+                    .thumbnailImage(item.getImage())
+                    .publishedDate(item.getPubdate())
+                    .build();
+            }
+        } catch (Exception e) {
+            log.error("Failed to fetch book metadata from Naver API", e);
+            throw new RuntimeException("Naver API 호출 중 오류 발생", e);
+        }
+
+        throw new RuntimeException("도서 정보를 찾을 수 없습니다: " + query);
     }
 }
