@@ -1,13 +1,15 @@
 package com.codeit.project.sb08deokhugamteamgwanwoong.dto.review;
 
-public record ReviewDto(
-        Long id,
+import java.util.UUID;
 
-        Long bookId,
+public record ReviewDto(
+        UUID id,
+
+        UUID bookId,
         String bookTitle,
         String bookThumbnailUrl,
 
-        Long userId,
+        UUID userId,
         String userNickname,
 
         String content,
