@@ -32,8 +32,10 @@ public class UserRepositoryTest extends RepositoryTestSupport {
         .build();
 
     // When
-    User savedUser = userRepository.save(user);
+    User savedUser = em.persistAndFlush(user);
+    em.clear(); // 메모리 비우기 -> 다음 조회 반드시 DB 거치도록 강제
 
+    // savedUser는 DB 최신의 데이터이다.
     Optional<User> foundUser = userRepository.findById(savedUser.getId());
 
     // Then
@@ -53,7 +55,7 @@ public class UserRepositoryTest extends RepositoryTestSupport {
         .password("testPass1")
         .build();
 
-    userRepository.save(user1);
+    em.persistAndFlush(user1);
 
     // When & Then (동일한 이메일로 저장 시도 -> 예외 발생)
     User duplicateUser = User.builder()
@@ -78,7 +80,8 @@ public class UserRepositoryTest extends RepositoryTestSupport {
         .password("testPass1234!")
         .build();
 
-    User savedUser = userRepository.save(user);
+    User savedUser = em.persistAndFlush(user);
+    em.clear();
 
     // When
     User findUser = userRepository.findById(savedUser.getId())
