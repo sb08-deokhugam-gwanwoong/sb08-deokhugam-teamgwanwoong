@@ -109,4 +109,46 @@ public class CommentRepositoryTest extends RepositoryTestSupport {
     assertThatThrownBy(() -> commentRepository.saveAndFlush(comment))
         .isInstanceOf(DataIntegrityViolationException.class);
   }
+
+  @Test
+  @DisplayName("댓글 내용을 수정하면 정상적으로 반영되어야 한다")
+  void updateCommentTest() {
+    // given
+    User user = User.builder()
+        .email("test12@test.com")
+        .nickname("테스터 박")
+        .password("testPass1234!")
+        .build();
+    User savedUser = userRepository.save(user);
+
+    Book book = Book.builder()
+        .title("자바의 정석")
+        .author("남궁성")
+        .isbn("9788994492032")
+        .publishedDate(LocalDate.now())
+        .publisher("도우출판")
+        .description("자바의 정석 기초편")
+        .build();
+    Book savedBook = bookRepository.save(book);
+
+    Review review = Review.builder()
+        .rating(5)
+        .content("정말 재밌어요!!!")
+        .user(user)
+        .book(book)
+        .build();
+    Review savedReview = reviewRepository.save(review);
+
+    Comment comment = Comment.builder()
+        .user(user)
+        .review(review)
+        .content("수정 전 내용입니다")
+        .build();
+
+    // when
+    comment.updateContent("수정 후 내용입니다");
+
+    // then
+    assertThat(comment.getContent()).isEqualTo("수정 후 내용입니다");
+  }
 }
