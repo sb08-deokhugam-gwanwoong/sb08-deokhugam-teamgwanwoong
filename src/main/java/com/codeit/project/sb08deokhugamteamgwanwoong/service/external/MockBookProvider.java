@@ -1,6 +1,7 @@
 package com.codeit.project.sb08deokhugamteamgwanwoong.service.external;
 
 import com.codeit.project.sb08deokhugamteamgwanwoong.dto.book.BookDto;
+import java.time.LocalDate;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.annotation.Primary;
 import org.springframework.context.annotation.Profile;
@@ -23,7 +24,7 @@ public class MockBookProvider implements BookMetadataProvider<BookDto> {
             .isbn("1111111111")
             .description("This is a mock book description.")
             .thumbnailUrl("https://via.placeholder.com/150")
-            .publishedDate("2023-01-01")
+            .publishedDate(LocalDate.now())
             .build();
     }
 }
