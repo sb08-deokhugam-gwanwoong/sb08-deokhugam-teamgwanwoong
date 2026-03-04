@@ -4,11 +4,16 @@ import lombok.Builder;
 
 @Builder
 public record BookDto(
+    String id,
     String title,
     String author,
-    String publisher,
-    String isbn,
     String description,
-    String imageUrl
-) {
+    String publisher,
+    String publishedDate,
+    String isbn,
+    String thumbnailUrl,
+    Integer reviewCount,
+    Double rating,
+    String createdAt,
+    String updatedAt) {
 }
