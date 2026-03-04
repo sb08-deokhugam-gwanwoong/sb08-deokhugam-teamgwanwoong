@@ -185,7 +185,7 @@ public class ReviewRepositoryTest extends RepositoryTestSupport {
         entityManager.clear();
 
         //then
-
+        boolean exists = reviewRepository.existsById(savedReview.getId());
         assertThat(exists).isFalse();
     }
 }
