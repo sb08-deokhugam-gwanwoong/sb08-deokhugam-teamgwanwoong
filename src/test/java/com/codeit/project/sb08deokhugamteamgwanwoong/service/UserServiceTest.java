@@ -140,5 +140,4 @@ public class UserServiceTest {
         .isInstanceOf(BusinessException.class)
         .hasFieldOrPropertyWithValue("errorCode", UserErrorCode.LOGIN_FAILED);
   }
-
 }

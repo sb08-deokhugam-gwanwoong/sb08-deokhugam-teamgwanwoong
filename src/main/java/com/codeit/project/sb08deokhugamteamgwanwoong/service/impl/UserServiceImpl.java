@@ -1,6 +1,7 @@
 package com.codeit.project.sb08deokhugamteamgwanwoong.service.impl;
 
 import com.codeit.project.sb08deokhugamteamgwanwoong.dto.user.UserDto;
+import com.codeit.project.sb08deokhugamteamgwanwoong.dto.user.UserLoginRequest;
 import com.codeit.project.sb08deokhugamteamgwanwoong.dto.user.UserRegisterRequest;
 import com.codeit.project.sb08deokhugamteamgwanwoong.entity.User;
 import com.codeit.project.sb08deokhugamteamgwanwoong.exception.BusinessException;
@@ -16,6 +17,7 @@ import org.springframework.transaction.annotation.Transactional;
 @Slf4j
 @Service
 @RequiredArgsConstructor
+@Transactional(readOnly = true)
 public class UserServiceImpl implements UserService {
 
   private final UserRepository userRepository;
@@ -44,5 +46,21 @@ public class UserServiceImpl implements UserService {
     log.info("[회원가입 완료] 새로운 유저 생성 성공. id: {}", savedUser.getId());
 
     return userMapper.toDto(savedUser);
+  }
+
+  @Override
+  public UserDto login(UserLoginRequest request) {
+
+    log.info("[로그인 시작] email: {}", request.email());
+
+    User user = userRepository.findByEmailAndPassword(request.email(), request.password())
+        .orElseThrow(() -> {
+          log.warn("[로그인 실패] 이메일 또는 비밀번호가 일치하지 않습니다. email: {}", request.email());
+          return new BusinessException(UserErrorCode.LOGIN_FAILED);
+        });
+
+    log.info("[로그인 성공] userId: {}, email: {}", user.getId(), user.getEmail());
+
+    return userMapper.toDto(user);
   }
 }
