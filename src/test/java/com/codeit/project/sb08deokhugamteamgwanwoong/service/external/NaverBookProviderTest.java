@@ -7,6 +7,7 @@ import static org.springframework.test.web.client.response.MockRestResponseCreat
 
 import com.codeit.project.sb08deokhugamteamgwanwoong.config.ExternalApiConfig;
 import com.codeit.project.sb08deokhugamteamgwanwoong.dto.book.BookDto;
+import com.codeit.project.sb08deokhugamteamgwanwoong.dto.book.NaverBookDto;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -51,6 +52,7 @@ public class NaverBookProviderTest {
               "title": "객체지향의 사실과 오해",
               "author": "조영호",
               "publisher": "위키북스",
+              "isbn": "8965402606 9788965402602",
               "description": "역할, 책임, 협력 관점에서 본 객체지향",
               "image": "https:////bookthumb-phinf.pstatic.net/cover/092/006/09200628.jpg?type=m1&udate=20150611",
               "pubdate": "20150617"
@@ -65,13 +67,13 @@ public class NaverBookProviderTest {
         .andRespond(withSuccess(mockResponse, MediaType.APPLICATION_JSON));
 
     // when
-    BookDto bookDto = naverBookProvider.getBookMetadata(isbn);
+    NaverBookDto naverBookDto = naverBookProvider.getBookMetadata(isbn);
 
     // then
-    assertThat(bookDto.title()).isEqualTo("객체지향의 사실과 오해");
-    assertThat(bookDto.author()).isEqualTo("조영호");
-    assertThat(bookDto.isbn()).isEqualTo("9788965402602");
-    assertThat(bookDto.publisher()).isEqualTo("위키북스");
+    assertThat(naverBookDto.title()).isEqualTo("객체지향의 사실과 오해");
+    assertThat(naverBookDto.author()).isEqualTo("조영호");
+    assertThat(naverBookDto.isbn()).isEqualTo("9788965402602");
+    assertThat(naverBookDto.publisher()).isEqualTo("위키북스");
     // 날짜 형식 변환 등은 구현 단계에서 처리해야 함
   }
 }
