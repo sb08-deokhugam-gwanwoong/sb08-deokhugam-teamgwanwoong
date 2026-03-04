@@ -8,6 +8,8 @@ import com.codeit.project.sb08deokhugamteamgwanwoong.dto.user.UserDto;
 import com.codeit.project.sb08deokhugamteamgwanwoong.dto.user.UserRegisterRequest;
 import com.codeit.project.sb08deokhugamteamgwanwoong.entity.User;
 import com.codeit.project.sb08deokhugamteamgwanwoong.repository.UserRepository;
+import com.codeit.project.sb08deokhugamteamgwanwoong.service.impl.UserServiceImpl;
+import java.time.Instant;
 import java.util.UUID;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -24,7 +26,7 @@ public class UserServiceTest {
   private UserRepository userRepository;
 
   @InjectMocks
-  private UserService userService;
+  private UserServiceImpl userService;
 
   @Test
   @DisplayName("회원가입: 새로운 이메일로 가입하면 성공하고, UserDto를 반환해야 한다.")
@@ -37,9 +39,10 @@ public class UserServiceTest {
         .password(request.password())
         .build();
 
-    // ReflectionTestUtils로 가짜 ID 주입
+    // ReflectionTestUtils로 가짜 ID, createdAt 주입
     UUID uuid = UUID.randomUUID();
     ReflectionTestUtils.setField(user, "id", uuid);
+    ReflectionTestUtils.setField(user, "createdAt", Instant.now());
 
     // Mocking
     given(userRepository.existsByEmail(request.email())).willReturn(false);
