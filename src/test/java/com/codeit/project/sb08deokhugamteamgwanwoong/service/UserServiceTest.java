@@ -1,13 +1,16 @@
 package com.codeit.project.sb08deokhugamteamgwanwoong.service;
 
 import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
-import static org.assertj.core.api.AssertionsForClassTypes.assertThatThrownBy;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.BDDMockito.given;
 
 import com.codeit.project.sb08deokhugamteamgwanwoong.dto.user.UserDto;
 import com.codeit.project.sb08deokhugamteamgwanwoong.dto.user.UserRegisterRequest;
 import com.codeit.project.sb08deokhugamteamgwanwoong.entity.User;
+import com.codeit.project.sb08deokhugamteamgwanwoong.exception.BusinessException;
+import com.codeit.project.sb08deokhugamteamgwanwoong.exception.enums.UserErrorCode;
+import com.codeit.project.sb08deokhugamteamgwanwoong.mapper.UserMapper;
 import com.codeit.project.sb08deokhugamteamgwanwoong.repository.UserRepository;
 import com.codeit.project.sb08deokhugamteamgwanwoong.service.impl.UserServiceImpl;
 import java.time.Instant;
@@ -25,6 +28,9 @@ public class UserServiceTest {
 
   @Mock
   private UserRepository userRepository;
+
+  @Mock
+  private UserMapper userMapper;
 
   @InjectMocks
   private UserServiceImpl userService;
@@ -45,9 +51,12 @@ public class UserServiceTest {
     ReflectionTestUtils.setField(user, "id", uuid);
     ReflectionTestUtils.setField(user, "createdAt", Instant.now());
 
+    UserDto expectedDto = new UserDto(uuid, request.email(), request.nickname(), Instant.now());
+
     // Mocking
     given(userRepository.existsByEmail(request.email())).willReturn(false);
     given(userRepository.save(any(User.class))).willReturn(user);
+    given(userMapper.toDto(user)).willReturn(expectedDto);
 
     // When
     UserDto result = userService.create(request);
@@ -68,10 +77,12 @@ public class UserServiceTest {
     // Mocking - 해당 이메일은 존재한다는 가정
     given(userRepository.existsByEmail(email)).willReturn(true);
 
-    // When & Then
-    assertThatThrownBy(() -> userService.create(request))
-        .isInstanceOf(IllegalArgumentException.class)
-        .hasMessage("이미 존재하는 이메일입니다.");
+    // When
+    BusinessException exception = assertThrows(BusinessException.class, () -> {
+      userService.create(request);
+    });
+
+    assertThat(exception.getErrorCode()).isEqualTo(UserErrorCode.EMAIL_ALREADY_EXISTS);
   }
 
 }
