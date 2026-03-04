@@ -7,7 +7,7 @@ import com.codeit.project.sb08deokhugamteamgwanwoong.entity.Book;
 import com.codeit.project.sb08deokhugamteamgwanwoong.entity.Review;
 import com.codeit.project.sb08deokhugamteamgwanwoong.entity.User;
 import com.codeit.project.sb08deokhugamteamgwanwoong.exception.BusinessException;
-import com.codeit.project.sb08deokhugamteamgwanwoong.exception.ReviewErrorCode;
+import com.codeit.project.sb08deokhugamteamgwanwoong.exception.enums.ReviewErrorCode;
 import com.codeit.project.sb08deokhugamteamgwanwoong.mapper.ReviewMapper;
 import com.codeit.project.sb08deokhugamteamgwanwoong.repository.BookRepository;
 import com.codeit.project.sb08deokhugamteamgwanwoong.repository.ReviewRepository;
@@ -22,6 +22,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.test.util.ReflectionTestUtils;
 
+import java.time.Instant;
 import java.time.LocalDate;
 import java.util.Optional;
 import java.util.UUID;
@@ -60,10 +61,22 @@ public class ReviewServiceTest {
         UUID bookId = UUID.randomUUID();
         UUID reviewId = UUID.randomUUID();
 
-        user = new User("test@codeit.com", "testUser", "testPassword!");
+        user = User.builder()
+                .email("test@codeit.com")
+                .nickname("testUser")
+                .password("testPassword!")
+                .build();
         ReflectionTestUtils.setField(user, "id", userId);
 
-        book = new Book("testBook", "testAuthor", "9788994492032", "testPublisher", LocalDate.now(), "testDescription", "https://test-thumbnail.url/image.jpg");
+        book = Book.builder()
+                .title("testBook")
+                .author("testAuthor")
+                .isbn("9788994492032")
+                .publisher("testPublisher")
+                .publishedDate(LocalDate.now())
+                .description("testDescription")
+                .thumbnailUrl("https://test-thumbnail.url/image.jpg")
+                .build();
         ReflectionTestUtils.setField(book, "id", bookId);
 
         review = Review.builder()
@@ -118,21 +131,18 @@ public class ReviewServiceTest {
     void modify_review_success() {
         //given
         UUID reviewId = review.getId();
-        UUID currentUserId = user.getId();
+        UUID requestUserId = user.getId();
 
         given(reviewRepository.findById(reviewId)).willReturn(Optional.of(review));
-        given(reviewRepository.save(any(Review.class))).willReturn(review);
         given(reviewMapper.toDto(any(), anyBoolean(), any()))
                 .willAnswer(invocation -> createReviewDto(invocation.getArgument(0)));
 
         //when
-        ReviewDto result = reviewService.update(reviewId, updateRequest, currentUserId);
+        ReviewDto result = reviewService.update(reviewId, updateRequest, requestUserId);
 
         //then
         assertThat(result.rating()).isEqualTo(updateRequest.rating());
         assertThat(result.content()).isEqualTo(updateRequest.content());
-
-        then(reviewRepository).should().save(any(Review.class));
     }
 
     @Test
@@ -140,21 +150,18 @@ public class ReviewServiceTest {
     void modify_review_fail_not_found() {
         //given
         UUID reviewId = review.getId();
-        UUID currentUserId = review.getUser().getId();
+        UUID requestUserId = review.getUser().getId();
 
         given(reviewRepository.findById(reviewId)).willReturn(Optional.empty());
 
-        //when
-        assertThatThrownBy(() -> reviewService.update(reviewId, updateRequest, currentUserId))
+        //when & then
+        assertThatThrownBy(() -> reviewService.update(reviewId, updateRequest, requestUserId))
                 .isInstanceOf(BusinessException.class)
                 .hasFieldOrPropertyWithValue("errorCode", ReviewErrorCode.REVIEW_NOT_FOUND);
-
-        //then
-        then(reviewRepository).should(never()).save(any());
     }
 
     @Test
-    @DisplayName("리뷰 수정 테스트 - 실패(본인이 작성한 리뷰가 아닌 경우)")
+    @DisplayName("리뷰 수정 테스트 - 실패(수정 권한이 없는 경우)")
     void modify_review_fail_not_author() {
         //given
         UUID reviewId = review.getId();
@@ -162,14 +169,14 @@ public class ReviewServiceTest {
 
         given(reviewRepository.findById(reviewId)).willReturn(Optional.of(review));
 
-        //when
+        //when & then
         assertThatThrownBy(() -> reviewService.update(reviewId, updateRequest, differentUserId))
                 .isInstanceOf(BusinessException.class)
-                .hasFieldOrPropertyWithValue("errorCode", ReviewErrorCode.REVIEW_AUTHOR_MISMATCH);
-
-        then(reviewRepository).should(never()).save(any());
+                .hasFieldOrPropertyWithValue("errorCode", ReviewErrorCode.REVIEW_EDIT_PERMISSION_DENIED);
     }
 
+
+    // 리뷰 생성 로직만 적용하면 사용하지 않아도 되지만 수정이 필요한 ReviewDto를 위해 공통 메소드 처리하였음.
     private ReviewDto createReviewDto(Review review) {
         return new ReviewDto(
                 review.getId(),
@@ -183,10 +190,8 @@ public class ReviewServiceTest {
                 review.getLikeCount(),
                 review.getCommentCount(),
                 false,
-                "2026. 3. 4.",
-                "2026. 3. 4."
+                Instant.now(),
+                Instant.now()
         );
     }
-
-
 }

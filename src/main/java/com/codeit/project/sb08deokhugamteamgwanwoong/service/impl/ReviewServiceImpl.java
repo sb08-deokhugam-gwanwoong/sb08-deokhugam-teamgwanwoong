@@ -2,11 +2,12 @@ package com.codeit.project.sb08deokhugamteamgwanwoong.service.impl;
 
 import com.codeit.project.sb08deokhugamteamgwanwoong.dto.review.ReviewCreateRequest;
 import com.codeit.project.sb08deokhugamteamgwanwoong.dto.review.ReviewDto;
+import com.codeit.project.sb08deokhugamteamgwanwoong.dto.review.ReviewUpdateRequest;
 import com.codeit.project.sb08deokhugamteamgwanwoong.entity.Book;
 import com.codeit.project.sb08deokhugamteamgwanwoong.entity.Review;
 import com.codeit.project.sb08deokhugamteamgwanwoong.entity.User;
 import com.codeit.project.sb08deokhugamteamgwanwoong.exception.BusinessException;
-import com.codeit.project.sb08deokhugamteamgwanwoong.exception.ReviewErrorCode;
+import com.codeit.project.sb08deokhugamteamgwanwoong.exception.enums.ReviewErrorCode;
 import com.codeit.project.sb08deokhugamteamgwanwoong.mapper.ReviewMapper;
 import com.codeit.project.sb08deokhugamteamgwanwoong.repository.BookRepository;
 import com.codeit.project.sb08deokhugamteamgwanwoong.repository.ReviewRepository;
@@ -60,5 +61,11 @@ public class ReviewServiceImpl implements ReviewService {
         log.info("Service: 리뷰 생성 성공 - ID: {}", savedReview.getId());
 
         return reviewMapper.toDto(savedReview, false, book.getThumbnailUrl());
+    }
+
+    @Override
+    @Transactional
+    public ReviewDto update(UUID reviewId, ReviewUpdateRequest request, UUID requestUserId) {
+
     }
 }
