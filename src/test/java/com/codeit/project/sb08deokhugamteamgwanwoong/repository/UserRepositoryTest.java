@@ -122,4 +122,20 @@ public class UserRepositoryTest extends RepositoryTestSupport {
     assertThat(result.get().getNickname()).isEqualTo(nickname);
     assertThat(result.get().getPassword()).isEqualTo(password);
   }
+
+  @Test
+  @DisplayName("로그인 실패: 가입되지 않은 이메일로 로그인 시 빈 결과를 반환해야 한다.")
+  void loginUser_Fail_EmailNotFound_Test() {
+    // Given
+    String nonExistentEmail = "non@test.com";
+    String password = "nonPassword1234!";
+
+    // When
+    Optional<User> result = userRepository.findByEmailAndPassword(nonExistentEmail, password);
+
+    // Then
+    assertThat(result).isEmpty();
+    assertThat(result.isPresent()).isFalse();
+
+  }
 }
