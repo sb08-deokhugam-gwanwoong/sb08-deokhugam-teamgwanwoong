@@ -6,6 +6,9 @@ import com.codeit.project.sb08deokhugamteamgwanwoong.dto.comment.CommentUpdateRe
 import com.codeit.project.sb08deokhugamteamgwanwoong.entity.Comment;
 import com.codeit.project.sb08deokhugamteamgwanwoong.entity.Review;
 import com.codeit.project.sb08deokhugamteamgwanwoong.entity.User;
+import com.codeit.project.sb08deokhugamteamgwanwoong.exception.BusinessException;
+import com.codeit.project.sb08deokhugamteamgwanwoong.exception.enums.CommentErrorCode;
+import com.codeit.project.sb08deokhugamteamgwanwoong.mapper.CommentMapper;
 import com.codeit.project.sb08deokhugamteamgwanwoong.repository.CommentRepository;
 import com.codeit.project.sb08deokhugamteamgwanwoong.repository.ReviewRepository;
 import com.codeit.project.sb08deokhugamteamgwanwoong.repository.UserRepository;
@@ -23,17 +26,18 @@ public class CommentServiceImpl implements CommentService {
   private final UserRepository userRepository;
   private final ReviewRepository reviewRepository;
   private final CommentRepository commentRepository;
+  private final CommentMapper commentMapper;
 
   @Override
   @Transactional
   public CommentDto create(CommentCreateRequest request) {
 
-    //TODO : BusinessException 및 CommentErrorCode 리팩토링 처리 예정
+    //TODO : User error code 만들어지면 적용 예정
     User user = userRepository.findById(request.userId())
         .orElseThrow(() -> new RuntimeException("USER NOT FOUND"));
 
     Review review = reviewRepository.findById(request.reviewId())
-        .orElseThrow(() -> new RuntimeException("REVIEW NOT FOUND"));
+        .orElseThrow(() -> new BusinessException(CommentErrorCode.REVIEW_NOT_FOUND));
 
     Comment comment = Comment.builder()
         .content(request.content())
@@ -43,40 +47,23 @@ public class CommentServiceImpl implements CommentService {
 
     Comment savedComment = commentRepository.save(comment);
 
-    return new CommentDto(
-        savedComment.getId(),
-        review.getId(),
-        user.getId(),
-        user.getNickname(),
-        savedComment.getContent(),
-        savedComment.getCreatedAt(),
-        savedComment.getUpdatedAt()
-    );
+    return commentMapper.toDto(savedComment);
   }
 
   @Override
   @Transactional
   public CommentDto update(UUID commentId, UUID userId, CommentUpdateRequest request) {
 
-    //TODO : BusinessException 및 CommentErrorCode 리팩토링 처리 예정
     Comment comment = commentRepository.findById(commentId)
-        .orElseThrow(() -> new RuntimeException("COMMENT NOT FOUND"));
+        .orElseThrow(() -> new BusinessException(CommentErrorCode.COMMENT_NOT_FOUND));
 
     if (!comment.getUser().getId().equals(userId)) {
-      throw new RuntimeException("UNAUTHORIZED");
+      throw new BusinessException(CommentErrorCode.UNAUTHORIZED_COMMENT_ACCESS);
     }
 
     comment.updateContent(request.content());
 
-    return new CommentDto(
-        comment.getId(),
-        comment.getReview().getId(),
-        comment.getUser().getId(),
-        comment.getUser().getNickname(),
-        comment.getContent(),
-        comment.getCreatedAt(),
-        comment.getUpdatedAt()
-    );
+    return commentMapper.toDto(comment);
   }
 }
 
