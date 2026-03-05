@@ -118,7 +118,7 @@ CREATE TABLE "dashboard" (
                              "period_type"   VARCHAR(20)     NOT NULL, -- 'DAILY', 'WEEKLY' 등
                              "score"         DOUBLE PRECISION NOT NULL,
                              "ranking_pos"   INTEGER         NOT NULL,
-                             "created_at"    DATE            NOT NULL,
+                             "created_at"    TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP NOT NULL,
                              CONSTRAINT "PK_DASHBOARD" PRIMARY KEY ("id")
 );
 
