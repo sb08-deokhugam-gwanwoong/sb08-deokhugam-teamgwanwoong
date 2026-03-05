@@ -16,4 +16,6 @@ public interface UserService {
   UserDto update(UUID userId, UserUpdateRequest request);
 
   void delete(UUID userId);
+
+  void hardDelete(UUID userId);
 }

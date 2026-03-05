@@ -83,7 +83,7 @@ public class UserServiceImpl implements UserService {
 
     log.info("[유저 조회 시작] userId: {}", userId);
 
-    User user = findUserById(userId);
+    User user = findUserById(userId, null);
 
     log.info("[유저 조회 성공] userId: {}, email: {}", user.getId(), user.getEmail());
 
@@ -102,7 +102,7 @@ public class UserServiceImpl implements UserService {
 
     log.info("[유저 닉네임 수정 시작] userId: {}", userId);
 
-    User user = findUserById(userId);
+    User user = findUserById(userId, null);
 
     if (!user.getNickname().equals(request.nickname())) {
       validateDuplicateNickname(request.nickname());
@@ -126,11 +126,28 @@ public class UserServiceImpl implements UserService {
 
     log.info("[유저 논리 삭제 시작] userId: {}", userId);
 
-    User user = findUserById(userId);
+    User user = findUserById(userId, null);
 
     user.delete();
 
     log.info("[유저 논리 삭제 완료] userId: {}, deletedAt: {}", userId, user.getDeletedAt());
+  }
+
+  /**
+   * 유저 물리 삭제
+   * @param userId 유저 Id
+   */
+  @Override
+  @Transactional
+  public void hardDelete(UUID userId) {
+
+    log.info("[유저 물리 삭제 시작] userId: {}", userId);
+
+    User user = findUserById(userId, "hard");
+
+    userRepository.delete(user);
+
+    log.info("[유저 물리 삭제 완료] userId: {}", userId);
   }
 
   /**
@@ -160,11 +177,21 @@ public class UserServiceImpl implements UserService {
    * @param userId 유저 Id
    * @return User
    */
-  private User findUserById(UUID userId) {
-    return userRepository.findById(userId)
-        .orElseThrow(() -> {
-          log.warn("[유저 조회 실패] 해당 유저가 존재하지 않습니다. userId: {}", userId);
-          return new BusinessException(UserErrorCode.USER_NOT_FOUND);
-        });
+  private User findUserById(UUID userId, String type) {
+
+    if ("hard".equals(type)) {
+      return userRepository.findByIdIncludeDeleted(userId)
+          .orElseThrow(() -> {
+            log.warn("[유저 조회 실패] 물리 삭제할 유저가 존재하지 않습니다. userId: {}", userId);
+            return new BusinessException(UserErrorCode.USER_NOT_FOUND);
+          });
+    } else {
+      return userRepository.findById(userId)
+          .orElseThrow(() -> {
+            log.warn("[유저 조회 실패] 해당 유저가 존재하지 않습니다. userId: {}", userId);
+            return new BusinessException(UserErrorCode.USER_NOT_FOUND);
+          });
+    }
+
   }
 }

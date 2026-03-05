@@ -62,4 +62,12 @@ public class UserController implements UserApi {
 
     return ResponseEntity.noContent().build();
   }
+
+  @Override
+  public ResponseEntity<Void> hardDeleteUser(@PathVariable UUID userId) {
+
+    userService.hardDelete(userId);
+
+    return ResponseEntity.noContent().build();
+  }
 }
