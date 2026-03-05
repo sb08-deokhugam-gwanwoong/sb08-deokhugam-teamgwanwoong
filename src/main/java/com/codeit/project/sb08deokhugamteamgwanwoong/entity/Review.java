@@ -6,6 +6,7 @@ import lombok.AccessLevel;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import org.hibernate.annotations.SQLRestriction;
 
 @Entity
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
@@ -19,6 +20,7 @@ import lombok.NoArgsConstructor;
                 )
         }
 )
+@SQLRestriction("deleted_at IS NULL")
 public class Review extends BaseRemovableEntity {
 
     @Column(
