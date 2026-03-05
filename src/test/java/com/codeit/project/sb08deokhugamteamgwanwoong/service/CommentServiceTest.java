@@ -14,6 +14,9 @@ import com.codeit.project.sb08deokhugamteamgwanwoong.entity.Book;
 import com.codeit.project.sb08deokhugamteamgwanwoong.entity.Comment;
 import com.codeit.project.sb08deokhugamteamgwanwoong.entity.Review;
 import com.codeit.project.sb08deokhugamteamgwanwoong.entity.User;
+import com.codeit.project.sb08deokhugamteamgwanwoong.exception.BusinessException;
+import com.codeit.project.sb08deokhugamteamgwanwoong.exception.enums.CommentErrorCode;
+import com.codeit.project.sb08deokhugamteamgwanwoong.mapper.CommentMapper;
 import com.codeit.project.sb08deokhugamteamgwanwoong.repository.CommentRepository;
 import com.codeit.project.sb08deokhugamteamgwanwoong.repository.ReviewRepository;
 import com.codeit.project.sb08deokhugamteamgwanwoong.repository.UserRepository;
@@ -39,6 +42,8 @@ public class CommentServiceTest {
   private UserRepository userRepository;
   @Mock
   private ReviewRepository reviewRepository;
+  @Mock
+  private CommentMapper commentMapper;
 
   @InjectMocks
   private CommentServiceImpl commentService;
@@ -56,7 +61,6 @@ public class CommentServiceTest {
     userId = UUID.randomUUID();
     bookId = UUID.randomUUID();
     reviewId = UUID.randomUUID();
-
 
     user = User.builder()
         .email("test@test.com")
@@ -110,6 +114,17 @@ public class CommentServiceTest {
     given(reviewRepository.findById(reviewId)).willReturn(Optional.of(review));
     given(commentRepository.save(any(Comment.class))).willReturn(comment);
 
+    CommentDto expectedDto = new CommentDto(
+        comment.getId(),
+        reviewId,
+        userId,
+        "웅제",
+        "테스트 댓글입니다",
+        null,
+        null
+    );
+    given(commentMapper.toDto(any(Comment.class))).willReturn(expectedDto);
+
     //when
     CommentDto result = commentService.create(request);
 
@@ -129,6 +144,17 @@ public class CommentServiceTest {
 
     //Stubbing
     given(commentRepository.findById(commentId)).willReturn(Optional.of(comment));
+
+    CommentDto expectedDto = new CommentDto(
+        comment.getId(),
+        reviewId,
+        userId,
+        "웅제",
+        "수정된 댓글 내용입니다.",
+        null,
+        null
+    );
+    given(commentMapper.toDto(any(Comment.class))).willReturn(expectedDto);
 
     //when
     CommentDto updatedComment = commentService.update(commentId, userId, updateRequest);
@@ -152,7 +178,25 @@ public class CommentServiceTest {
     // when & then
     assertThatThrownBy(() ->
         commentService.update(commentId, anotherUserId, updateRequest))
-        .isInstanceOf(RuntimeException.class)
-        .hasMessage("UNAUTHORIZED");
+        .isInstanceOf(BusinessException.class)
+        .extracting("errorCode")
+        .isEqualTo(CommentErrorCode.UNAUTHORIZED_COMMENT_ACCESS);
+  }
+
+  @Test
+  @DisplayName("댓글 수정 실패 - 존재하지 않는 댓글일 경우 예외 발생")
+  void updateComment_Fail_NotFound() {
+    //given
+    UUID notFoundId = UUID.randomUUID();
+    CommentUpdateRequest updateRequest = new CommentUpdateRequest("빈 내용");
+
+    given(commentRepository.findById(notFoundId)).willReturn(Optional.empty());
+
+    //when & then
+    assertThatThrownBy(() ->
+        commentService.update(notFoundId, userId, updateRequest))
+        .isInstanceOf(BusinessException.class)
+        .extracting("errorCode")
+        .isEqualTo(CommentErrorCode.COMMENT_NOT_FOUND);
   }
 }
