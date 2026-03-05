@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.BDDMockito.given;
+import static org.mockito.BDDMockito.then;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 
@@ -21,6 +22,7 @@ import com.codeit.project.sb08deokhugamteamgwanwoong.repository.CommentRepositor
 import com.codeit.project.sb08deokhugamteamgwanwoong.repository.ReviewRepository;
 import com.codeit.project.sb08deokhugamteamgwanwoong.repository.UserRepository;
 import com.codeit.project.sb08deokhugamteamgwanwoong.service.impl.CommentServiceImpl;
+import java.time.Instant;
 import java.time.LocalDate;
 import java.util.Optional;
 import java.util.UUID;
@@ -120,8 +122,8 @@ public class CommentServiceTest {
         userId,
         "웅제",
         "테스트 댓글입니다",
-        null,
-        null
+        Instant.now(),
+        Instant.now()
     );
     given(commentMapper.toDto(any(Comment.class))).willReturn(expectedDto);
 
@@ -132,7 +134,7 @@ public class CommentServiceTest {
     assertThat(result.content()).isEqualTo("테스트 댓글입니다");
     assertThat(result.userNickname()).isEqualTo("웅제");
 
-    verify(commentRepository, times(1)).save(any(Comment.class));
+    then(commentRepository).should(times(1)).save(any(Comment.class));
   }
 
   @Test
@@ -151,8 +153,8 @@ public class CommentServiceTest {
         userId,
         "웅제",
         "수정된 댓글 내용입니다.",
-        null,
-        null
+        Instant.now(),
+        Instant.now()
     );
     given(commentMapper.toDto(any(Comment.class))).willReturn(expectedDto);
 
@@ -162,6 +164,8 @@ public class CommentServiceTest {
     //then
     assertThat(updatedComment.content()).isEqualTo("수정된 댓글 내용입니다.");
     assertThat(updatedComment.userNickname()).isEqualTo("웅제");
+
+    assertThat(comment.getContent()).isEqualTo("수정된 댓글 내용입니다.");
   }
 
   @Test
@@ -180,7 +184,7 @@ public class CommentServiceTest {
         commentService.update(commentId, anotherUserId, updateRequest))
         .isInstanceOf(BusinessException.class)
         .extracting("errorCode")
-        .isEqualTo(CommentErrorCode.UNAUTHORIZED_COMMENT_ACCESS);
+        .isEqualTo(CommentErrorCode.COMMENT_UPDATE_DENIED);
   }
 
   @Test
