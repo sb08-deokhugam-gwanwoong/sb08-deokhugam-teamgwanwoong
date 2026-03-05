@@ -8,6 +8,7 @@ import com.codeit.project.sb08deokhugamteamgwanwoong.entity.Review;
 import com.codeit.project.sb08deokhugamteamgwanwoong.entity.User;
 import com.codeit.project.sb08deokhugamteamgwanwoong.exception.BusinessException;
 import com.codeit.project.sb08deokhugamteamgwanwoong.exception.enums.CommentErrorCode;
+import com.codeit.project.sb08deokhugamteamgwanwoong.exception.enums.ReviewErrorCode;
 import com.codeit.project.sb08deokhugamteamgwanwoong.mapper.CommentMapper;
 import com.codeit.project.sb08deokhugamteamgwanwoong.repository.CommentRepository;
 import com.codeit.project.sb08deokhugamteamgwanwoong.repository.ReviewRepository;
@@ -37,7 +38,7 @@ public class CommentServiceImpl implements CommentService {
         .orElseThrow(() -> new RuntimeException("USER NOT FOUND"));
 
     Review review = reviewRepository.findById(request.reviewId())
-        .orElseThrow(() -> new BusinessException(CommentErrorCode.REVIEW_NOT_FOUND));
+        .orElseThrow(() -> new BusinessException(ReviewErrorCode.REVIEW_NOT_FOUND));
 
     Comment comment = Comment.builder()
         .content(request.content())
@@ -58,7 +59,7 @@ public class CommentServiceImpl implements CommentService {
         .orElseThrow(() -> new BusinessException(CommentErrorCode.COMMENT_NOT_FOUND));
 
     if (!comment.getUser().getId().equals(userId)) {
-      throw new BusinessException(CommentErrorCode.UNAUTHORIZED_COMMENT_ACCESS);
+      throw new BusinessException(CommentErrorCode.COMMENT_UPDATE_DENIED);
     }
 
     comment.updateContent(request.content());
