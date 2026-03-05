@@ -1,6 +1,7 @@
 package com.codeit.project.sb08deokhugamteamgwanwoong.service;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.times;
@@ -8,6 +9,7 @@ import static org.mockito.Mockito.verify;
 
 import com.codeit.project.sb08deokhugamteamgwanwoong.dto.comment.CommentCreateRequest;
 import com.codeit.project.sb08deokhugamteamgwanwoong.dto.comment.CommentDto;
+import com.codeit.project.sb08deokhugamteamgwanwoong.dto.comment.CommentUpdateRequest;
 import com.codeit.project.sb08deokhugamteamgwanwoong.entity.Book;
 import com.codeit.project.sb08deokhugamteamgwanwoong.entity.Comment;
 import com.codeit.project.sb08deokhugamteamgwanwoong.entity.Review;
@@ -47,12 +49,14 @@ public class CommentServiceTest {
   private User user;
   private Book book;
   private Review review;
+  private Comment comment;
 
   @BeforeEach
   void setUp() {
     userId = UUID.randomUUID();
     bookId = UUID.randomUUID();
     reviewId = UUID.randomUUID();
+
 
     user = User.builder()
         .email("test@test.com")
@@ -79,6 +83,13 @@ public class CommentServiceTest {
         .book(book)
         .build();
     ReflectionTestUtils.setField(review, "id", reviewId);
+
+    comment = Comment.builder()
+        .content("기존 댓글 내용")
+        .user(user)
+        .review(review)
+        .build();
+    ReflectionTestUtils.setField(comment, "id", UUID.randomUUID());
   }
 
   @Test
@@ -108,5 +119,23 @@ public class CommentServiceTest {
     assertThat(result.userNickname()).isEqualTo("웅제");
 
     verify(commentRepository, times(1)).save(any(Comment.class));
+  }
+
+  @Test
+  @DisplayName("댓글 수정 성공")
+  void updateComment_Success() {
+    //given
+    CommentUpdateRequest updateRequest = new CommentUpdateRequest("수정된 댓글 내용입니다.");
+    UUID commentId = comment.getId();
+
+    //Stubbing
+    given(commentRepository.findById(commentId)).willReturn(Optional.of(comment));
+
+    //when
+    CommentDto updatedComment = commentService.update(commentId, userId, updateRequest);
+
+    //then
+    assertThat(updatedComment.content()).isEqualTo("수정된 댓글 내용입니다.");
+    assertThat(updatedComment.userNickname()).isEqualTo("웅제");
   }
 }
