@@ -26,7 +26,7 @@ public class ReviewController {
             @Valid @RequestBody ReviewCreateRequest request
     ) {
         log.info("Controller: 리뷰 생성 요청");
-        ReviewDto reviewDto = reviewService.create(request);
+        ReviewDto reviewDto = reviewService.createReview(request);
         log.info("Controller: 리뷰 생성 완료");
         return ResponseEntity
                 .status(HttpStatus.CREATED)
@@ -40,7 +40,7 @@ public class ReviewController {
             @Valid @RequestBody ReviewUpdateRequest request
     ) {
         log.info("Controller: 리뷰 수정 요청 - ID: {}", reviewId);
-        ReviewDto reviewDto = reviewService.update(reviewId, request, requestUserId);
+        ReviewDto reviewDto = reviewService.updateReview(reviewId, request, requestUserId);
         log.info("Controller: 리뷰 수정 완료 - ID: {}", reviewId);
         return ResponseEntity
                 .status(HttpStatus.OK)
