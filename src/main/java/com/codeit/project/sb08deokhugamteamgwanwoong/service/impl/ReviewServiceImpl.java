@@ -99,6 +99,9 @@ public class ReviewServiceImpl implements ReviewService {
 
         // 논리 삭제를 위해 deletedAt 갱신
         review.delete();
+
+        // 명시적으로 save() 호출해서 변경된 상태를 DB에 강제로 반영
+        reviewRepository.save(review);
     }
 
     @Override
