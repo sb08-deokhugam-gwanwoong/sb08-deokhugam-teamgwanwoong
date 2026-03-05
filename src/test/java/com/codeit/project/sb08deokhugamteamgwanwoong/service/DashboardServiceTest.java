@@ -1,34 +1,56 @@
 package com.codeit.project.sb08deokhugamteamgwanwoong.service;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyList;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.when;
 
 import com.codeit.project.sb08deokhugamteamgwanwoong.dto.dashboard.PopularBookDto;
 import com.codeit.project.sb08deokhugamteamgwanwoong.entity.Book;
 import com.codeit.project.sb08deokhugamteamgwanwoong.entity.Dashboard;
 import com.codeit.project.sb08deokhugamteamgwanwoong.entity.enums.DashboardPeriodEnums;
-import com.codeit.project.sb08deokhugamteamgwanwoong.integration.support.IntegrationTestSupport;
+import com.codeit.project.sb08deokhugamteamgwanwoong.mapper.DashboardMapper;
 import com.codeit.project.sb08deokhugamteamgwanwoong.repository.BookRepository;
 import com.codeit.project.sb08deokhugamteamgwanwoong.repository.DashboardRepository;
-import java.time.LocalDate;
+import com.codeit.project.sb08deokhugamteamgwanwoong.service.impl.DashboardServiceImpl;
+import java.time.Instant;
 import java.util.List;
+import java.util.UUID;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
-import org.springframework.beans.factory.annotation.Autowired;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.data.domain.PageRequest;
 
-class DashboardServiceTest extends IntegrationTestSupport {
+@ExtendWith(MockitoExtension.class)
+@DisplayName("대시보드 서비스")
+class DashboardServiceTest {
 
-	@Autowired
-	private DashboardService dashboardService;
-
-	@Autowired
+	@Mock
 	private DashboardRepository dashboardRepository;
 
-	@Autowired
+	@Mock
 	private BookRepository bookRepository;
 
-	@DisplayName("대시보드 데이터가 없으면 빈 리스트를 반환한다.")
+	@Mock
+	private DashboardMapper dashboardMapper;
+
+	@InjectMocks
+	private DashboardServiceImpl dashboardService;
+
 	@Test
+	@DisplayName("대시보드 데이터가 없으면 빈 리스트를 반환한다.")
 	void getPopularBooks_returnsEmpty_whenNoDashboardData() {
+		// given
+		when(dashboardRepository.findRecentRankings(
+				eq("BOOK"),
+				eq(DashboardPeriodEnums.ALL_TIME),
+				any(PageRequest.class)
+		)).thenReturn(List.of());
+
 		// when
 		List<PopularBookDto> response = dashboardService.getPopularBooks();
 
@@ -36,34 +58,15 @@ class DashboardServiceTest extends IntegrationTestSupport {
 		assertThat(response).isEmpty();
 	}
 
-	@DisplayName("대시보드 데이터가 있으면 점수 순(랭킹 순)으로 인기 도서 목록을 조회한다.")
 	@Test
+	@DisplayName("대시보드 데이터가 있으면 점수 순(랭킹 순)으로 인기 도서 목록을 조회한다.")
 	void getPopularBooks_returnsOrderedByRanking_whenDashboardDataExists() {
 		// given
-		Book book1 = Book.builder()
-				.title("자바의 정석")
-				.author("남궁성")
-				.isbn("9788994492032")
-				.publisher("도우출판")
-				.publishedDate(LocalDate.now())
-				.description("자바 기초")
-				.thumbnailUrl("https://example.com/thumb1.jpg")
-				.build();
-		Book savedBook1 = bookRepository.save(book1);
-
-		Book book2 = Book.builder()
-				.title("클린 코드")
-				.author("로버트 마틴")
-				.isbn("9788966260959")
-				.publisher("인사이트")
-				.publishedDate(LocalDate.now())
-				.description("클린 코드")
-				.thumbnailUrl(null)
-				.build();
-		Book savedBook2 = bookRepository.save(book2);
+		UUID book1Id = UUID.randomUUID();
+		UUID book2Id = UUID.randomUUID();
 
 		Dashboard dashboard1 = Dashboard.builder()
-				.targetId(savedBook1.getId())
+				.targetId(book1Id)
 				.targetType("BOOK")
 				.periodType(DashboardPeriodEnums.ALL_TIME)
 				.score(90.0)
@@ -71,17 +74,54 @@ class DashboardServiceTest extends IntegrationTestSupport {
 				.build();
 
 		Dashboard dashboard2 = Dashboard.builder()
-				.targetId(savedBook2.getId())
+				.targetId(book2Id)
 				.targetType("BOOK")
 				.periodType(DashboardPeriodEnums.ALL_TIME)
 				.score(80.0)
 				.rankingPos(2)
 				.build();
 
-		// rank 2를 먼저 저장 → rank 1을 나중에 저장
-		// ORDER BY created_at DESC 이므로 나중 저장(rank 1)이 먼저 조회됨
-		dashboardRepository.save(dashboard2);
-		dashboardRepository.save(dashboard1);
+		Book book1 = createMockBook(book1Id);
+		Book book2 = createMockBook(book2Id);
+
+		PopularBookDto dto1 = new PopularBookDto(
+				UUID.randomUUID(),
+				book1Id,
+				"자바의 정석",
+				"남궁성",
+				"https://example.com/thumb1.jpg",
+				DashboardPeriodEnums.ALL_TIME,
+				1L,
+				90.0,
+				10L,
+				4.5,
+				Instant.now()
+		);
+
+		PopularBookDto dto2 = new PopularBookDto(
+				UUID.randomUUID(),
+				book2Id,
+				"클린 코드",
+				"로버트 마틴",
+				null,
+				DashboardPeriodEnums.ALL_TIME,
+				2L,
+				80.0,
+				5L,
+				4.0,
+				Instant.now()
+		);
+
+		when(dashboardRepository.findRecentRankings(
+				eq("BOOK"),
+				eq(DashboardPeriodEnums.ALL_TIME),
+				any(PageRequest.class)
+		)).thenReturn(List.of(dashboard1, dashboard2));
+
+		when(bookRepository.findAllById(anyList())).thenReturn(List.of(book1, book2));
+
+		when(dashboardMapper.toPopularBookDto(dashboard1, book1)).thenReturn(dto1);
+		when(dashboardMapper.toPopularBookDto(dashboard2, book2)).thenReturn(dto2);
 
 		// when
 		List<PopularBookDto> response = dashboardService.getPopularBooks();
@@ -91,15 +131,21 @@ class DashboardServiceTest extends IntegrationTestSupport {
 		assertThat(response.get(0).rank()).isEqualTo(1L);
 		assertThat(response.get(0).title()).isEqualTo("자바의 정석");
 		assertThat(response.get(0).author()).isEqualTo("남궁성");
-		assertThat(response.get(0).bookId()).isEqualTo(savedBook1.getId());
+		assertThat(response.get(0).bookId()).isEqualTo(book1Id);
 		assertThat(response.get(0).score()).isEqualTo(90.0);
 		assertThat(response.get(0).thumbnailUrl()).isEqualTo("https://example.com/thumb1.jpg");
 
 		assertThat(response.get(1).rank()).isEqualTo(2L);
 		assertThat(response.get(1).title()).isEqualTo("클린 코드");
 		assertThat(response.get(1).author()).isEqualTo("로버트 마틴");
-		assertThat(response.get(1).bookId()).isEqualTo(savedBook2.getId());
+		assertThat(response.get(1).bookId()).isEqualTo(book2Id);
 		assertThat(response.get(1).score()).isEqualTo(80.0);
 		assertThat(response.get(1).thumbnailUrl()).isNull();
+	}
+
+	private Book createMockBook(UUID id) {
+		Book book = org.mockito.Mockito.mock(Book.class);
+		when(book.getId()).thenReturn(id);
+		return book;
 	}
 }
