@@ -4,6 +4,7 @@ import com.codeit.project.sb08deokhugamteamgwanwoong.controller.support.Controll
 import com.codeit.project.sb08deokhugamteamgwanwoong.dto.review.ReviewCreateRequest;
 import com.codeit.project.sb08deokhugamteamgwanwoong.dto.review.ReviewDto;
 import com.codeit.project.sb08deokhugamteamgwanwoong.dto.review.ReviewUpdateRequest;
+import com.codeit.project.sb08deokhugamteamgwanwoong.entity.Review;
 import com.codeit.project.sb08deokhugamteamgwanwoong.exception.BusinessException;
 import com.codeit.project.sb08deokhugamteamgwanwoong.exception.enums.ReviewErrorCode;
 import org.junit.jupiter.api.DisplayName;
@@ -28,27 +29,18 @@ public class ReviewControllerTest extends ControllerTestSupport {
     @DisplayName("POST /api/reviews - 리뷰 생성 성공")
     void createReview_success() throws Exception {
         //given
+        UUID reviewId = UUID.randomUUID();
+        UUID bookId = UUID.randomUUID();
+        UUID userId = UUID.randomUUID();
+
         ReviewCreateRequest request = new ReviewCreateRequest(
-                UUID.randomUUID(),
-                UUID.randomUUID(),
+                bookId,
+                userId,
                 "test review",
                 5
         );
-        ReviewDto reviewDto = new ReviewDto(
-                UUID.randomUUID(),
-                request.bookId(),
-                "testBook",
-                "https://test-thumbnail.url/image.jpg",
-                request.userId(),
-                "testUser",
-                request.content(),
-                request.rating(),
-                0,
-                0,
-                false,
-                Instant.now(),
-                Instant.now()
-        );
+
+        ReviewDto reviewDto = createReviewDto(reviewId, bookId, userId);
 
         //BDD 모킹
         given(reviewService.createReview(any(ReviewCreateRequest.class))).willReturn(reviewDto);
@@ -97,25 +89,11 @@ public class ReviewControllerTest extends ControllerTestSupport {
         UUID reviewId = UUID.randomUUID();
 
         ReviewUpdateRequest request = new ReviewUpdateRequest(
-                "update test review",
-                2
+                "test review",
+                5
         );
 
-        ReviewDto reviewDto = new ReviewDto(
-                reviewId,
-                bookId,
-                "testBook",
-                "https://test-thumbnail.url/image.jpg",
-                userId,
-                "testUser",
-                request.content(),
-                request.rating(),
-                0,
-                0,
-                false,
-                Instant.now(),
-                Instant.now()
-        );
+        ReviewDto reviewDto = createReviewDto(reviewId, bookId, userId);
 
         //BDD 모킹
         given(reviewService.updateReview(eq(reviewId), any(ReviewUpdateRequest.class), eq(userId)))
@@ -168,6 +146,24 @@ public class ReviewControllerTest extends ControllerTestSupport {
                 argThat(req ->
                         req.rating().equals(request.rating()) && req.content().equals(request.content())),
                 eq(differentUserId)
+        );
+    }
+
+    private ReviewDto createReviewDto(UUID reviewId, UUID bookId, UUID userId) {
+        return new ReviewDto(
+                reviewId,
+                bookId,
+                "testBook",
+                "https://test-thumbnail.url/image.jpg",
+                userId,
+                "testUser",
+                "test review",
+                5,
+                0,
+                0,
+                false,
+                Instant.now(),
+                Instant.now()
         );
     }
 }
