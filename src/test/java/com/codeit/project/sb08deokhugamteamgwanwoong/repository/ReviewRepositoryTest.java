@@ -177,10 +177,9 @@ public class ReviewRepositoryTest extends RepositoryTestSupport {
                 .book(book)
                 .build();
         Review savedReview = reviewRepository.save(review);
-        Review foundReview = reviewRepository.findById(savedReview.getId()).orElseThrow();
 
         //when
-        reviewRepository.deleteById(foundReview.getId());
+        reviewRepository.deleteById(savedReview.getId());
         entityManager.flush();
         entityManager.clear();
 

@@ -1,13 +1,18 @@
 package com.codeit.project.sb08deokhugamteamgwanwoong.dto.review;
 
-public record ReviewDto(
-        Long id,
+import com.fasterxml.jackson.annotation.JsonFormat;
 
-        Long bookId,
+import java.time.Instant;
+import java.util.UUID;
+
+public record ReviewDto(
+        UUID id,
+
+        UUID bookId,
         String bookTitle,
         String bookThumbnailUrl,
 
-        Long userId,
+        UUID userId,
         String userNickname,
 
         String content,
@@ -15,7 +20,9 @@ public record ReviewDto(
         Integer likeCount,
         Integer commentCount,
         boolean likedByMe,
-        String createdAt,
-        String updatedAt
+        @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "yyyy. M. d.", timezone = "Asia/Seoul")
+        Instant createdAt,
+        @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "yyyy. M. d.", timezone = "Asia/Seoul")
+        Instant updatedAt
 ) {
 }
