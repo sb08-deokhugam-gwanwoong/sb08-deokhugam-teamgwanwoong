@@ -13,6 +13,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import java.util.UUID;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -140,4 +141,30 @@ public interface UserApi {
   )
   @PatchMapping("/{userId}")
   ResponseEntity<UserDto> updateUser(@PathVariable @Parameter(description = "사용자 ID", required = true) UUID userId, @RequestBody @Valid UserUpdateRequest request);
+
+  @Operation(
+      summary = "사용자 논리 삭제",
+      description = "사용자를 논리적으로 삭제합니다.",
+      operationId = "deleteUser",
+      responses = {
+          @ApiResponse(
+              responseCode = "204",
+              description = "사용자 삭제 성공"
+          ),
+          @ApiResponse(
+              responseCode = "403",
+              description = "사용자 삭제 권한 없음"
+          ),
+          @ApiResponse(
+              responseCode = "404",
+              description = "사용자 정보 없음"
+          ),
+          @ApiResponse(
+              responseCode = "500",
+              description = "서버 내부 오류"
+          )
+      }
+  )
+  @DeleteMapping("/{userId}")
+  ResponseEntity<Void> deleteUser(@PathVariable @Parameter(description = "사용자 ID", required = true) UUID userId);
 }
