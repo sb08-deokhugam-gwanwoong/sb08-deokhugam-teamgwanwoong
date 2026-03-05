@@ -3,6 +3,7 @@ package com.codeit.project.sb08deokhugamteamgwanwoong.service.impl;
 import com.codeit.project.sb08deokhugamteamgwanwoong.dto.user.UserDto;
 import com.codeit.project.sb08deokhugamteamgwanwoong.dto.user.UserLoginRequest;
 import com.codeit.project.sb08deokhugamteamgwanwoong.dto.user.UserRegisterRequest;
+import com.codeit.project.sb08deokhugamteamgwanwoong.dto.user.UserUpdateRequest;
 import com.codeit.project.sb08deokhugamteamgwanwoong.entity.User;
 import com.codeit.project.sb08deokhugamteamgwanwoong.exception.BusinessException;
 import com.codeit.project.sb08deokhugamteamgwanwoong.exception.enums.UserErrorCode;
@@ -24,17 +25,19 @@ public class UserServiceImpl implements UserService {
   private final UserRepository userRepository;
   private final UserMapper userMapper;
 
+  /**
+   * 회원가입
+   * @param request 회원가입 요청 request
+   * @return UserDto
+   */
   @Override
   @Transactional
   public UserDto create(UserRegisterRequest request) {
 
     log.info("[회원가입 시작] email: {}, nickname: {}", request.email(), request.nickname());
 
-    // 중복 이메일 확인
-    if (userRepository.existsByEmail(request.email())) {
-      log.warn("[회원가입 실패] 이미 존재하는 이메일입니다. email: {}", request.email());
-      throw new BusinessException(UserErrorCode.EMAIL_ALREADY_EXISTS);
-    }
+    validateDuplicateEmail(request.email());
+    validateDuplicateNickname(request.nickname());
 
     User user = User.builder()
         .email(request.email())
@@ -49,6 +52,11 @@ public class UserServiceImpl implements UserService {
     return userMapper.toDto(savedUser);
   }
 
+  /**
+   * 유저 로그인
+   * @param request 로그인 요청 request
+   * @return UserDto
+   */
   @Override
   public UserDto login(UserLoginRequest request) {
 
@@ -65,19 +73,98 @@ public class UserServiceImpl implements UserService {
     return userMapper.toDto(user);
   }
 
+  /**
+   * 유저 조회
+   * @param userId 유저 Id
+   * @return UserDto
+   */
   @Override
   public UserDto getUserById(UUID userId) {
 
     log.info("[유저 조회 시작] userId: {}", userId);
 
-    User user = userRepository.findById(userId)
-        .orElseThrow(() -> {
-          log.warn("[유저 조회 실패] 해당 유저가 존재하지 않습니다. userId: {}", userId);
-          return new BusinessException(UserErrorCode.USER_NOT_FOUND);
-        });
+    User user = findUserById(userId);
 
     log.info("[유저 조회 성공] userId: {}, email: {}", user.getId(), user.getEmail());
 
     return userMapper.toDto(user);
+  }
+
+  /**
+   * 유저 닉네임 수정
+   * @param userId  유저 Id
+   * @param request 유저 수정 요청 request
+   * @return UserDto
+   */
+  @Override
+  @Transactional
+  public UserDto update(UUID userId, UserUpdateRequest request) {
+
+    log.info("[유저 닉네임 수정 시작] userId: {}", userId);
+
+    User user = findUserById(userId);
+
+    if (!user.getNickname().equals(request.nickname())) {
+      validateDuplicateNickname(request.nickname());
+      user.updateNickname(request.nickname());
+    } else {
+      log.info("[유저 닉네임 수정 건너뜀] 기존 닉네임과 동일합니다. userId: {}", userId);
+    }
+
+    log.info("[유저 닉네임 수정 완료] userId: {}, nickname: {}", userId, user.getNickname());
+
+    return userMapper.toDto(user);
+  }
+
+  /**
+   * 유저 논리 삭제
+   * @param userId 유저 Id
+   */
+  @Override
+  @Transactional
+  public void delete(UUID userId) {
+
+    log.info("[유저 논리 삭제 시작] userId: {}", userId);
+
+    User user = findUserById(userId);
+
+    user.delete();
+
+    log.info("[유저 논리 삭제 완료] userId: {}, deletedAt: {}", userId, user.getDeletedAt());
+  }
+
+  /**
+   * 닉네임 중복 검증 (공통 메서드)
+   * @param nickname 닉네임
+   */
+  private void validateDuplicateNickname(String nickname) {
+    if (userRepository.existsByNickname(nickname)) {
+      log.warn("[중복 검증 실패] 이미 존재하는 닉네임입니다. nickname: {}", nickname);
+      throw new BusinessException(UserErrorCode.NICKNAME_ALREADY_EXISTS);
+    }
+  }
+
+  /**
+   * 이메일 중복 검증 (공통 메서드)
+   * @param email 이메일
+   */
+  private void validateDuplicateEmail(String email) {
+    if (userRepository.existsByEmail(email)) {
+      log.warn("[중복 검증 실패] 이미 존재하는 이메일입니다. email: {}", email);
+      throw new BusinessException(UserErrorCode.EMAIL_ALREADY_EXISTS);
+    }
+  }
+
+  /**
+   * 유저 조회 (공통 메서드)
+   * @param userId 유저 Id
+   * @return User
+   */
+  private User findUserById(UUID userId) {
+    return userRepository.findById(userId)
+        .orElseThrow(() -> {
+          log.warn("[유저 조회 실패] 해당 유저가 존재하지 않습니다. userId: {}", userId);
+          return new BusinessException(UserErrorCode.USER_NOT_FOUND);
+        });
   }
 }

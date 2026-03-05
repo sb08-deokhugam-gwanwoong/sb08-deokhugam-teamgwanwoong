@@ -3,6 +3,7 @@ package com.codeit.project.sb08deokhugamteamgwanwoong.controller.docs;
 import com.codeit.project.sb08deokhugamteamgwanwoong.dto.user.UserDto;
 import com.codeit.project.sb08deokhugamteamgwanwoong.dto.user.UserLoginRequest;
 import com.codeit.project.sb08deokhugamteamgwanwoong.dto.user.UserRegisterRequest;
+import com.codeit.project.sb08deokhugamteamgwanwoong.dto.user.UserUpdateRequest;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.media.Content;
@@ -13,6 +14,7 @@ import jakarta.validation.Valid;
 import java.util.UUID;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -103,4 +105,39 @@ public interface UserApi {
   )
   @GetMapping("/{userId}")
   ResponseEntity<UserDto> getUser(@PathVariable @Parameter(description = "사용자 ID", required = true) UUID userId);
+
+  @Operation(
+      summary = "사용자 정보 수정",
+      description = "사용자의 닉네임을 수정합니다.",
+      operationId = "updateUser",
+      responses = {
+          @ApiResponse(
+              responseCode = "200",
+              description = "사용자 정보 수정 성공",
+              content = @Content(schema = @Schema(implementation = UserDto.class))
+          ),
+          @ApiResponse(
+              responseCode = "400",
+              description = "잘못된 요청 (입력값 검증 실패)",
+              content = @Content(schema = @Schema(implementation = UserDto.class))
+          ),
+          @ApiResponse(
+              responseCode = "403",
+              description = "사용자 정보 수정 권한 없음",
+              content = @Content(schema = @Schema(implementation = UserDto.class))
+          ),
+          @ApiResponse(
+              responseCode = "404",
+              description = "사용자 정보 없음",
+              content = @Content(schema = @Schema(implementation = UserDto.class))
+          ),
+          @ApiResponse(
+              responseCode = "500",
+              description = "서버 내부 오류",
+              content = @Content(schema = @Schema(implementation = UserDto.class))
+          )
+      }
+  )
+  @PatchMapping("/{userId}")
+  ResponseEntity<UserDto> updateUser(@PathVariable @Parameter(description = "사용자 ID", required = true) UUID userId, @RequestBody @Valid UserUpdateRequest request);
 }
