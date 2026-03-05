@@ -43,3 +43,12 @@ logging:
     org.hibernate.SQL: debug
     # 바인딩되는 파라미터 출력
     org.hibernate.orm.jdbc.bind: trace
+
+# Naver API
+naver:
+  api:
+    client-id: ${NAVER_CLIENT_ID}
+    client-secret: ${NAVER_CLIENT_SECRET}
+  url:
+    search:
+      book: "https://openapi.naver.com/v1/search/book.json"
