@@ -32,4 +32,18 @@ public class ReviewController {
                 .status(HttpStatus.CREATED)
                 .body(reviewDto);
     }
+
+    @PatchMapping("/{reviewId}")
+    public ResponseEntity<ReviewDto> update(
+            @PathVariable("reviewId") UUID reviewId,
+            @RequestHeader("Deokhugam-Request-User-ID") UUID requestUserId,
+            @Valid @RequestBody ReviewUpdateRequest request
+    ) {
+        log.info("Controller: 리뷰 수정 요청 - ID: {}", reviewId);
+        ReviewDto reviewDto = reviewService.update(reviewId, request, requestUserId);
+        log.info("Controller: 리뷰 수정 완료 - ID: {}", reviewId);
+        return ResponseEntity
+                .status(HttpStatus.OK)
+                .body(reviewDto);
+    }
 }
