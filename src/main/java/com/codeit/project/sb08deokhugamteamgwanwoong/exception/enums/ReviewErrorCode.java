@@ -10,7 +10,8 @@ import org.springframework.http.HttpStatus;
 public enum ReviewErrorCode implements ErrorCode {
     REVIEW_NOT_FOUND(4001, "NOT_FOUND", HttpStatus.NOT_FOUND, "리뷰를 찾을 수 없습니다."),
     REVIEW_ALREADY_EXISTS(4002, "ALREADY_EXISTS", HttpStatus.CONFLICT, "이미 작성된 리뷰가 존재합니다."),
-    REVIEW_EDIT_PERMISSION_DENIED(4003, "EDIT_PERMISSION_DENIED", HttpStatus.FORBIDDEN, "리뷰 수정 권한이 없습니다.");
+    REVIEW_EDIT_PERMISSION_DENIED(4003, "EDIT_PERMISSION_DENIED", HttpStatus.FORBIDDEN, "리뷰 수정 권한이 없습니다."),
+    REVIEW_DELETE_PERMISSION_DENIED(4004, "DELETE_PERMISSION_DENIED", HttpStatus.FORBIDDEN, "리뷰 삭제 권한이 없습니다.");
 
     private final int numeric;
     private final String errorKey;
