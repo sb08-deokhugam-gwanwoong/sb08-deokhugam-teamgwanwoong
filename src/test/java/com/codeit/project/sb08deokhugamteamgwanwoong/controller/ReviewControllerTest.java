@@ -1,5 +1,6 @@
-package com.codeit.project.sb08deokhugamteamgwanwoong.controller.support;
+package com.codeit.project.sb08deokhugamteamgwanwoong.controller;
 
+import com.codeit.project.sb08deokhugamteamgwanwoong.controller.support.ControllerTestSupport;
 import com.codeit.project.sb08deokhugamteamgwanwoong.dto.review.ReviewCreateRequest;
 import com.codeit.project.sb08deokhugamteamgwanwoong.dto.review.ReviewDto;
 import com.codeit.project.sb08deokhugamteamgwanwoong.dto.review.ReviewUpdateRequest;
