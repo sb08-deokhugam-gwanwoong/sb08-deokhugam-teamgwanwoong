@@ -2,7 +2,7 @@ package com.codeit.project.sb08deokhugamteamgwanwoong.service.external;
 
 import com.codeit.project.sb08deokhugamteamgwanwoong.dto.book.NaverBookDto;
 import com.codeit.project.sb08deokhugamteamgwanwoong.dto.external.naver.NaverApiResponse;
-import com.codeit.project.sb08deokhugamteamgwanwoong.dto.external.naver.NaverItem;
+import com.codeit.project.sb08deokhugamteamgwanwoong.dto.external.naver.NaverBookItemResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -56,16 +56,16 @@ public class NaverBookProvider implements BookMetadataProvider<NaverBookDto> {
             );
 
             NaverApiResponse body = response.getBody();
-            if (body != null && body.getItems() != null && !body.getItems().isEmpty()) {
-                NaverItem item = body.getItems().get(0);
+            if (body != null && body.items() != null && !body.items().isEmpty()) {
+                NaverBookItemResponse item = body.items().get(0);
                 return NaverBookDto.builder()
-                    .title(item.getTitle())
-                    .author(item.getAuthor())
-                    .publisher(item.getPublisher())
-                    .isbn(item.getIsbn())
-                    .description(item.getDescription())
-                    .thumbnailImage(item.getImage())
-                    .publishedDate(item.getPubdate())
+                    .title(item.title())
+                    .author(item.author())
+                    .publisher(item.publisher())
+                    .isbn(item.isbn())
+                    .description(item.description())
+                    .thumbnailImage(item.image())
+                    .publishedDate(item.pubdate())
                     .build();
             }
         } catch (Exception e) {
