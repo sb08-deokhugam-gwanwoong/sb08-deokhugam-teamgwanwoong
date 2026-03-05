@@ -2,6 +2,7 @@ package com.codeit.project.sb08deokhugamteamgwanwoong.service.impl;
 
 import com.codeit.project.sb08deokhugamteamgwanwoong.dto.review.ReviewCreateRequest;
 import com.codeit.project.sb08deokhugamteamgwanwoong.dto.review.ReviewDto;
+import com.codeit.project.sb08deokhugamteamgwanwoong.dto.review.ReviewLikeDto;
 import com.codeit.project.sb08deokhugamteamgwanwoong.dto.review.ReviewUpdateRequest;
 import com.codeit.project.sb08deokhugamteamgwanwoong.entity.Book;
 import com.codeit.project.sb08deokhugamteamgwanwoong.entity.Review;
@@ -102,13 +103,14 @@ public class ReviewServiceImpl implements ReviewService {
 
         // 명시적으로 save() 호출해서 변경된 상태를 DB에 강제로 반영
         reviewRepository.save(review);
+        log.info("Service: 리뷰 논리 삭제 로직 성공 - reviewId: {}, requestUserId: {}", reviewId, requestUserId);
     }
 
     @Override
     @Transactional
     public void hardDeleteReview(UUID reviewId, UUID requestUserId) {
         log.info("Service: 리뷰 물리 삭제 로직 시작 - reviewId: {}, requestUserId: {}", reviewId, requestUserId);
-        Review review = reviewRepository.findById(reviewId)
+        Review review = reviewRepository.findByIdIncludeDeleted(reviewId)
                 .orElseThrow(() -> new BusinessException(ReviewErrorCode.REVIEW_NOT_FOUND));
 
         if (!review.getUser().getId().equals(requestUserId)) {
@@ -118,7 +120,23 @@ public class ReviewServiceImpl implements ReviewService {
         // 리뷰와 연관된 댓글 한번에 물리 삭제(벌크 연산)
         commentRepository.hardDeleteAllByReviewId(reviewId);
 
-        // 물리 삭제
-        reviewRepository.deleteById(reviewId);
+        // @SQLRestriction을 통해서 deleted_at이 null이 아닌 경우 삭제 시 해당 Review를 찾을 수 없음
+        reviewRepository.hardDeleteById(reviewId);
+        log.info("Service: 리뷰 물리 삭제 로직 성공 - reviewId: {}, requestUserId: {}", reviewId, requestUserId);
     }
+
+//    @Override
+//    public ReviewLikeDto createReviewLike(UUID reviewId, UUID requestUserId) {
+//        log.info("Service: 리뷰 좋아요 로직 시작 - reviewId: {}, requestUserId: {}", reviewId, requestUserId);
+//        Review review =  reviewRepository.findById(reviewId)
+//                .orElseThrow(() -> new BusinessException(ReviewErrorCode.REVIEW_NOT_FOUND));
+//
+//        if (!review.getUser().getId().equals(requestUserId)) {
+//            throw new BusinessException(ReviewErrorCode.REVIEW_EDIT_PERMISSION_DENIED);
+//        }
+//
+//        review.increaseLikeCount();
+//
+//
+//    }
 }
