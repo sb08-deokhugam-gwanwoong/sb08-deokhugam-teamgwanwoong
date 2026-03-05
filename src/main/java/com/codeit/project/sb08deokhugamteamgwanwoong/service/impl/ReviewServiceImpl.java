@@ -66,6 +66,17 @@ public class ReviewServiceImpl implements ReviewService {
     @Override
     @Transactional
     public ReviewDto update(UUID reviewId, ReviewUpdateRequest request, UUID requestUserId) {
+        log.info("Service: 리뷰 수정 로직 시작 - reviewId: {}, requestUserId: {}", reviewId, requestUserId);
+        Review review = reviewRepository.findById(reviewId)
+                .orElseThrow(() -> new BusinessException(ReviewErrorCode.REVIEW_NOT_FOUND));
 
+        if (!review.getUser().getId().equals(requestUserId)) {
+            throw new BusinessException(ReviewErrorCode.REVIEW_EDIT_PERMISSION_DENIED);
+        }
+
+        review.update(request.rating(), request.content());
+        log.info("Service: 리뷰 수정 완료 - ID: {}", reviewId);
+
+        return reviewMapper.toDto(review, false, review.getBook().getThumbnailUrl());
     }
 }

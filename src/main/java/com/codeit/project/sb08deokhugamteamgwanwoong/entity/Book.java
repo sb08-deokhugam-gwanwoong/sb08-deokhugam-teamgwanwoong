@@ -45,12 +45,12 @@ public class Book extends BaseRemovableEntity {
 
     @Builder
     public Book(String title, String author, String isbn, String publisher, LocalDate publishedDate, String description, String thumbnailUrl) {
-        this.title = title;
-        this.author = author;
-        this.isbn = isbn;
-        this.publisher = publisher;
-        this.publishedDate = publishedDate;
-        this.description = description;
-        this.thumbnailUrl = thumbnailUrl;
+      this.title = title;
+      this.author = author;
+      this.isbn = isbn;
+      this.publisher = publisher;
+      this.publishedDate = publishedDate;
+      this.description = description;
+      this.thumbnailUrl = thumbnailUrl;
     }
 }
