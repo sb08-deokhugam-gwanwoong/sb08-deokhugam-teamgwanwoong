@@ -1,6 +1,8 @@
 package com.codeit.project.sb08deokhugamteamgwanwoong.controller.support;
 
 import com.codeit.project.sb08deokhugamteamgwanwoong.config.MDCLoggingInterceptor;
+import com.codeit.project.sb08deokhugamteamgwanwoong.controller.ReviewController;
+import com.codeit.project.sb08deokhugamteamgwanwoong.controller.UserController;
 import com.codeit.project.sb08deokhugamteamgwanwoong.mapper.BookMapper;
 import com.codeit.project.sb08deokhugamteamgwanwoong.mapper.CommentMapper;
 import com.codeit.project.sb08deokhugamteamgwanwoong.mapper.NotificationMapper;
@@ -19,6 +21,8 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
 @WebMvcTest(controllers = {
+        UserController.class,
+        ReviewController.class,
 })
 @Import(MDCLoggingInterceptor.class)
 public abstract class ControllerTestSupport {
