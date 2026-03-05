@@ -69,7 +69,6 @@ class DashboardServiceTest extends IntegrationTestSupport {
 				.score(90.0)
 				.rankingPos(1)
 				.build();
-		dashboardRepository.save(dashboard1);
 
 		Dashboard dashboard2 = Dashboard.builder()
 				.targetId(savedBook2.getId())
@@ -78,7 +77,11 @@ class DashboardServiceTest extends IntegrationTestSupport {
 				.score(80.0)
 				.rankingPos(2)
 				.build();
+
+		// rank 2를 먼저 저장 → rank 1을 나중에 저장
+		// ORDER BY created_at DESC 이므로 나중 저장(rank 1)이 먼저 조회됨
 		dashboardRepository.save(dashboard2);
+		dashboardRepository.save(dashboard1);
 
 		// when
 		List<PopularBookDto> response = dashboardService.getPopularBooks();
