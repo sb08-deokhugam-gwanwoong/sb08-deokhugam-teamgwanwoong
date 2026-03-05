@@ -4,6 +4,7 @@ import com.codeit.project.sb08deokhugamteamgwanwoong.dto.dashboard.PopularBookDt
 import com.codeit.project.sb08deokhugamteamgwanwoong.entity.Book;
 import com.codeit.project.sb08deokhugamteamgwanwoong.entity.Dashboard;
 import com.codeit.project.sb08deokhugamteamgwanwoong.entity.enums.DashboardPeriodEnums;
+import com.codeit.project.sb08deokhugamteamgwanwoong.mapper.DashboardMapper;
 import com.codeit.project.sb08deokhugamteamgwanwoong.repository.BookRepository;
 import com.codeit.project.sb08deokhugamteamgwanwoong.repository.DashboardRepository;
 import com.codeit.project.sb08deokhugamteamgwanwoong.service.DashboardService;
@@ -23,6 +24,7 @@ public class DashboardServiceImpl implements DashboardService {
 
 	private final DashboardRepository dashboardRepository;
 	private final BookRepository bookRepository;
+	private final DashboardMapper dashboardMapper;
 
 	@Override
 	public List<PopularBookDto> getPopularBooks() {
@@ -47,24 +49,8 @@ public class DashboardServiceImpl implements DashboardService {
 
 		return rankings.stream()
 				.filter(r -> bookMap.containsKey(r.getTargetId()))
-				.map(r -> toPopularBookDto(r, bookMap.get(r.getTargetId())))
+				.map(r -> dashboardMapper.toPopularBookDto(r, bookMap.get(r.getTargetId())))
 				.toList();
-	}
-
-	private PopularBookDto toPopularBookDto(Dashboard d, Book book) {
-		return new PopularBookDto(
-				d.getId(),
-				book.getId(),
-				book.getTitle(),
-				book.getAuthor(),
-				book.getThumbnailUrl(),
-				d.getPeriodType(),
-				d.getRankingPos().longValue(),
-				d.getScore(),
-				book.getReviewCount().longValue(),
-				book.getRating(),
-				d.getCreatedAt()
-		);
 	}
 }
 
