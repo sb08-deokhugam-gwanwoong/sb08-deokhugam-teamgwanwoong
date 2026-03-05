@@ -9,6 +9,15 @@ spring:
     driver-class-name: org.h2.Driver
     hikari:
       connection-init-sql: "" # H2에서는 초기화 SQL 실행 안 함
+  cloud:
+    aws:
+      s3:
+        bucket: ${AWS_BUCKET_NAME}
+      region:
+        static: ${AWS_REGION}
+      credentials:
+        access-key: ${AWS_ACCESS_KEY}
+        secret-key: ${AWS_SECRET_KEY}
 
   # Spring Boot의 SQL 초기화 기능 끄기 (Hibernate 기능 사용)
   sql:
