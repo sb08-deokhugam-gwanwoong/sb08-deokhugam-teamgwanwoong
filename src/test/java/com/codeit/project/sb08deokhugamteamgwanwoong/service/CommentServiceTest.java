@@ -95,7 +95,6 @@ public class CommentServiceTest {
   @Test
   @DisplayName("댓글 작성 성공")
   void createComment_Success() {
-
     //given
     CommentCreateRequest request = new CommentCreateRequest(reviewId, userId, "테스트 댓글입니다");
 
@@ -137,5 +136,23 @@ public class CommentServiceTest {
     //then
     assertThat(updatedComment.content()).isEqualTo("수정된 댓글 내용입니다.");
     assertThat(updatedComment.userNickname()).isEqualTo("웅제");
+  }
+
+  @Test
+  @DisplayName("댓글 수정 실패 - 작성자가 아닐 경우 예외 발생")
+  void updateComment_Fail_Unauthorized() {
+    // given
+    CommentUpdateRequest updateRequest = new CommentUpdateRequest("불법 수정 시도!");
+
+    UUID commentId = comment.getId();
+    UUID anotherUserId = UUID.randomUUID();
+
+    given(commentRepository.findById(commentId)).willReturn(Optional.of(comment));
+
+    // when & then
+    assertThatThrownBy(() ->
+        commentService.update(commentId, anotherUserId, updateRequest))
+        .isInstanceOf(RuntimeException.class)
+        .hasMessage("UNAUTHORIZED");
   }
 }
