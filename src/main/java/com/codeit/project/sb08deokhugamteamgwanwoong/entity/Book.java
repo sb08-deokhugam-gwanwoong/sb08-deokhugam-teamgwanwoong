@@ -44,7 +44,7 @@ public class Book extends BaseRemovableEntity {
     private Double rating = 0.0;
 
     @Builder
-    public Book(String title, String author, String isbn, String publisher, LocalDate publishedDate, String description, String thumbnailUrl, Integer reviewCount, Double rating) {
+    public Book(String title, String author, String isbn, String publisher, LocalDate publishedDate, String description, String thumbnailUrl) {
       this.title = title;
       this.author = author;
       this.isbn = isbn;
@@ -52,7 +52,5 @@ public class Book extends BaseRemovableEntity {
       this.publishedDate = publishedDate;
       this.description = description;
       this.thumbnailUrl = thumbnailUrl;
-      this.reviewCount = reviewCount != null ? reviewCount : 0; // null 방지
-      this.rating = rating != null ? rating : 0.0; // null 방지
     }
 }

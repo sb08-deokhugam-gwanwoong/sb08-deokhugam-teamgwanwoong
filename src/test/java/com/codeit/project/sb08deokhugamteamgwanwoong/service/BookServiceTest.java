@@ -9,6 +9,8 @@ import static org.mockito.Mockito.verify;
 import com.codeit.project.sb08deokhugamteamgwanwoong.dto.book.BookCreateRequest;
 import com.codeit.project.sb08deokhugamteamgwanwoong.dto.book.BookDto;
 import com.codeit.project.sb08deokhugamteamgwanwoong.entity.Book;
+import com.codeit.project.sb08deokhugamteamgwanwoong.exception.BusinessException;
+import com.codeit.project.sb08deokhugamteamgwanwoong.mapper.BookMapper;
 import com.codeit.project.sb08deokhugamteamgwanwoong.repository.BookRepository;
 import com.codeit.project.sb08deokhugamteamgwanwoong.service.impl.BookServiceImpl;
 import java.time.LocalDate;
@@ -28,6 +30,17 @@ public class BookServiceTest {
 
   @Mock
   private BookRepository bookRepository;
+
+  @Mock
+  private BookMapper bookMapper = new BookMapper() {
+    @Override
+    public BookDto toDto(Book book) {
+      return BookDto.builder()
+          .title(book.getTitle())
+          .isbn(book.getIsbn())
+          .build();
+    }
+  };
 
   @DisplayName("도서를 정상적으로 등록할 수 있다.")
   @Test
@@ -53,6 +66,9 @@ public class BookServiceTest {
 
       return book;
     });
+
+    // Mapper mocking
+    given(bookMapper.toDto(any(Book.class))).willReturn(BookDto.builder().title("자바의 정석").isbn("9788994492032").build());
 
     // when
     BookDto bookDto = bookService.createBook(request, thumbnailImage);
@@ -83,7 +99,7 @@ public class BookServiceTest {
 
     // when & then
     assertThatThrownBy(() -> bookService.createBook(request, null))
-        .isInstanceOf(IllegalArgumentException.class) // 커스텀 예외 처리 예정
+        .isInstanceOf(BusinessException.class) // 커스텀 예외 처리 예정
         .hasMessageContaining("이미 존재하는 ISBN입니다.");
   }
 }
