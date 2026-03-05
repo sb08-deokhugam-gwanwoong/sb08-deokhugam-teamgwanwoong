@@ -46,4 +46,30 @@ public class ReviewController {
                 .status(HttpStatus.OK)
                 .body(reviewDto);
     }
+
+    @DeleteMapping("/{reviewId}")
+    public ResponseEntity<Void> softDelete(
+            @PathVariable("reviewId") UUID reviewId,
+            @RequestHeader("Deokhugam-Request-User-ID") UUID requestUserId
+    ) {
+        log.info("Controller: 리뷰 논리 삭제 요청 - ID: {}", reviewId);
+        reviewService.softDeleteReview(reviewId, requestUserId);
+        log.info("Controller: 리뷰 논리 삭제 완료 - ID: {}", reviewId);
+        return ResponseEntity
+                .status(HttpStatus.NO_CONTENT)
+                .build();
+    }
+
+    @DeleteMapping("/{reviewId}/hard")
+    public ResponseEntity<Void> hardDeleteHard(
+            @PathVariable("reviewId") UUID reviewId,
+            @RequestHeader("Deokhugam-Request-User-ID") UUID requestUserId
+    ) {
+        log.info("Controller: 리뷰 물리 삭제 요청 - ID: {}", reviewId);
+        reviewService.hardDeleteReview(reviewId, requestUserId);
+        log.info("Controller: 리뷰 물리 삭제 성공 - ID: {}", reviewId);
+        return ResponseEntity
+                .status(HttpStatus.NO_CONTENT)
+                .build();
+    }
 }

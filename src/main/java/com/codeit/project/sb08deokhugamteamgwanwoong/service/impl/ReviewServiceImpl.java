@@ -10,6 +10,7 @@ import com.codeit.project.sb08deokhugamteamgwanwoong.exception.BusinessException
 import com.codeit.project.sb08deokhugamteamgwanwoong.exception.enums.ReviewErrorCode;
 import com.codeit.project.sb08deokhugamteamgwanwoong.mapper.ReviewMapper;
 import com.codeit.project.sb08deokhugamteamgwanwoong.repository.BookRepository;
+import com.codeit.project.sb08deokhugamteamgwanwoong.repository.CommentRepository;
 import com.codeit.project.sb08deokhugamteamgwanwoong.repository.ReviewRepository;
 import com.codeit.project.sb08deokhugamteamgwanwoong.repository.UserRepository;
 import com.codeit.project.sb08deokhugamteamgwanwoong.service.ReviewService;
@@ -29,11 +30,12 @@ public class ReviewServiceImpl implements ReviewService {
     private final ReviewRepository reviewRepository;
     private final UserRepository userRepository;
     private final BookRepository bookRepository;
+    private final CommentRepository commentRepository;
     private final ReviewMapper reviewMapper;
 
     @Override
     @Transactional
-    public ReviewDto create(ReviewCreateRequest request) {
+    public ReviewDto createReview(ReviewCreateRequest request) {
         UUID bookId = request.bookId();
         UUID userId = request.userId();
 
@@ -65,7 +67,7 @@ public class ReviewServiceImpl implements ReviewService {
 
     @Override
     @Transactional
-    public ReviewDto update(UUID reviewId, ReviewUpdateRequest request, UUID requestUserId) {
+    public ReviewDto updateReview(UUID reviewId, ReviewUpdateRequest request, UUID requestUserId) {
         log.info("Service: 리뷰 수정 로직 시작 - reviewId: {}, requestUserId: {}", reviewId, requestUserId);
         Review review = reviewRepository.findById(reviewId)
                 .orElseThrow(() -> new BusinessException(ReviewErrorCode.REVIEW_NOT_FOUND));
@@ -78,5 +80,41 @@ public class ReviewServiceImpl implements ReviewService {
         log.info("Service: 리뷰 수정 완료 - ID: {}", reviewId);
 
         return reviewMapper.toDto(review, false, review.getBook().getThumbnailUrl());
+    }
+
+    @Override
+    @Transactional
+    public void softDeleteReview(UUID reviewId, UUID requestUserId) {
+        log.info("Service: 리뷰 논리 삭제 로직 시작 - reviewId: {}, requestUserId: {}", reviewId, requestUserId);
+        Review review = reviewRepository.findById(reviewId)
+                .orElseThrow(() -> new BusinessException(ReviewErrorCode.REVIEW_NOT_FOUND));
+
+        if (!review.getUser().getId().equals(requestUserId)) {
+            throw new BusinessException(ReviewErrorCode.REVIEW_EDIT_PERMISSION_DENIED);
+        }
+
+        // 리뷰와 연관된 댓글 한번에 논리 삭제(벌크 연산)
+        commentRepository.softDeleteAllByReviewId(reviewId);
+
+        // 논리 삭제를 위해 deletedAt 갱신
+        review.delete();
+    }
+
+    @Override
+    @Transactional
+    public void hardDeleteReview(UUID reviewId, UUID requestUserId) {
+        log.info("Service: 리뷰 물리 삭제 로직 시작 - reviewId: {}, requestUserId: {}", reviewId, requestUserId);
+        Review review = reviewRepository.findById(reviewId)
+                .orElseThrow(() -> new BusinessException(ReviewErrorCode.REVIEW_NOT_FOUND));
+
+        if (!review.getUser().getId().equals(requestUserId)) {
+            throw new BusinessException(ReviewErrorCode.REVIEW_EDIT_PERMISSION_DENIED);
+        }
+
+        // 리뷰와 연관된 댓글 한번에 물리 삭제(벌크 연산)
+        commentRepository.hardDeleteAllByReviewId(reviewId);
+
+        // 물리 삭제
+        reviewRepository.deleteById(reviewId);
     }
 }

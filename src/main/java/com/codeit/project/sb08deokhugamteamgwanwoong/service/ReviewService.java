@@ -7,6 +7,8 @@ import com.codeit.project.sb08deokhugamteamgwanwoong.dto.review.ReviewUpdateRequ
 import java.util.UUID;
 
 public interface ReviewService {
-    ReviewDto create(ReviewCreateRequest request);
-    ReviewDto update(UUID reviewId, ReviewUpdateRequest request, UUID currentUserId);
+    ReviewDto createReview(ReviewCreateRequest request);
+    ReviewDto updateReview(UUID reviewId, ReviewUpdateRequest request, UUID requestUserId);
+    void softDeleteReview(UUID reviewId,  UUID requestUserId);
+    void hardDeleteReview(UUID reviewId,  UUID requestUserId);
 }
