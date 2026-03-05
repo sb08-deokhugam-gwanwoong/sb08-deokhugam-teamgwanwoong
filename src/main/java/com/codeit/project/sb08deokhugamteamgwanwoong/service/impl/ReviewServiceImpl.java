@@ -19,6 +19,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.Instant;
 import java.util.UUID;
 
 @Slf4j
@@ -94,7 +95,7 @@ public class ReviewServiceImpl implements ReviewService {
         }
 
         // 리뷰와 연관된 댓글 한번에 논리 삭제(벌크 연산)
-        commentRepository.softDeleteAllByReviewId(reviewId);
+        commentRepository.softDeleteAllByReviewId(reviewId, Instant.now());
 
         // 논리 삭제를 위해 deletedAt 갱신
         review.delete();
