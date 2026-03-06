@@ -53,4 +53,9 @@ public class Book extends BaseRemovableEntity {
       this.description = description;
       this.thumbnailUrl = thumbnailUrl;
     }
+
+  // 썸네일 이미지 수정
+  public void updateThumbnailUrl(String thumbnailUrl) {
+      if (thumbnailUrl != null) this.thumbnailUrl = thumbnailUrl;
+  }
 }
