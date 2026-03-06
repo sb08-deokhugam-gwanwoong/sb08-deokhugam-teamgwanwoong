@@ -1,9 +1,6 @@
 package com.codeit.project.sb08deokhugamteamgwanwoong.controller;
 
-import com.codeit.project.sb08deokhugamteamgwanwoong.dto.review.ReviewCreateRequest;
-import com.codeit.project.sb08deokhugamteamgwanwoong.dto.review.ReviewDto;
-import com.codeit.project.sb08deokhugamteamgwanwoong.dto.review.ReviewLikeDto;
-import com.codeit.project.sb08deokhugamteamgwanwoong.dto.review.ReviewUpdateRequest;
+import com.codeit.project.sb08deokhugamteamgwanwoong.dto.review.*;
 import com.codeit.project.sb08deokhugamteamgwanwoong.service.ReviewService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -22,6 +19,19 @@ public class ReviewController {
 
     private final ReviewService reviewService;
 
+    @GetMapping
+    public ResponseEntity<CursorPageResponseReviewDto> findAll(
+            @RequestHeader("Deokhugam-Request-User-ID") UUID requestUserId,
+            @ModelAttribute ReviewPageRequest request
+    ) {
+        log.info("Controller: 리뷰 목록 조회 요청");
+        CursorPageResponseReviewDto reviewDto = reviewService.findAllReview(request, requestUserId);
+        log.info("Controller: 리뷰 목록 조회 완료");
+        return ResponseEntity
+                .status(HttpStatus.OK)
+                .body(reviewDto);
+    }
+
     @PostMapping
     public ResponseEntity<ReviewDto> create(
             @Valid @RequestBody ReviewCreateRequest request
@@ -34,15 +44,27 @@ public class ReviewController {
                 .body(reviewDto);
     }
 
-    @PatchMapping("/{reviewId}")
-    public ResponseEntity<ReviewDto> update(
+    @PostMapping("/{reviewId}/like")
+    public ResponseEntity<ReviewLikeDto> createReviewLike(
             @PathVariable("reviewId") UUID reviewId,
-            @RequestHeader("Deokhugam-Request-User-ID") UUID requestUserId,
-            @Valid @RequestBody ReviewUpdateRequest request
+            @RequestHeader("Deokhugam-Request-User-ID") UUID requestUserId
     ) {
-        log.info("Controller: 리뷰 수정 요청 - ID: {}, UserId: {}", reviewId, requestUserId);
-        ReviewDto reviewDto = reviewService.updateReview(reviewId, request, requestUserId);
-        log.info("Controller: 리뷰 수정 완료 - ID: {}, UserId: {}", reviewId, requestUserId);
+        log.info("Controller: 리뷰 좋아요 요청 - ID: {}, UserId: {}", reviewId, requestUserId);
+        ReviewLikeDto reviewLikeDto = reviewService.createReviewLike(reviewId, requestUserId);
+        log.info("Controller: 리뷰 좋아요 성공 - ID: {}, UserId: {}", reviewId, requestUserId);
+        return ResponseEntity
+                .status(HttpStatus.CREATED)
+                .body(reviewLikeDto);
+    }
+
+    @GetMapping("/{reviewId}")
+    public ResponseEntity<ReviewDto> findDetail(
+            @PathVariable("reviewId") UUID reviewId,
+            @RequestHeader("Deokhugam-Request-User-ID") UUID requestUserId
+    ) {
+        log.info("Controller: 리뷰 상세 정보 요청 - ID: {}, UserId: {}", reviewId, requestUserId);
+        ReviewDto reviewDto = reviewService.findDetailReview(reviewId, requestUserId);
+        log.info("Controller: 리뷰 상세 정보 성공 - ID: {}, UserId: {}", reviewId, requestUserId);
         return ResponseEntity
                 .status(HttpStatus.OK)
                 .body(reviewDto);
@@ -61,6 +83,20 @@ public class ReviewController {
                 .build();
     }
 
+    @PatchMapping("/{reviewId}")
+    public ResponseEntity<ReviewDto> update(
+            @PathVariable("reviewId") UUID reviewId,
+            @RequestHeader("Deokhugam-Request-User-ID") UUID requestUserId,
+            @Valid @RequestBody ReviewUpdateRequest request
+    ) {
+        log.info("Controller: 리뷰 수정 요청 - ID: {}, UserId: {}", reviewId, requestUserId);
+        ReviewDto reviewDto = reviewService.updateReview(reviewId, request, requestUserId);
+        log.info("Controller: 리뷰 수정 완료 - ID: {}, UserId: {}", reviewId, requestUserId);
+        return ResponseEntity
+                .status(HttpStatus.OK)
+                .body(reviewDto);
+    }
+
     @DeleteMapping("/{reviewId}/hard")
     public ResponseEntity<Void> hardDeleteHard(
             @PathVariable("reviewId") UUID reviewId,
@@ -72,18 +108,5 @@ public class ReviewController {
         return ResponseEntity
                 .status(HttpStatus.NO_CONTENT)
                 .build();
-    }
-
-    @PostMapping("/{reviewId}/like")
-    public ResponseEntity<ReviewLikeDto> createReviewLike(
-            @PathVariable("reviewId") UUID reviewId,
-            @RequestHeader("Deokhugam-Request-User-ID") UUID requestUserId
-    ) {
-        log.info("Controller: 리뷰 좋아요 요청 - ID: {}, UserId: {}", reviewId, requestUserId);
-        ReviewLikeDto reviewLikeDto = reviewService.createReviewLike(reviewId, requestUserId);
-        log.info("Controller: 리뷰 좋아요 성공 - ID: {}, UserId: {}", reviewId, requestUserId);
-        return ResponseEntity
-                .status(HttpStatus.CREATED)
-                .body(reviewLikeDto);
     }
 }
