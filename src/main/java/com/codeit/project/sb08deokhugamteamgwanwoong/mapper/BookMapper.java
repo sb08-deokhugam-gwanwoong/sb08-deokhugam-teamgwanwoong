@@ -13,8 +13,4 @@ import org.mapstruct.ReportingPolicy;
 public interface BookMapper {
 
     BookDto toDto(Book book);
-
-    // request에서 null인 필드는 무시하고, 값이 있는 것만 Book(엔티티)에 덮어 씌우기
-    @BeanMapping(nullValuePropertyMappingStrategy = NullValuePropertyMappingStrategy.IGNORE)
-    void updateBookFromRequest(BookUpdateRequest request, @MappingTarget Book book);
 }

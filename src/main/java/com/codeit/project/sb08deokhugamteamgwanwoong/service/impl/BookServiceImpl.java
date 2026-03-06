@@ -68,7 +68,7 @@ public class BookServiceImpl implements BookService {
 
     // MapStruct로 들어온 데이터 중 null이 아닌 값을 엔티티로 덮어씌움
     if (request != null) {
-      bookMapper.updateBookFromRequest(request, book);
+      book.update(request);
     }
 
     // 썸네일 이미지가 새로 갱신되면, S3에 업로드 후 URL 업데이트
