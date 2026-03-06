@@ -24,7 +24,7 @@ public class UserController implements UserApi {
   private final UserService userService;
 
   @Override
-  public ResponseEntity<UserDto> createUser(@Valid @RequestBody UserRegisterRequest request) {
+  public ResponseEntity<UserDto> createUser(@RequestBody @Valid UserRegisterRequest request) {
 
     UserDto response = userService.create(request);
 
@@ -32,7 +32,7 @@ public class UserController implements UserApi {
   }
 
   @Override
-  public ResponseEntity<UserDto> login(@Valid @RequestBody UserLoginRequest request) {
+  public ResponseEntity<UserDto> login(@RequestBody @Valid UserLoginRequest request) {
 
     UserDto response = userService.login(request);
 
@@ -48,7 +48,7 @@ public class UserController implements UserApi {
   }
 
   @Override
-  public ResponseEntity<UserDto> updateUser(@PathVariable UUID userId, @Valid @RequestBody UserUpdateRequest request) {
+  public ResponseEntity<UserDto> updateUser(@PathVariable UUID userId, @RequestBody @Valid UserUpdateRequest request) {
 
     UserDto response = userService.update(userId, request);
 
