@@ -15,6 +15,6 @@ public class WebMvcConfig implements WebMvcConfigurer {
   @Override
   public void addInterceptors(InterceptorRegistry registry) {
     registry.addInterceptor(mdcLoggingInterceptor)
-        .addPathPatterns("/api/**"); // API 요청에만 적용
+        .addPathPatterns("/**"); // 모든 요청에 적용
   }
 }
