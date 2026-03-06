@@ -100,9 +100,9 @@ CREATE TABLE "notifications" (
                                  "id"            UUID            NOT NULL,
                                  "review_id"     UUID            NOT NULL,
                                  "user_id"       UUID            NOT NULL,
-                                 "content"       VARCHAR(100)    NOT NULL,
+                                 "message"       VARCHAR(100)    NOT NULL,
                                  "is_confirmed"  BOOLEAN         DEFAULT FALSE NOT NULL,
-                                 "review_title"  TEXT            NOT NULL,
+                                 "review_content" TEXT           NOT NULL,
                                  "created_at"    TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP NOT NULL,
                                  "updated_at"    TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP NOT NULL,
                                  CONSTRAINT "PK_NOTIFICATIONS" PRIMARY KEY ("id")
