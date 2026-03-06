@@ -56,4 +56,30 @@ public interface NotificationApi {
       @PathVariable @Parameter(description = "알림 ID", required = true) UUID notificationId,
       @RequestHeader("Deokhugam-Request-User-ID") UUID requestUserId,
       @RequestBody @Valid NotificationUpdateRequest request);
+
+  @Operation(
+      summary = "모든 알림 읽음 처리",
+      description = "사용자의 모든 알림을 읽음 상태로 처리합니다.",
+      operationId = "markAllAsRead",
+      responses = {
+          @ApiResponse(
+              responseCode = "204",
+              description = "알림 읽음 처리 성공"
+          ),
+          @ApiResponse(
+              responseCode = "400",
+              description = "잘못된 요청 (사용자 ID 누락)"
+          ),
+          @ApiResponse(
+              responseCode = "404",
+              description = "사용자 정보 없음"
+          ),
+          @ApiResponse(
+              responseCode = "500",
+              description = "서버 내부 오류"
+          )
+      }
+  )
+  @PatchMapping("/read-all")
+  ResponseEntity<Void> markAllAsRead(@RequestHeader("Deokhugam-Request-User-ID") UUID requestUserId);
 }

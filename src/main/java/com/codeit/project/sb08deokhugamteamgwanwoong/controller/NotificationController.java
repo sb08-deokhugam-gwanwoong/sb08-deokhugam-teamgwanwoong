@@ -31,4 +31,12 @@ public class NotificationController implements NotificationApi {
 
     return ResponseEntity.ok(response);
   }
+
+  @Override
+  public ResponseEntity<Void> markAllAsRead(UUID requestUserId) {
+
+    notificationService.allConfirmNotification(requestUserId);
+
+    return ResponseEntity.noContent().build();
+  }
 }

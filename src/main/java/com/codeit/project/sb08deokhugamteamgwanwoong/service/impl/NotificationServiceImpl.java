@@ -7,8 +7,10 @@ import com.codeit.project.sb08deokhugamteamgwanwoong.entity.Review;
 import com.codeit.project.sb08deokhugamteamgwanwoong.entity.User;
 import com.codeit.project.sb08deokhugamteamgwanwoong.exception.BusinessException;
 import com.codeit.project.sb08deokhugamteamgwanwoong.exception.enums.NotificationErrorCode;
+import com.codeit.project.sb08deokhugamteamgwanwoong.exception.enums.UserErrorCode;
 import com.codeit.project.sb08deokhugamteamgwanwoong.mapper.NotificationMapper;
 import com.codeit.project.sb08deokhugamteamgwanwoong.repository.NotificationRepository;
+import com.codeit.project.sb08deokhugamteamgwanwoong.repository.UserRepository;
 import com.codeit.project.sb08deokhugamteamgwanwoong.service.NotificationService;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
@@ -22,6 +24,8 @@ import org.springframework.transaction.annotation.Transactional;
 public class NotificationServiceImpl implements NotificationService {
 
   private final NotificationRepository notificationRepository;
+
+  private final UserRepository userRepository;
 
   private final NotificationMapper notificationMapper;
 
@@ -54,7 +58,7 @@ public class NotificationServiceImpl implements NotificationService {
    * @param notificationId 알림 Id
    * @param requestUserId  요청자 Id
    * @param request        알림 업데이트 request
-   * @return
+   * @return               NotificationDto
    */
   @Override
   @Transactional
@@ -75,6 +79,26 @@ public class NotificationServiceImpl implements NotificationService {
     log.info("[알림 읽음 상태 업데이트 성공] notificationId: {}, isConfirmed: {}", notificationId, notification.isConfirmed());
 
     return notificationMapper.toDto(notification);
+  }
+
+  /**
+   * 모든 알림 읽음 처리
+   * @param requestUserId 요청자 Id
+   */
+  @Override
+  @Transactional
+  public void allConfirmNotification(UUID requestUserId) {
+
+    log.info("[모든 알림 읽음 처리 시작] requestUserId: {}", requestUserId);
+
+    if(!userRepository.existsById(requestUserId)) {
+      log.warn("[유저 조회 실패] 해당 유저가 존재하지 않습니다. requestUserId: {}", requestUserId);
+      throw new BusinessException(UserErrorCode.USER_NOT_FOUND);
+    }
+
+    notificationRepository.allConfirmNotification(requestUserId);
+
+    log.info("[모든 알림 읽음 처리 성공] requestUserId: {}", requestUserId);
   }
 
   /**

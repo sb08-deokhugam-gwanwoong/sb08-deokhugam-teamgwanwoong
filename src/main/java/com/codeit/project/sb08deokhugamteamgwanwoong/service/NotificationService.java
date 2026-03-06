@@ -10,4 +10,6 @@ public interface NotificationService {
   void createNotification(User user, Review review, String message);
 
   NotificationDto update(UUID notificationId, UUID requestUserId, NotificationUpdateRequest request);
+
+  void allConfirmNotification(UUID requestUserId);
 }
