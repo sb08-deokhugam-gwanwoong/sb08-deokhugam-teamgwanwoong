@@ -4,6 +4,7 @@ import com.codeit.project.sb08deokhugamteamgwanwoong.controller.support.Controll
 import com.codeit.project.sb08deokhugamteamgwanwoong.dto.review.ReviewCreateRequest;
 import com.codeit.project.sb08deokhugamteamgwanwoong.dto.review.ReviewDto;
 import com.codeit.project.sb08deokhugamteamgwanwoong.dto.review.ReviewUpdateRequest;
+import com.codeit.project.sb08deokhugamteamgwanwoong.entity.Review;
 import com.codeit.project.sb08deokhugamteamgwanwoong.exception.BusinessException;
 import com.codeit.project.sb08deokhugamteamgwanwoong.exception.enums.ReviewErrorCode;
 import org.junit.jupiter.api.DisplayName;
@@ -28,30 +29,21 @@ public class ReviewControllerTest extends ControllerTestSupport {
     @DisplayName("POST /api/reviews - 리뷰 생성 성공")
     void createReview_success() throws Exception {
         //given
+        UUID reviewId = UUID.randomUUID();
+        UUID bookId = UUID.randomUUID();
+        UUID userId = UUID.randomUUID();
+
         ReviewCreateRequest request = new ReviewCreateRequest(
-                UUID.randomUUID(),
-                UUID.randomUUID(),
+                bookId,
+                userId,
                 "test review",
                 5
         );
-        ReviewDto reviewDto = new ReviewDto(
-                UUID.randomUUID(),
-                request.bookId(),
-                "testBook",
-                "https://test-thumbnail.url/image.jpg",
-                request.userId(),
-                "testUser",
-                request.content(),
-                request.rating(),
-                0,
-                0,
-                false,
-                Instant.now(),
-                Instant.now()
-        );
+
+        ReviewDto reviewDto = createReviewDto(reviewId, bookId, userId);
 
         //BDD 모킹
-        given(reviewService.create(any(ReviewCreateRequest.class))).willReturn(reviewDto);
+        given(reviewService.createReview(any(ReviewCreateRequest.class))).willReturn(reviewDto);
 
         //when & then
         mockMvc.perform(post("/api/reviews")
@@ -63,7 +55,7 @@ public class ReviewControllerTest extends ControllerTestSupport {
                 .andExpect(jsonPath("$.content").value(reviewDto.content()));
 
         //BDD 검증
-        then(reviewService).should().create(argThat(req ->
+        then(reviewService).should().createReview(argThat(req ->
                 req.rating().equals(request.rating()) && req.content().equals(request.content())
         ));
     }
@@ -85,7 +77,7 @@ public class ReviewControllerTest extends ControllerTestSupport {
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isBadRequest());
 
-        then(reviewService).should(never()).create(any());
+        then(reviewService).should(never()).createReview(any());
     }
 
     @Test
@@ -97,28 +89,14 @@ public class ReviewControllerTest extends ControllerTestSupport {
         UUID reviewId = UUID.randomUUID();
 
         ReviewUpdateRequest request = new ReviewUpdateRequest(
-                "update test review",
-                2
+                "test review",
+                5
         );
 
-        ReviewDto reviewDto = new ReviewDto(
-                reviewId,
-                bookId,
-                "testBook",
-                "https://test-thumbnail.url/image.jpg",
-                userId,
-                "testUser",
-                request.content(),
-                request.rating(),
-                0,
-                0,
-                false,
-                Instant.now(),
-                Instant.now()
-        );
+        ReviewDto reviewDto = createReviewDto(reviewId, bookId, userId);
 
         //BDD 모킹
-        given(reviewService.update(eq(reviewId), any(ReviewUpdateRequest.class), eq(userId)))
+        given(reviewService.updateReview(eq(reviewId), any(ReviewUpdateRequest.class), eq(userId)))
                 .willReturn(reviewDto);
 
         //when & then
@@ -132,7 +110,7 @@ public class ReviewControllerTest extends ControllerTestSupport {
                 .andExpect(jsonPath("$.content").value(reviewDto.content()));
 
         //BDD 검증: 서비스의 update 메서드가 올바른 파라미터로 호출되었는 지 검증하는 확인할 수 있음
-        then(reviewService).should().update(
+        then(reviewService).should().updateReview(
                 eq(reviewId),
                 argThat(req -> req.rating().equals(request.rating()) && req.content().equals(request.content())),
                 eq(userId)
@@ -152,7 +130,7 @@ public class ReviewControllerTest extends ControllerTestSupport {
         );
 
         //BDD 모킹
-        given(reviewService.update(eq(reviewId), any(ReviewUpdateRequest.class), eq(differentUserId)))
+        given(reviewService.updateReview(eq(reviewId), any(ReviewUpdateRequest.class), eq(differentUserId)))
                 .willThrow(new BusinessException(ReviewErrorCode.REVIEW_EDIT_PERMISSION_DENIED));
 
         //when & then
@@ -163,11 +141,29 @@ public class ReviewControllerTest extends ControllerTestSupport {
                 .andExpect(status().isForbidden());
 
         //BDD 검증, 예외가 발생하였어도, 서비스 메서드에 올바른 파라미터가 들어갔는지 확인함
-        then(reviewService).should().update(
+        then(reviewService).should().updateReview(
                 eq(reviewId),
                 argThat(req ->
                         req.rating().equals(request.rating()) && req.content().equals(request.content())),
                 eq(differentUserId)
+        );
+    }
+
+    private ReviewDto createReviewDto(UUID reviewId, UUID bookId, UUID userId) {
+        return new ReviewDto(
+                reviewId,
+                bookId,
+                "testBook",
+                "https://test-thumbnail.url/image.jpg",
+                userId,
+                "testUser",
+                "test review",
+                5,
+                0,
+                0,
+                false,
+                Instant.now(),
+                Instant.now()
         );
     }
 }
