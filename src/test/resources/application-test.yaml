@@ -15,7 +15,22 @@ spring:
   sql:
     init:
       mode: never # schema-pg.sql 실행 방지 추가
+  cloud:
+    aws:
+      s3:
+        bucket: dummy-bucket
+      region:
+        static: ap-northeast-2
+      credentials:
+        access-key: dummy-access
+        secret-key: dummy-secret
+
 logging:
   level:
     org.hibernate.SQL: DEBUG
     org.hibernate.type.descriptor.sql.BasicBinder: TRACE
+
+naver:
+  api:
+    client-id: dummy-client-id
+    client-secret: dummy-client-secret

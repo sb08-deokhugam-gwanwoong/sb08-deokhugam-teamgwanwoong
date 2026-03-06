@@ -63,7 +63,7 @@ public class BookRepositoryTest extends RepositoryTestSupport {
         .build();
 
     // when & then
-    assertThatThrownBy(() -> bookRepository.save(book2))
+    assertThatThrownBy(() -> bookRepository.saveAndFlush(book2))
         .isInstanceOf(DataIntegrityViolationException.class);
   }
 }
