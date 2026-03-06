@@ -25,10 +25,13 @@ public interface CommentRepository extends JpaRepository<Comment, UUID> {
     void hardDeleteAllByReviewId(@Param("reviewId") UUID reviewId);
 
   // 특정 리뷰의 댓글 중 삭제되지 않은 것들을 최신순으로 페이징 조회
-  @Query("SELECT c FROM Comment c WHERE c.review.id = :reviewId " +
-      "AND (:cursorCreatedAt IS NULL OR c.createdAt < :cursorCreatedAt) " +
-      "AND c.deletedAt IS NULL " +
-      "ORDER BY c.createdAt DESC")
+  @Query("""
+      SELECT c FROM Comment c
+      WHERE c.review.id = :reviewId
+      AND (:cursorCreatedAt IS NULL OR c.createdAt < :cursorCreatedAt)
+      AND c.deletedAt IS NULL
+      ORDER BY c.createdAt DESC
+      """)
   List<Comment> findCommentsByCursor(
       @Param("reviewId") UUID reviewId,
       @Param("cursorCreatedAt") Instant cursorCreatedAt,
