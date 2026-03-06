@@ -103,7 +103,7 @@ public class ReviewServiceTest {
         given(reviewMapper.toDto(any(), anyBoolean(), any())).willAnswer(invocation -> createReviewDto(invocation.getArgument(0)));
 
         //when
-        ReviewDto result = reviewService.create(createRequest);
+        ReviewDto result = reviewService.createReview(createRequest);
 
         //then
         assertThat(result.content()).isEqualTo("test review");
@@ -118,7 +118,7 @@ public class ReviewServiceTest {
         given(reviewRepository.existsByBookIdAndUserId(createRequest.bookId(), createRequest.userId())).willReturn(true);
 
         //when
-        assertThatThrownBy(() -> reviewService.create(createRequest))
+        assertThatThrownBy(() -> reviewService.createReview(createRequest))
                 .isInstanceOf(BusinessException.class)
                 .hasFieldOrPropertyWithValue("errorCode", ReviewErrorCode.REVIEW_ALREADY_EXISTS);
 
@@ -138,7 +138,7 @@ public class ReviewServiceTest {
                 .willAnswer(invocation -> createReviewDto(invocation.getArgument(0)));
 
         //when
-        ReviewDto result = reviewService.update(reviewId, updateRequest, requestUserId);
+        ReviewDto result = reviewService.updateReview(reviewId, updateRequest, requestUserId);
 
         //then
         assertThat(result.rating()).isEqualTo(updateRequest.rating());
@@ -155,7 +155,7 @@ public class ReviewServiceTest {
         given(reviewRepository.findById(reviewId)).willReturn(Optional.empty());
 
         //when & then
-        assertThatThrownBy(() -> reviewService.update(reviewId, updateRequest, requestUserId))
+        assertThatThrownBy(() -> reviewService.updateReview(reviewId, updateRequest, requestUserId))
                 .isInstanceOf(BusinessException.class)
                 .hasFieldOrPropertyWithValue("errorCode", ReviewErrorCode.REVIEW_NOT_FOUND);
     }
@@ -170,7 +170,7 @@ public class ReviewServiceTest {
         given(reviewRepository.findById(reviewId)).willReturn(Optional.of(review));
 
         //when & then
-        assertThatThrownBy(() -> reviewService.update(reviewId, updateRequest, differentUserId))
+        assertThatThrownBy(() -> reviewService.updateReview(reviewId, updateRequest, differentUserId))
                 .isInstanceOf(BusinessException.class)
                 .hasFieldOrPropertyWithValue("errorCode", ReviewErrorCode.REVIEW_EDIT_PERMISSION_DENIED);
     }

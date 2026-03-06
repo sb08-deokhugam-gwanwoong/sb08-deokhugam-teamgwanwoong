@@ -13,9 +13,12 @@ import org.springframework.stereotype.Repository;
 @Repository
 public interface DashboardRepository extends JpaRepository<Dashboard, UUID> {
 
-	@Query("SELECT d FROM Dashboard d "
-			+ "WHERE d.targetType = :targetType AND d.periodType = :periodType "
-			+ "ORDER BY d.createdAt DESC, d.rankingPos ASC")
+		@Query("""
+    SELECT d FROM Dashboard d
+    WHERE d.targetType = :targetType 
+      AND d.periodType = :periodType
+    ORDER BY d.createdAt DESC, d.rankingPos ASC
+    """)
 	List<Dashboard> findRecentRankings(
 			@Param("targetType") String targetType,
 			@Param("periodType") DashboardPeriodEnums periodType,

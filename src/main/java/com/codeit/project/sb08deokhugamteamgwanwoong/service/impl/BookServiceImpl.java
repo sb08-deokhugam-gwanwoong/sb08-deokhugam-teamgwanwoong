@@ -8,6 +8,7 @@ import com.codeit.project.sb08deokhugamteamgwanwoong.exception.enums.BookErrorCo
 import com.codeit.project.sb08deokhugamteamgwanwoong.mapper.BookMapper;
 import com.codeit.project.sb08deokhugamteamgwanwoong.repository.BookRepository;
 import com.codeit.project.sb08deokhugamteamgwanwoong.service.BookService;
+import com.codeit.project.sb08deokhugamteamgwanwoong.service.external.S3Uploader;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -20,6 +21,7 @@ public class BookServiceImpl implements BookService {
 
   private final BookRepository bookRepository;
   private final BookMapper bookMapper;
+  private final S3Uploader s3Uploader;
 
   @Override
   @Transactional
@@ -33,7 +35,7 @@ public class BookServiceImpl implements BookService {
     // 썸네일 이미지 업로드 (추후 구현)
     String thumbnailUrl = null;
     if (thumbnailImage != null && !thumbnailImage.isEmpty()) {
-      // thumbnailUrl = s3Uploader.upload(thumbnailImage);
+       thumbnailUrl = s3Uploader.upload(thumbnailImage);
     }
 
     // 엔티티 생성
