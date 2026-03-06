@@ -43,7 +43,7 @@ public class Notification extends BaseUpdatableEntity {
     this.reviewContent = reviewContent;
   }
 
-  public void confirm() {
-    this.isConfirmed = true;
+  public void confirm(boolean confirmed) {
+    this.isConfirmed = confirmed;
   }
 }
