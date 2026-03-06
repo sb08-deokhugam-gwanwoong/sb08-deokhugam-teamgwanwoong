@@ -27,6 +27,6 @@ public interface ReviewRepository extends JpaRepository<Review, UUID> {
     Optional<Review> findByIdIncludeDeleted(@Param("id") UUID id);
 
     @Modifying(clearAutomatically = true)
-    @Query(value = "DELETE FROM reviews WHERE id = :id", nativeQuery = true)
+    @Query(value = "DELETE FROM reviews r WHERE id = :id", nativeQuery = true)
     void hardDeleteById(@Param("id") UUID id);
 }

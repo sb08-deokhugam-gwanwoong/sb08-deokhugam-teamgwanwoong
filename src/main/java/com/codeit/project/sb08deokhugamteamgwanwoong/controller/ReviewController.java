@@ -2,6 +2,7 @@ package com.codeit.project.sb08deokhugamteamgwanwoong.controller;
 
 import com.codeit.project.sb08deokhugamteamgwanwoong.dto.review.ReviewCreateRequest;
 import com.codeit.project.sb08deokhugamteamgwanwoong.dto.review.ReviewDto;
+import com.codeit.project.sb08deokhugamteamgwanwoong.dto.review.ReviewLikeDto;
 import com.codeit.project.sb08deokhugamteamgwanwoong.dto.review.ReviewUpdateRequest;
 import com.codeit.project.sb08deokhugamteamgwanwoong.service.ReviewService;
 import jakarta.validation.Valid;
@@ -39,9 +40,9 @@ public class ReviewController {
             @RequestHeader("Deokhugam-Request-User-ID") UUID requestUserId,
             @Valid @RequestBody ReviewUpdateRequest request
     ) {
-        log.info("Controller: 리뷰 수정 요청 - ID: {}", reviewId);
+        log.info("Controller: 리뷰 수정 요청 - ID: {}, UserId: {}", reviewId, requestUserId);
         ReviewDto reviewDto = reviewService.updateReview(reviewId, request, requestUserId);
-        log.info("Controller: 리뷰 수정 완료 - ID: {}", reviewId);
+        log.info("Controller: 리뷰 수정 완료 - ID: {}, UserId: {}", reviewId, requestUserId);
         return ResponseEntity
                 .status(HttpStatus.OK)
                 .body(reviewDto);
@@ -52,9 +53,9 @@ public class ReviewController {
             @PathVariable("reviewId") UUID reviewId,
             @RequestHeader("Deokhugam-Request-User-ID") UUID requestUserId
     ) {
-        log.info("Controller: 리뷰 논리 삭제 요청 - ID: {}", reviewId);
+        log.info("Controller: 리뷰 논리 삭제 요청 - ID: {}, UserId: {}", reviewId, requestUserId);
         reviewService.softDeleteReview(reviewId, requestUserId);
-        log.info("Controller: 리뷰 논리 삭제 완료 - ID: {}", reviewId);
+        log.info("Controller: 리뷰 논리 삭제 완료 - ID: {}, UserId: {}", reviewId, requestUserId);
         return ResponseEntity
                 .status(HttpStatus.NO_CONTENT)
                 .build();
@@ -65,11 +66,24 @@ public class ReviewController {
             @PathVariable("reviewId") UUID reviewId,
             @RequestHeader("Deokhugam-Request-User-ID") UUID requestUserId
     ) {
-        log.info("Controller: 리뷰 물리 삭제 요청 - ID: {}", reviewId);
+        log.info("Controller: 리뷰 물리 삭제 요청 - ID: {}, UserId: {}", reviewId, requestUserId);
         reviewService.hardDeleteReview(reviewId, requestUserId);
-        log.info("Controller: 리뷰 물리 삭제 성공 - ID: {}", reviewId);
+        log.info("Controller: 리뷰 물리 삭제 성공 - ID: {}, UserId: {}", reviewId, requestUserId);
         return ResponseEntity
                 .status(HttpStatus.NO_CONTENT)
                 .build();
+    }
+
+    @PostMapping("/{reviewId}/like")
+    public ResponseEntity<ReviewLikeDto> createReviewLike(
+            @PathVariable("reviewId") UUID reviewId,
+            @RequestHeader("Deokhugam-Request-User-ID") UUID requestUserId
+    ) {
+        log.info("Controller: 리뷰 좋아요 요청 - ID: {}, UserId: {}", reviewId, requestUserId);
+        ReviewLikeDto reviewLikeDto = reviewService.createReviewLike(reviewId, requestUserId);
+        log.info("Controller: 리뷰 좋아요 성공 - ID: {}, UserId: {}", reviewId, requestUserId);
+        return ResponseEntity
+                .status(HttpStatus.CREATED)
+                .body(reviewLikeDto);
     }
 }
