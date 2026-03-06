@@ -1,12 +1,15 @@
 package com.codeit.project.sb08deokhugamteamgwanwoong.service.impl;
 
 import com.codeit.project.sb08deokhugamteamgwanwoong.dto.dashboard.PopularBookDto;
+import com.codeit.project.sb08deokhugamteamgwanwoong.dto.dashboard.PopularReviewDto;
 import com.codeit.project.sb08deokhugamteamgwanwoong.entity.Book;
 import com.codeit.project.sb08deokhugamteamgwanwoong.entity.Dashboard;
 import com.codeit.project.sb08deokhugamteamgwanwoong.entity.enums.DashboardPeriodEnums;
 import com.codeit.project.sb08deokhugamteamgwanwoong.mapper.DashboardMapper;
+import com.codeit.project.sb08deokhugamteamgwanwoong.entity.Review;
 import com.codeit.project.sb08deokhugamteamgwanwoong.repository.BookRepository;
 import com.codeit.project.sb08deokhugamteamgwanwoong.repository.DashboardRepository;
+import com.codeit.project.sb08deokhugamteamgwanwoong.repository.ReviewRepository;
 import com.codeit.project.sb08deokhugamteamgwanwoong.service.DashboardService;
 import java.util.List;
 import java.util.Map;
@@ -24,6 +27,7 @@ public class DashboardServiceImpl implements DashboardService {
 
 	private final DashboardRepository dashboardRepository;
 	private final BookRepository bookRepository;
+	private final ReviewRepository reviewRepository;
 	private final DashboardMapper dashboardMapper;
 
 	@Override
@@ -50,6 +54,28 @@ public class DashboardServiceImpl implements DashboardService {
 		return rankings.stream()
 				.filter(r -> bookMap.containsKey(r.getTargetId()))
 				.map(r -> dashboardMapper.toPopularBookDto(r, bookMap.get(r.getTargetId())))
+				.toList();
+	}
+
+	@Override
+	public List<PopularReviewDto> getPopularReviews(DashboardPeriodEnums period) {
+		List<Dashboard> rankings = dashboardRepository.findRecentRankings(
+				"REVIEW", period, PageRequest.of(0, 10));
+
+		if (rankings.isEmpty()) {
+			return List.of();
+		}
+
+		List<UUID> reviewIds = rankings.stream()
+				.map(Dashboard::getTargetId)
+				.toList();
+
+		Map<UUID, Review> reviewMap = reviewRepository.findAllById(reviewIds).stream()
+				.collect(Collectors.toMap(Review::getId, review -> review));
+
+		return rankings.stream()
+				.filter(r -> reviewMap.containsKey(r.getTargetId()))
+				.map(r -> dashboardMapper.toPopularReviewDto(r, reviewMap.get(r.getTargetId())))
 				.toList();
 	}
 }
