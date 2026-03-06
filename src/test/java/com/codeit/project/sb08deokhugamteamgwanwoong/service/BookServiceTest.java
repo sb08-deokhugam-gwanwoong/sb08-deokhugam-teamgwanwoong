@@ -19,6 +19,7 @@ import java.time.LocalDate;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mapstruct.factory.Mappers;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.Spy;
@@ -39,7 +40,7 @@ public class BookServiceTest {
   private S3Uploader s3Uploader;
 
   @Spy
-  private BookMapper bookMapper;
+  private BookMapper bookMapper = Mappers.getMapper(BookMapper.class);
 
   @DisplayName("도서를 정상적으로 등록할 수 있다. (이미지 포함)")
   @Test
@@ -69,16 +70,6 @@ public class BookServiceTest {
     given(bookRepository.save(any(Book.class))).willAnswer(invocation -> {
       Book book = invocation.getArgument(0);
       return book;
-    });
-
-    // Mapper mocking
-    given(bookMapper.toDto(any(Book.class))).willAnswer(invocation -> {
-      Book book = invocation.getArgument(0);
-      return BookDto.builder()
-          .title(book.getTitle())
-          .isbn(book.getIsbn())
-          .thumbnailUrl(book.getThumbnailUrl())
-          .build();
     });
 
     // when
