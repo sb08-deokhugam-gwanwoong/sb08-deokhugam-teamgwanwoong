@@ -7,12 +7,15 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.when;
 
 import com.codeit.project.sb08deokhugamteamgwanwoong.dto.dashboard.PopularBookDto;
+import com.codeit.project.sb08deokhugamteamgwanwoong.dto.dashboard.PopularReviewDto;
 import com.codeit.project.sb08deokhugamteamgwanwoong.entity.Book;
 import com.codeit.project.sb08deokhugamteamgwanwoong.entity.Dashboard;
+import com.codeit.project.sb08deokhugamteamgwanwoong.entity.Review;
 import com.codeit.project.sb08deokhugamteamgwanwoong.entity.enums.DashboardPeriodEnums;
 import com.codeit.project.sb08deokhugamteamgwanwoong.mapper.DashboardMapper;
 import com.codeit.project.sb08deokhugamteamgwanwoong.repository.BookRepository;
 import com.codeit.project.sb08deokhugamteamgwanwoong.repository.DashboardRepository;
+import com.codeit.project.sb08deokhugamteamgwanwoong.repository.ReviewRepository;
 import com.codeit.project.sb08deokhugamteamgwanwoong.service.impl.DashboardServiceImpl;
 import java.time.Instant;
 import java.util.List;
@@ -34,6 +37,9 @@ class DashboardServiceTest {
 
 	@Mock
 	private BookRepository bookRepository;
+
+	@Mock
+	private ReviewRepository reviewRepository;
 
 	@Mock
 	private DashboardMapper dashboardMapper;
@@ -143,9 +149,121 @@ class DashboardServiceTest {
 		assertThat(response.get(1).thumbnailUrl()).isNull();
 	}
 
+	@Test
+	@DisplayName("인기 리뷰: 대시보드 데이터가 없으면 빈 리스트를 반환한다.")
+	void getPopularReviews_returnsEmpty_whenNoDashboardData() {
+		// given
+		when(dashboardRepository.findRecentRankings(
+				eq("REVIEW"),
+				eq(DashboardPeriodEnums.WEEKLY),
+				any(PageRequest.class)
+		)).thenReturn(List.of());
+
+		// when
+		List<PopularReviewDto> response = dashboardService.getPopularReviews(DashboardPeriodEnums.WEEKLY);
+
+		// then
+		assertThat(response).isEmpty();
+	}
+
+	@Test
+	@DisplayName("인기 리뷰: 대시보드 데이터가 있으면 점수 순(랭킹 순)으로 인기 리뷰 목록을 조회한다.")
+	void getPopularReviews_returnsOrderedByRanking_whenDashboardDataExists() {
+		// given
+		UUID review1Id = UUID.randomUUID();
+		UUID review2Id = UUID.randomUUID();
+
+		Dashboard dashboard1 = Dashboard.builder()
+				.targetId(review1Id)
+				.targetType("REVIEW")
+				.periodType(DashboardPeriodEnums.MONTHLY)
+				.score(85.0)
+				.rankingPos(1)
+				.build();
+
+		Dashboard dashboard2 = Dashboard.builder()
+				.targetId(review2Id)
+				.targetType("REVIEW")
+				.periodType(DashboardPeriodEnums.MONTHLY)
+				.score(70.0)
+				.rankingPos(2)
+				.build();
+
+		Review review1 = createMockReview(review1Id);
+		Review review2 = createMockReview(review2Id);
+
+		PopularReviewDto dto1 = new PopularReviewDto(
+				UUID.randomUUID(),
+				review1Id,
+				UUID.randomUUID(),
+				"자바의 정석",
+				"https://example.com/thumb1.jpg",
+				UUID.randomUUID(),
+				"사용자1",
+				"좋은 책이에요",
+				5.0,
+				DashboardPeriodEnums.MONTHLY,
+				Instant.now(),
+				1L,
+				85.0,
+				10L,
+				3L
+		);
+
+		PopularReviewDto dto2 = new PopularReviewDto(
+				UUID.randomUUID(),
+				review2Id,
+				UUID.randomUUID(),
+				"클린 코드",
+				null,
+				UUID.randomUUID(),
+				"사용자2",
+				"재미있어요",
+				4.0,
+				DashboardPeriodEnums.MONTHLY,
+				Instant.now(),
+				2L,
+				70.0,
+				5L,
+				2L
+		);
+
+		when(dashboardRepository.findRecentRankings(
+				eq("REVIEW"),
+				eq(DashboardPeriodEnums.MONTHLY),
+				any(PageRequest.class)
+		)).thenReturn(List.of(dashboard1, dashboard2));
+
+		when(reviewRepository.findAllById(anyList())).thenReturn(List.of(review1, review2));
+
+		when(dashboardMapper.toPopularReviewDto(dashboard1, review1)).thenReturn(dto1);
+		when(dashboardMapper.toPopularReviewDto(dashboard2, review2)).thenReturn(dto2);
+
+		// when
+		List<PopularReviewDto> response = dashboardService.getPopularReviews(DashboardPeriodEnums.MONTHLY);
+
+		// then
+		assertThat(response).hasSize(2);
+		assertThat(response.get(0).rank()).isEqualTo(1L);
+		assertThat(response.get(0).reviewId()).isEqualTo(review1Id);
+		assertThat(response.get(0).reviewContent()).isEqualTo("좋은 책이에요");
+		assertThat(response.get(0).score()).isEqualTo(85.0);
+
+		assertThat(response.get(1).rank()).isEqualTo(2L);
+		assertThat(response.get(1).reviewId()).isEqualTo(review2Id);
+		assertThat(response.get(1).reviewContent()).isEqualTo("재미있어요");
+		assertThat(response.get(1).score()).isEqualTo(70.0);
+	}
+
 	private Book createMockBook(UUID id) {
 		Book book = org.mockito.Mockito.mock(Book.class);
 		when(book.getId()).thenReturn(id);
 		return book;
+	}
+
+	private Review createMockReview(UUID id) {
+		Review review = org.mockito.Mockito.mock(Review.class);
+		when(review.getId()).thenReturn(id);
+		return review;
 	}
 }
