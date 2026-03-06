@@ -71,52 +71,18 @@ class DashboardServiceTest {
 		UUID book1Id = UUID.randomUUID();
 		UUID book2Id = UUID.randomUUID();
 
-		Dashboard dashboard1 = Dashboard.builder()
-				.targetId(book1Id)
-				.targetType("BOOK")
-				.periodType(DashboardPeriodEnums.ALL_TIME)
-				.score(90.0)
-				.rankingPos(1)
-				.build();
-
-		Dashboard dashboard2 = Dashboard.builder()
-				.targetId(book2Id)
-				.targetType("BOOK")
-				.periodType(DashboardPeriodEnums.ALL_TIME)
-				.score(80.0)
-				.rankingPos(2)
-				.build();
+		Dashboard dashboard1 = createDashboard(book1Id, "BOOK", DashboardPeriodEnums.ALL_TIME, 90.0, 1);
+		Dashboard dashboard2 = createDashboard(book2Id, "BOOK", DashboardPeriodEnums.ALL_TIME, 80.0, 2);
 
 		Book book1 = createMockBook(book1Id);
 		Book book2 = createMockBook(book2Id);
 
-		PopularBookDto dto1 = new PopularBookDto(
-				UUID.randomUUID(),
-				book1Id,
-				"자바의 정석",
-				"남궁성",
-				"https://example.com/thumb1.jpg",
-				DashboardPeriodEnums.ALL_TIME,
-				1L,
-				90.0,
-				10L,
-				4.5,
-				Instant.now()
-		);
-
-		PopularBookDto dto2 = new PopularBookDto(
-				UUID.randomUUID(),
-				book2Id,
-				"클린 코드",
-				"로버트 마틴",
-				null,
-				DashboardPeriodEnums.ALL_TIME,
-				2L,
-				80.0,
-				5L,
-				4.0,
-				Instant.now()
-		);
+		PopularBookDto dto1 = createPopularBookDto(
+				book1Id, "자바의 정석", "남궁성", "https://example.com/thumb1.jpg",
+				DashboardPeriodEnums.ALL_TIME, 1L, 90.0, 10L, 4.5);
+		PopularBookDto dto2 = createPopularBookDto(
+				book2Id, "클린 코드", "로버트 마틴", null,
+				DashboardPeriodEnums.ALL_TIME, 2L, 80.0, 5L, 4.0);
 
 		when(dashboardRepository.findRecentRankings(
 				eq("BOOK"),
@@ -173,60 +139,18 @@ class DashboardServiceTest {
 		UUID review1Id = UUID.randomUUID();
 		UUID review2Id = UUID.randomUUID();
 
-		Dashboard dashboard1 = Dashboard.builder()
-				.targetId(review1Id)
-				.targetType("REVIEW")
-				.periodType(DashboardPeriodEnums.MONTHLY)
-				.score(85.0)
-				.rankingPos(1)
-				.build();
-
-		Dashboard dashboard2 = Dashboard.builder()
-				.targetId(review2Id)
-				.targetType("REVIEW")
-				.periodType(DashboardPeriodEnums.MONTHLY)
-				.score(70.0)
-				.rankingPos(2)
-				.build();
+		Dashboard dashboard1 = createDashboard(review1Id, "REVIEW", DashboardPeriodEnums.MONTHLY, 85.0, 1);
+		Dashboard dashboard2 = createDashboard(review2Id, "REVIEW", DashboardPeriodEnums.MONTHLY, 70.0, 2);
 
 		Review review1 = createMockReview(review1Id);
 		Review review2 = createMockReview(review2Id);
 
-		PopularReviewDto dto1 = new PopularReviewDto(
-				UUID.randomUUID(),
-				review1Id,
-				UUID.randomUUID(),
-				"자바의 정석",
-				"https://example.com/thumb1.jpg",
-				UUID.randomUUID(),
-				"사용자1",
-				"좋은 책이에요",
-				5.0,
-				DashboardPeriodEnums.MONTHLY,
-				Instant.now(),
-				1L,
-				85.0,
-				10L,
-				3L
-		);
-
-		PopularReviewDto dto2 = new PopularReviewDto(
-				UUID.randomUUID(),
-				review2Id,
-				UUID.randomUUID(),
-				"클린 코드",
-				null,
-				UUID.randomUUID(),
-				"사용자2",
-				"재미있어요",
-				4.0,
-				DashboardPeriodEnums.MONTHLY,
-				Instant.now(),
-				2L,
-				70.0,
-				5L,
-				2L
-		);
+		PopularReviewDto dto1 = createPopularReviewDto(
+				review1Id, "자바의 정석", "https://example.com/thumb1.jpg", "사용자1",
+				"좋은 책이에요", 5.0, 1L, 85.0, 10L, 3L);
+		PopularReviewDto dto2 = createPopularReviewDto(
+				review2Id, "클린 코드", null, "사용자2",
+				"재미있어요", 4.0, 2L, 70.0, 5L, 2L);
 
 		when(dashboardRepository.findRecentRankings(
 				eq("REVIEW"),
@@ -253,6 +177,56 @@ class DashboardServiceTest {
 		assertThat(response.get(1).reviewId()).isEqualTo(review2Id);
 		assertThat(response.get(1).reviewContent()).isEqualTo("재미있어요");
 		assertThat(response.get(1).score()).isEqualTo(70.0);
+	}
+
+	private Dashboard createDashboard(UUID targetId, String targetType, DashboardPeriodEnums periodType,
+			double score, int rankingPos) {
+		return Dashboard.builder()
+				.targetId(targetId)
+				.targetType(targetType)
+				.periodType(periodType)
+				.score(score)
+				.rankingPos(rankingPos)
+				.build();
+	}
+
+	private PopularBookDto createPopularBookDto(UUID bookId, String title, String author, String thumbnailUrl,
+			DashboardPeriodEnums period, long rank, double score, long reviewCount, double rating) {
+		return new PopularBookDto(
+				UUID.randomUUID(),
+				bookId,
+				title,
+				author,
+				thumbnailUrl,
+				period,
+				rank,
+				score,
+				reviewCount,
+				rating,
+				Instant.now()
+		);
+	}
+
+	private PopularReviewDto createPopularReviewDto(UUID reviewId, String bookTitle, String bookThumbnailUrl,
+			String userNickname, String reviewContent, double reviewRating, long rank, double score,
+			long likeCount, long commentCount) {
+		return new PopularReviewDto(
+				UUID.randomUUID(),
+				reviewId,
+				UUID.randomUUID(),
+				bookTitle,
+				bookThumbnailUrl,
+				UUID.randomUUID(),
+				userNickname,
+				reviewContent,
+				reviewRating,
+				DashboardPeriodEnums.MONTHLY,
+				Instant.now(),
+				rank,
+				score,
+				likeCount,
+				commentCount
+		);
 	}
 
 	private Book createMockBook(UUID id) {
