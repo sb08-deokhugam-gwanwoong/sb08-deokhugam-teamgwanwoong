@@ -93,8 +93,7 @@ public class CommentServiceImpl implements CommentService {
 
   @Override
   public CommentDto findById(UUID commentId) {
-    Comment comment = commentRepository.findById(commentId)
-        .orElseThrow(() -> new BusinessException(CommentErrorCode.COMMENT_NOT_FOUND));
+    Comment comment = findComment(commentId);
     return commentMapper.toDto(comment);
   }
 
@@ -102,12 +101,8 @@ public class CommentServiceImpl implements CommentService {
   @Transactional
   public CommentDto update(UUID commentId, UUID userId, CommentUpdateRequest request) {
 
-    Comment comment = commentRepository.findById(commentId)
-        .orElseThrow(() -> new BusinessException(CommentErrorCode.COMMENT_NOT_FOUND));
-
-    if (!comment.getUser().getId().equals(userId)) {
-      throw new BusinessException(CommentErrorCode.COMMENT_UPDATE_DENIED);
-    }
+    Comment comment = findComment(commentId);
+    validateCommentOwner(comment, userId, CommentErrorCode.COMMENT_UPDATE_DENIED);
 
     comment.updateContent(request.content());
 
@@ -118,12 +113,8 @@ public class CommentServiceImpl implements CommentService {
   @Transactional
   public void softDelete(UUID commentId, UUID userId) {
 
-    Comment comment = commentRepository.findById(commentId)
-        .orElseThrow(() -> new BusinessException(CommentErrorCode.COMMENT_NOT_FOUND));
-
-    if (!comment.getUser().getId().equals(userId)) {
-      throw new BusinessException(CommentErrorCode.COMMENT_DELETE_DENIED);
-    }
+    Comment comment = findComment(commentId);
+    validateCommentOwner(comment, userId, CommentErrorCode.COMMENT_DELETE_DENIED);
 
     comment.delete();
     comment.getReview().decreaseCommentCount();
@@ -132,12 +123,8 @@ public class CommentServiceImpl implements CommentService {
   @Override
   @Transactional
   public void hardDelete(UUID commentId, UUID userId) {
-    Comment comment = commentRepository.findById(commentId)
-        .orElseThrow(() -> new BusinessException(CommentErrorCode.COMMENT_NOT_FOUND));
-
-    if (!comment.getUser().getId().equals(userId)) {
-      throw new BusinessException(CommentErrorCode.COMMENT_DELETE_DENIED);
-    }
+    Comment comment = findComment(commentId);
+    validateCommentOwner(comment, userId, CommentErrorCode.COMMENT_DELETE_DENIED);
 
     //논리 삭제된 상태가 아닐 때만 감소시키려면 체크 로직 필요(중요)
     if (comment.getDeletedAt() == null) {
@@ -145,6 +132,19 @@ public class CommentServiceImpl implements CommentService {
     }
 
     commentRepository.delete(comment);
+  }
+
+  // 댓글 존재 여부 확인 공통 메서드
+  private Comment findComment(UUID commentId) {
+    return commentRepository.findById(commentId)
+        .orElseThrow(() -> new BusinessException(CommentErrorCode.COMMENT_NOT_FOUND));
+  }
+
+  // 작성자 본인 확인 공통 메서드
+  private void validateCommentOwner(Comment comment, UUID userId, CommentErrorCode errorCode) {
+    if (!comment.getUser().getId().equals(userId)) {
+      throw new BusinessException(errorCode);
+    }
   }
 }
 
