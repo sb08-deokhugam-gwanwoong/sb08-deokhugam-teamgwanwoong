@@ -1,6 +1,7 @@
 package com.codeit.project.sb08deokhugamteamgwanwoong.controller.support;
 
 import com.codeit.project.sb08deokhugamteamgwanwoong.config.MDCLoggingInterceptor;
+import com.codeit.project.sb08deokhugamteamgwanwoong.controller.BookController;
 import com.codeit.project.sb08deokhugamteamgwanwoong.controller.ReviewController;
 import com.codeit.project.sb08deokhugamteamgwanwoong.controller.UserController;
 import com.codeit.project.sb08deokhugamteamgwanwoong.mapper.BookMapper;
@@ -23,6 +24,7 @@ import org.springframework.test.web.servlet.MockMvc;
 @WebMvcTest(controllers = {
         UserController.class,
         ReviewController.class,
+    BookController.class
 })
 @Import(MDCLoggingInterceptor.class)
 public abstract class ControllerTestSupport {
