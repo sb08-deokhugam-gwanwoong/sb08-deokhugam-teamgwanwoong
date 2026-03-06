@@ -2,7 +2,9 @@ package com.codeit.project.sb08deokhugamteamgwanwoong.service.impl;
 
 import com.codeit.project.sb08deokhugamteamgwanwoong.dto.dashboard.PopularBookDto;
 import com.codeit.project.sb08deokhugamteamgwanwoong.dto.dashboard.PopularReviewDto;
+import com.codeit.project.sb08deokhugamteamgwanwoong.dto.dashboard.PowerUserDto;
 import com.codeit.project.sb08deokhugamteamgwanwoong.entity.Book;
+import com.codeit.project.sb08deokhugamteamgwanwoong.entity.User;
 import com.codeit.project.sb08deokhugamteamgwanwoong.entity.Dashboard;
 import com.codeit.project.sb08deokhugamteamgwanwoong.entity.enums.DashboardPeriodEnums;
 import com.codeit.project.sb08deokhugamteamgwanwoong.mapper.DashboardMapper;
@@ -10,6 +12,7 @@ import com.codeit.project.sb08deokhugamteamgwanwoong.entity.Review;
 import com.codeit.project.sb08deokhugamteamgwanwoong.repository.BookRepository;
 import com.codeit.project.sb08deokhugamteamgwanwoong.repository.DashboardRepository;
 import com.codeit.project.sb08deokhugamteamgwanwoong.repository.ReviewRepository;
+import com.codeit.project.sb08deokhugamteamgwanwoong.repository.UserRepository;
 import com.codeit.project.sb08deokhugamteamgwanwoong.service.DashboardService;
 import java.util.List;
 import java.util.Map;
@@ -28,6 +31,7 @@ public class DashboardServiceImpl implements DashboardService {
 	private final DashboardRepository dashboardRepository;
 	private final BookRepository bookRepository;
 	private final ReviewRepository reviewRepository;
+	private final UserRepository userRepository;
 	private final DashboardMapper dashboardMapper;
 
 	@Override
@@ -76,6 +80,28 @@ public class DashboardServiceImpl implements DashboardService {
 		return rankings.stream()
 				.filter(r -> reviewMap.containsKey(r.getTargetId()))
 				.map(r -> dashboardMapper.toPopularReviewDto(r, reviewMap.get(r.getTargetId())))
+				.toList();
+	}
+
+	@Override
+	public List<PowerUserDto> getPowerUsers(DashboardPeriodEnums period) {
+		List<Dashboard> rankings = dashboardRepository.findRecentRankings(
+				"USER", period, PageRequest.of(0, 10));
+
+		if (rankings.isEmpty()) {
+			return List.of();
+		}
+
+		List<UUID> userIds = rankings.stream()
+				.map(Dashboard::getTargetId)
+				.toList();
+
+		Map<UUID, User> userMap = userRepository.findAllById(userIds).stream()
+				.collect(Collectors.toMap(User::getId, user -> user));
+
+		return rankings.stream()
+				.filter(r -> userMap.containsKey(r.getTargetId()))
+				.map(r -> dashboardMapper.toPowerUserDto(r, userMap.get(r.getTargetId())))
 				.toList();
 	}
 }
