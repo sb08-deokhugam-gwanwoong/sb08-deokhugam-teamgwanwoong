@@ -10,6 +10,7 @@ import com.codeit.project.sb08deokhugamteamgwanwoong.exception.BusinessException
 import com.codeit.project.sb08deokhugamteamgwanwoong.exception.enums.ReviewErrorCode;
 import com.codeit.project.sb08deokhugamteamgwanwoong.mapper.ReviewMapper;
 import com.codeit.project.sb08deokhugamteamgwanwoong.repository.BookRepository;
+import com.codeit.project.sb08deokhugamteamgwanwoong.repository.ReviewLikeRepository;
 import com.codeit.project.sb08deokhugamteamgwanwoong.repository.ReviewRepository;
 import com.codeit.project.sb08deokhugamteamgwanwoong.repository.UserRepository;
 import com.codeit.project.sb08deokhugamteamgwanwoong.service.impl.ReviewServiceImpl;
@@ -42,6 +43,8 @@ public class ReviewServiceTest {
     private ReviewServiceImpl reviewService;
     @Mock
     private ReviewRepository reviewRepository;
+    @Mock
+    private ReviewLikeRepository reviewLikeRepository;
     @Mock
     private UserRepository userRepository;
     @Mock
@@ -100,7 +103,8 @@ public class ReviewServiceTest {
         given(userRepository.findById(any())).willReturn(Optional.of(user));
         given(bookRepository.findById(any())).willReturn(Optional.of(book));
         given(reviewRepository.save(any(Review.class))).willReturn(review);
-        given(reviewMapper.toDto(any(), anyBoolean(), any())).willAnswer(invocation -> createReviewDto(invocation.getArgument(0)));
+        given(reviewMapper.toDto(any(), anyBoolean(), any()))
+                .willAnswer(invocation -> createReviewDto(invocation.getArgument(0), invocation.getArgument(1)));
 
         //when
         ReviewDto result = reviewService.createReview(createRequest);
@@ -133,9 +137,11 @@ public class ReviewServiceTest {
         UUID reviewId = review.getId();
         UUID requestUserId = user.getId();
 
-        given(reviewRepository.findById(reviewId)).willReturn(Optional.of(review));
+        given(reviewRepository.findByIdWithPessimisticLock(reviewId)).willReturn(Optional.of(review));
+        given(userRepository.findById(requestUserId)).willReturn(Optional.of(user));
+        given(reviewLikeRepository.findByReviewIdAndUserId(reviewId, requestUserId)).willReturn(Optional.empty());
         given(reviewMapper.toDto(any(), anyBoolean(), any()))
-                .willAnswer(invocation -> createReviewDto(invocation.getArgument(0)));
+                .willAnswer(invocation -> createReviewDto(invocation.getArgument(0), invocation.getArgument(1)));
 
         //when
         ReviewDto result = reviewService.updateReview(reviewId, updateRequest, requestUserId);
@@ -152,7 +158,7 @@ public class ReviewServiceTest {
         UUID reviewId = review.getId();
         UUID requestUserId = review.getUser().getId();
 
-        given(reviewRepository.findById(reviewId)).willReturn(Optional.empty());
+        given(reviewRepository.findByIdWithPessimisticLock(reviewId)).willReturn(Optional.empty());
 
         //when & then
         assertThatThrownBy(() -> reviewService.updateReview(reviewId, updateRequest, requestUserId))
@@ -167,7 +173,11 @@ public class ReviewServiceTest {
         UUID reviewId = review.getId();
         UUID differentUserId = UUID.randomUUID();
 
-        given(reviewRepository.findById(reviewId)).willReturn(Optional.of(review));
+        User differentUser = User.builder().nickname("otherUser").build();
+        ReflectionTestUtils.setField(differentUser, "id", differentUserId);
+
+        given(reviewRepository.findByIdWithPessimisticLock(reviewId)).willReturn(Optional.of(review));
+        given(userRepository.findById(differentUserId)).willReturn(Optional.of(differentUser));
 
         //when & then
         assertThatThrownBy(() -> reviewService.updateReview(reviewId, updateRequest, differentUserId))
@@ -177,7 +187,7 @@ public class ReviewServiceTest {
 
 
     // 리뷰 생성 로직만 적용하면 사용하지 않아도 되지만 수정이 필요한 ReviewDto를 위해 공통 메소드 처리하였음.
-    private ReviewDto createReviewDto(Review review) {
+    private ReviewDto createReviewDto(Review review, boolean isLiked) {
         return new ReviewDto(
                 review.getId(),
                 review.getBook().getId(),
@@ -189,7 +199,7 @@ public class ReviewServiceTest {
                 review.getRating(),
                 review.getLikeCount(),
                 review.getCommentCount(),
-                false,
+                isLiked,
                 Instant.now(),
                 Instant.now()
         );

@@ -1,21 +1,23 @@
 package com.codeit.project.sb08deokhugamteamgwanwoong.service;
 
-import com.codeit.project.sb08deokhugamteamgwanwoong.dto.review.ReviewCreateRequest;
-import com.codeit.project.sb08deokhugamteamgwanwoong.dto.review.ReviewDto;
-import com.codeit.project.sb08deokhugamteamgwanwoong.dto.review.ReviewLikeDto;
-import com.codeit.project.sb08deokhugamteamgwanwoong.dto.review.ReviewUpdateRequest;
+import com.codeit.project.sb08deokhugamteamgwanwoong.dto.review.*;
 
 import java.util.UUID;
 
 public interface ReviewService {
 
+    CursorPageResponseReviewDto findAllReview(ReviewPageRequest request, UUID requestUserId);
+
     ReviewDto createReview(ReviewCreateRequest request);
 
-    ReviewDto updateReview(UUID reviewId, ReviewUpdateRequest request, UUID requestUserId);
+    ReviewLikeDto createReviewLike(UUID reviewId, UUID requestUserId);
+
+    ReviewDto findDetailReview(UUID reviewId, UUID requestUserId);
 
     void softDeleteReview(UUID reviewId, UUID requestUserId);
 
+    ReviewDto updateReview(UUID reviewId, ReviewUpdateRequest request, UUID requestUserId);
+
     void hardDeleteReview(UUID reviewId, UUID requestUserId);
 
-    ReviewLikeDto createReviewLike(UUID reviewId, UUID requestUserId);
 }
