@@ -1,5 +1,6 @@
 package com.codeit.project.sb08deokhugamteamgwanwoong.controller;
 
+import com.codeit.project.sb08deokhugamteamgwanwoong.controller.docs.ReviewApi;
 import com.codeit.project.sb08deokhugamteamgwanwoong.dto.review.*;
 import com.codeit.project.sb08deokhugamteamgwanwoong.service.ReviewService;
 import jakarta.validation.Valid;
@@ -15,11 +16,11 @@ import java.util.UUID;
 @RequiredArgsConstructor
 @RestController
 @RequestMapping("/api/reviews")
-public class ReviewController {
+public class ReviewController implements ReviewApi {
 
     private final ReviewService reviewService;
 
-    @GetMapping
+    @Override
     public ResponseEntity<CursorPageResponseReviewDto> findAll(
             @RequestHeader("Deokhugam-Request-User-ID") UUID requestUserId,
             @ModelAttribute ReviewPageRequest request
@@ -32,7 +33,7 @@ public class ReviewController {
                 .body(reviewDto);
     }
 
-    @PostMapping
+    @Override
     public ResponseEntity<ReviewDto> create(
             @Valid @RequestBody ReviewCreateRequest request
     ) {
@@ -44,7 +45,7 @@ public class ReviewController {
                 .body(reviewDto);
     }
 
-    @PostMapping("/{reviewId}/like")
+    @Override
     public ResponseEntity<ReviewLikeDto> createReviewLike(
             @PathVariable("reviewId") UUID reviewId,
             @RequestHeader("Deokhugam-Request-User-ID") UUID requestUserId
@@ -57,7 +58,7 @@ public class ReviewController {
                 .body(reviewLikeDto);
     }
 
-    @GetMapping("/{reviewId}")
+    @Override
     public ResponseEntity<ReviewDto> findDetail(
             @PathVariable("reviewId") UUID reviewId,
             @RequestHeader("Deokhugam-Request-User-ID") UUID requestUserId
@@ -70,7 +71,7 @@ public class ReviewController {
                 .body(reviewDto);
     }
 
-    @DeleteMapping("/{reviewId}")
+    @Override
     public ResponseEntity<Void> softDelete(
             @PathVariable("reviewId") UUID reviewId,
             @RequestHeader("Deokhugam-Request-User-ID") UUID requestUserId
@@ -83,7 +84,7 @@ public class ReviewController {
                 .build();
     }
 
-    @PatchMapping("/{reviewId}")
+    @Override
     public ResponseEntity<ReviewDto> update(
             @PathVariable("reviewId") UUID reviewId,
             @RequestHeader("Deokhugam-Request-User-ID") UUID requestUserId,
@@ -97,8 +98,8 @@ public class ReviewController {
                 .body(reviewDto);
     }
 
-    @DeleteMapping("/{reviewId}/hard")
-    public ResponseEntity<Void> hardDeleteHard(
+    @Override
+    public ResponseEntity<Void> hardDelete(
             @PathVariable("reviewId") UUID reviewId,
             @RequestHeader("Deokhugam-Request-User-ID") UUID requestUserId
     ) {
