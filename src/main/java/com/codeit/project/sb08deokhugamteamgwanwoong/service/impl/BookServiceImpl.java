@@ -80,6 +80,32 @@ public class BookServiceImpl implements BookService {
     return bookMapper.toDto(book);
   }
 
+  @Override
+  @Transactional
+  public void softDeleteBook(UUID bookId) {
+    // 기존 도서 조회
+   Book book = bookRepository.findById(bookId)
+       .orElseThrow(() -> new BusinessException(BookErrorCode.BOOK_NOT_FOUND));
+
+   // soft-delete
+   book.delete();
+  }
+
+  @Override
+  @Transactional
+  public void hardDeleteBook(UUID bookId) {
+   // 논리 삭제된 도서인지 확인
+   Book book = bookRepository.findByIdIncludeDeleted(bookId)
+       .orElseThrow(() -> new BusinessException(BookErrorCode.BOOK_NOT_FOUND));
+
+   // S3에 올라가 있는 썸네일 이미지도 같이 삭제
+   if (book.getThumbnailUrl() != null) {
+     s3Uploader.delete(book.getThumbnailUrl());
+   }
+
+   bookRepository.hardDeleteById(bookId);
+  }
+
   private Book createBookEntity(BookCreateRequest request, String thumbnailUrl) {
     return Book.builder()
         .title(request.title())
