@@ -137,7 +137,7 @@ public class ReviewServiceTest {
         UUID reviewId = review.getId();
         UUID requestUserId = user.getId();
 
-        given(reviewRepository.findById(reviewId)).willReturn(Optional.of(review));
+        given(reviewRepository.findByIdWithPessimisticLock(reviewId)).willReturn(Optional.of(review));
         given(userRepository.findById(requestUserId)).willReturn(Optional.of(user));
         given(reviewLikeRepository.findByReviewIdAndUserId(reviewId, requestUserId)).willReturn(Optional.empty());
         given(reviewMapper.toDto(any(), anyBoolean(), any()))
@@ -158,7 +158,7 @@ public class ReviewServiceTest {
         UUID reviewId = review.getId();
         UUID requestUserId = review.getUser().getId();
 
-        given(reviewRepository.findById(reviewId)).willReturn(Optional.empty());
+        given(reviewRepository.findByIdWithPessimisticLock(reviewId)).willReturn(Optional.empty());
 
         //when & then
         assertThatThrownBy(() -> reviewService.updateReview(reviewId, updateRequest, requestUserId))
@@ -176,7 +176,7 @@ public class ReviewServiceTest {
         User differentUser = User.builder().nickname("otherUser").build();
         ReflectionTestUtils.setField(differentUser, "id", differentUserId);
 
-        given(reviewRepository.findById(reviewId)).willReturn(Optional.of(review));
+        given(reviewRepository.findByIdWithPessimisticLock(reviewId)).willReturn(Optional.of(review));
         given(userRepository.findById(differentUserId)).willReturn(Optional.of(differentUser));
 
         //when & then

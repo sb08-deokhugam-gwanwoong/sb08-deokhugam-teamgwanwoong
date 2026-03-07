@@ -4,11 +4,17 @@ import com.codeit.project.sb08deokhugamteamgwanwoong.entity.Book;
 import com.codeit.project.sb08deokhugamteamgwanwoong.entity.Review;
 import com.codeit.project.sb08deokhugamteamgwanwoong.entity.User;
 import com.codeit.project.sb08deokhugamteamgwanwoong.repository.support.RepositoryTestSupport;
+import com.querydsl.jpa.impl.JPAQueryFactory;
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.PersistenceContext;
 import org.hibernate.exception.ConstraintViolationException;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.orm.jpa.TestEntityManager;
+import org.springframework.boot.test.context.TestConfiguration;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Import;
 
 import java.time.LocalDate;
 import java.util.List;
@@ -16,6 +22,8 @@ import java.util.List;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+// 이 테스트 클래스에서만 사용할 QueryDSL 설정을 Import
+@Import(ReviewRepositoryTest.QuerydslTestConfig.class)
 public class ReviewRepositoryTest extends RepositoryTestSupport {
 
     @Autowired
@@ -23,6 +31,18 @@ public class ReviewRepositoryTest extends RepositoryTestSupport {
 
     @Autowired
     private TestEntityManager entityManager;
+
+    // 테스트 전용 QueryDSL 설정(결합도 최소화)
+    @TestConfiguration
+    static class QuerydslTestConfig {
+        @PersistenceContext
+        private EntityManager em;
+
+        @Bean
+        public JPAQueryFactory queryFactory() {
+            return new JPAQueryFactory(em);
+        }
+    }
 
     @Test
     @DisplayName("리뷰 저장이 정상적으로 동작해야 한다.")
