@@ -9,6 +9,15 @@ spring:
     driver-class-name: org.h2.Driver
     hikari:
       connection-init-sql: "" # H2에서는 초기화 SQL 실행 안 함
+  cloud:
+    aws:
+      s3:
+        bucket: ${AWS_BUCKET_NAME}
+      region:
+        static: ${AWS_REGION}
+      credentials:
+        access-key: ${AWS_ACCESS_KEY}
+        secret-key: ${AWS_SECRET_KEY}
 
   # Spring Boot의 SQL 초기화 기능 끄기 (Hibernate 기능 사용)
   sql:
@@ -43,6 +52,9 @@ logging:
     org.hibernate.SQL: debug
     # 바인딩되는 파라미터 출력
     org.hibernate.orm.jdbc.bind: trace
+  # 로그 패턴 추가
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{36} - [%X{request_id}] [%X{client_ip}] %msg%n"
 
 # Naver API
 naver:
