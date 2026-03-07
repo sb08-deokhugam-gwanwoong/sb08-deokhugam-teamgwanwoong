@@ -11,6 +11,7 @@ import com.codeit.project.sb08deokhugamteamgwanwoong.exception.enums.UserErrorCo
 import com.codeit.project.sb08deokhugamteamgwanwoong.mapper.ReviewLikeMapper;
 import com.codeit.project.sb08deokhugamteamgwanwoong.mapper.ReviewMapper;
 import com.codeit.project.sb08deokhugamteamgwanwoong.repository.*;
+import com.codeit.project.sb08deokhugamteamgwanwoong.service.NotificationService;
 import com.codeit.project.sb08deokhugamteamgwanwoong.service.ReviewService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -41,6 +42,8 @@ public class ReviewServiceImpl implements ReviewService {
 
     private final ReviewMapper reviewMapper;
     private final ReviewLikeMapper reviewLikeMapper;
+
+    private final NotificationService notificationService;
 
     @Override
     public CursorPageResponseReviewDto findAllReview(ReviewPageRequest request, UUID requestUserId) {
@@ -186,6 +189,14 @@ public class ReviewServiceImpl implements ReviewService {
             reviewLikeRepository.save(newReviewLike);
             review.increaseLikeCount();
             isLikedNow = true;
+
+            User toUser = review.getUser(); // 리뷰 작성자
+
+            // 다른 사람이 좋아요를 누를 경우만 알림 발송
+            if (!toUser.getId().equals(user.getId())) {
+                String message = String.format("[%s]님이 나의 리뷰를 좋아합니다.", user.getNickname());
+                notificationService.createNotification(toUser, review, message);
+            }
         }
         log.info("Service: 리뷰 좋아요 로직 성공 - reviewId: {}, requestUserId: {}", reviewId, requestUserId);
         return reviewLikeMapper.toDto(review.getId(), requestUserId, isLikedNow);
