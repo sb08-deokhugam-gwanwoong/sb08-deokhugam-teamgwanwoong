@@ -11,6 +11,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -62,5 +63,23 @@ public class BookController {
     log.info("도서 정보 수정 완료 - bookId : {}", bookDto.id());
 
     return ResponseEntity.status(HttpStatus.OK).body(bookDto);
+  }
+
+  @DeleteMapping("/{bookId}")
+  public ResponseEntity<Void> softDeleteBook(@PathVariable("bookId") UUID bookId) {
+    log.info("도서 논리 삭제 요청 - bookId : {}", bookId);
+    bookService.softDeleteBook(bookId);
+    log.info("도서 논리 삭제 완료 - bookId : {}", bookId);
+
+    return ResponseEntity.status(HttpStatus.NO_CONTENT).build();
+  }
+
+  @DeleteMapping("/{bookId}/hard")
+  public ResponseEntity<Void> hardDeleteBook(@PathVariable("bookId") UUID bookId) {
+    log.info("도서 물리 삭제 요청 - bookId : {}", bookId);
+    bookService.hardDeleteBook(bookId);
+    log.info("도서 물리 삭제 완료 - bookId : {}", bookId);
+
+    return ResponseEntity.status(HttpStatus.NO_CONTENT).build();
   }
 }

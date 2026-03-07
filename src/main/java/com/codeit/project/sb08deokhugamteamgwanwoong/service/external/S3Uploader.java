@@ -13,6 +13,7 @@ import software.amazon.awssdk.core.sync.RequestBody;
 import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.model.GetUrlRequest;
 import software.amazon.awssdk.services.s3.model.PutObjectRequest;
+import software.amazon.awssdk.services.s3.model.DeleteObjectRequest;
 
 @Slf4j
 @Component
@@ -77,6 +78,34 @@ public class S3Uploader {
       // 8. 업로드 중 에러 발생 시 로그 남기고 예외 발생
       log.error("S3 업로드 실패: {}", e.getMessage());
       throw new BusinessException(GlobalErrorCode.FILE_UPLOAD_FAILED);
+    }
+  }
+
+  /**
+   * S3에 저장된 파일을 삭제한다.
+   *
+   * @param fileUrl 삭제할 파일의 전체 S3 URL
+   */
+  public void delete(String fileUrl) {
+    if (fileUrl == null || fileUrl.isBlank()) {
+      return;
+    }
+
+    try {
+      // URL에서 S3 객체 키(파일명) 추출
+      String s3FileName = fileUrl.substring(fileUrl.lastIndexOf("/") + 1);
+
+      // S3 삭제 요청 객체 생성
+      DeleteObjectRequest deleteObjectRequest = DeleteObjectRequest.builder()
+          .bucket(bucket)
+          .key(s3FileName)
+          .build();
+
+      // S3 클라이언트를 통해 삭제 실행
+      s3Client.deleteObject(deleteObjectRequest);
+      log.info("S3 파일 삭제 완료 : {} ", s3FileName);
+    } catch (Exception e) {
+      log.error("S3 파일 삭제 실패 (URL: {}): {}", fileUrl, e.getMessage());
     }
   }
 }

@@ -11,4 +11,6 @@ public interface BookService {
   BookDto createBook(BookCreateRequest request, MultipartFile thumbnailImage);
   BookDto getBook(UUID bookId);
   BookDto updateBook(UUID bookId, BookUpdateRequest request, MultipartFile thumbnailImage);
+  void softDeleteBook(UUID bookId);
+  void hardDeleteBook(UUID bookId);
 }
