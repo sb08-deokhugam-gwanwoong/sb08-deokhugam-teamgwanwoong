@@ -2,7 +2,9 @@ package com.codeit.project.sb08deokhugamteamgwanwoong.controller;
 
 import com.codeit.project.sb08deokhugamteamgwanwoong.dto.book.BookCreateRequest;
 import com.codeit.project.sb08deokhugamteamgwanwoong.dto.book.BookDto;
+import com.codeit.project.sb08deokhugamteamgwanwoong.dto.book.BookPageRequest;
 import com.codeit.project.sb08deokhugamteamgwanwoong.dto.book.BookUpdateRequest;
+import com.codeit.project.sb08deokhugamteamgwanwoong.dto.book.CursorPageResponseBookDto;
 import com.codeit.project.sb08deokhugamteamgwanwoong.service.BookService;
 import jakarta.validation.Valid;
 import java.util.UUID;
@@ -13,6 +15,7 @@ import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -81,5 +84,18 @@ public class BookController {
     log.info("도서 물리 삭제 완료 - bookId : {}", bookId);
 
     return ResponseEntity.status(HttpStatus.NO_CONTENT).build();
+  }
+
+  @GetMapping
+  public ResponseEntity<CursorPageResponseBookDto> searchBooks (
+      @ModelAttribute BookPageRequest request
+  ) {
+    log.info("도서 목록 조회 요청 - keyword : {}, orderBy: {}, cursor : {}",
+        request.keyword(), request.orderBy(), request.cursor());
+    CursorPageResponseBookDto responseBookDto = bookService.searchBooks(request);
+    log.info("도서 목록 조회 완료 - 반환된 데이터 개수: {}, 다음 페이지 존재 여부: {}",
+        responseBookDto.content().size(), responseBookDto.hasNext());
+
+    return ResponseEntity.status(HttpStatus.OK).body(responseBookDto);
   }
 }
