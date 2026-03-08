@@ -3,6 +3,8 @@ package com.codeit.project.sb08deokhugamteamgwanwoong.service.external;
 import com.codeit.project.sb08deokhugamteamgwanwoong.dto.book.NaverBookDto;
 import com.codeit.project.sb08deokhugamteamgwanwoong.dto.external.naver.NaverApiResponse;
 import com.codeit.project.sb08deokhugamteamgwanwoong.dto.external.naver.NaverBookItemResponse;
+import com.codeit.project.sb08deokhugamteamgwanwoong.exception.BusinessException;
+import com.codeit.project.sb08deokhugamteamgwanwoong.exception.enums.GlobalErrorCode;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -70,9 +72,9 @@ public class NaverBookProvider implements BookMetadataProvider<NaverBookDto> {
             }
         } catch (Exception e) {
             log.error("Failed to fetch book metadata from Naver API", e);
-            throw new RuntimeException("Naver API 호출 중 오류 발생", e);
+            throw new BusinessException(GlobalErrorCode.INTERNAL_SERVER_ERROR, "Naver API 호출 중 오류 발생 : " + e);
         }
 
-        throw new RuntimeException("도서 정보를 찾을 수 없습니다: " + query);
+        throw new BusinessException(GlobalErrorCode.INTERNAL_SERVER_ERROR,"도서 정보를 찾을 수 없습니다: " + query);
     }
 }
