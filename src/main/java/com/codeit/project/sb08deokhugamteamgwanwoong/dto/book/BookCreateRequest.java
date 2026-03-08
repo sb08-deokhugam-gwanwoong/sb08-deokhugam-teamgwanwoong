@@ -7,15 +7,15 @@ import lombok.Builder;
 
 @Builder
 public record BookCreateRequest(
-    @NotBlank
+    @NotBlank(message = "제목은 필수입니다.")
     String title,
-    @NotBlank
+    @NotBlank(message = "저자는 필수입니다.")
     String author,
-    @NotBlank
+    @NotBlank(message = "설명은 필수입니다.")
     String description,
-    @NotBlank
+    @NotBlank(message = "출판사는 필수입니다.")
     String publisher,
-    @NotNull
+    @NotNull(message = "출판일은 필수입니다.")
     LocalDate publishedDate,
     String isbn
 ) {

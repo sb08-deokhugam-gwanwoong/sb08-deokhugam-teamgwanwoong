@@ -55,7 +55,7 @@ public class BookController {
   @PatchMapping(value = "/{bookId}", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
   public ResponseEntity<BookDto> updateBook(
       @PathVariable("bookId") UUID bookId,
-      @RequestPart(value = "bookData", required = false)BookUpdateRequest request,
+      @Valid @RequestPart(value = "bookData", required = false)BookUpdateRequest request,
       @RequestPart(value = "thumbnailImage", required = false) MultipartFile thumbnailImage
   ) {
     log.info("도서 정보 수정 요청 - bookId : {}", bookId);
