@@ -251,7 +251,7 @@ public class BookControllerTest extends ControllerTestSupport {
         .author("남궁성")
         .build();
 
-    given(bookService.getBook(bookId)).willReturn(bookDto).willReturn(bookDto);
+    given(bookService.getBook(bookId)).willReturn(bookDto);
 
     // when & then
     mockMvc.perform(get("/api/books/{bookId}", bookId))
