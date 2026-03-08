@@ -73,6 +73,11 @@ public class BookServiceImpl implements BookService {
 
     // 썸네일 이미지가 새로 갱신되면, S3에 업로드 후 URL 업데이트
     if (thumbnailImage != null && !thumbnailImage.isEmpty()) {
+      // 새로운 이미지를 올리기 전에, 기존 이미지가 있단면 S3에서 먼저 삭제
+      if (book.getThumbnailUrl() != null) {
+        s3Uploader.delete(book.getThumbnailUrl());
+      }
+
       String newThumbnailUrl = s3Uploader.upload(thumbnailImage);
       book.updateThumbnailUrl(newThumbnailUrl);
     }
