@@ -2,6 +2,7 @@ package com.codeit.project.sb08deokhugamteamgwanwoong.service.impl;
 
 import com.codeit.project.sb08deokhugamteamgwanwoong.dto.book.BookCreateRequest;
 import com.codeit.project.sb08deokhugamteamgwanwoong.dto.book.BookDto;
+import com.codeit.project.sb08deokhugamteamgwanwoong.dto.book.BookUpdateRequest;
 import com.codeit.project.sb08deokhugamteamgwanwoong.entity.Book;
 import com.codeit.project.sb08deokhugamteamgwanwoong.exception.BusinessException;
 import com.codeit.project.sb08deokhugamteamgwanwoong.exception.enums.BookErrorCode;
@@ -9,6 +10,7 @@ import com.codeit.project.sb08deokhugamteamgwanwoong.mapper.BookMapper;
 import com.codeit.project.sb08deokhugamteamgwanwoong.repository.BookRepository;
 import com.codeit.project.sb08deokhugamteamgwanwoong.service.BookService;
 import com.codeit.project.sb08deokhugamteamgwanwoong.service.external.S3Uploader;
+import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -46,6 +48,62 @@ public class BookServiceImpl implements BookService {
 
     // DTO 변환, 반환
     return bookMapper.toDto(savedBook);
+  }
+
+  @Override
+  public BookDto getBook(UUID bookId) {
+    // 단건 조회
+    Book book = bookRepository.findById(bookId)
+        .orElseThrow(() -> new BusinessException(BookErrorCode.BOOK_NOT_FOUND));
+
+    return bookMapper.toDto(book);
+  }
+
+  @Override
+  @Transactional
+  public BookDto updateBook(UUID bookId, BookUpdateRequest request, MultipartFile thumbnailImage) {
+    // 기존 도서 조회
+    Book book = bookRepository.findById(bookId)
+        .orElseThrow(() -> new BusinessException(BookErrorCode.BOOK_NOT_FOUND));
+
+    // MapStruct로 들어온 데이터 중 null이 아닌 값을 엔티티로 덮어씌움
+    if (request != null) {
+      book.update(request);
+    }
+
+    // 썸네일 이미지가 새로 갱신되면, S3에 업로드 후 URL 업데이트
+    if (thumbnailImage != null && !thumbnailImage.isEmpty()) {
+      String newThumbnailUrl = s3Uploader.upload(thumbnailImage);
+      book.updateThumbnailUrl(newThumbnailUrl);
+    }
+
+    return bookMapper.toDto(book);
+  }
+
+  @Override
+  @Transactional
+  public void softDeleteBook(UUID bookId) {
+    // 기존 도서 조회
+   Book book = bookRepository.findById(bookId)
+       .orElseThrow(() -> new BusinessException(BookErrorCode.BOOK_NOT_FOUND));
+
+   // soft-delete
+   book.delete();
+  }
+
+  @Override
+  @Transactional
+  public void hardDeleteBook(UUID bookId) {
+   // 논리 삭제된 도서인지 확인
+   Book book = bookRepository.findByIdIncludeDeleted(bookId)
+       .orElseThrow(() -> new BusinessException(BookErrorCode.BOOK_NOT_FOUND));
+
+   // S3에 올라가 있는 썸네일 이미지도 같이 삭제
+   if (book.getThumbnailUrl() != null) {
+     s3Uploader.delete(book.getThumbnailUrl());
+   }
+
+   bookRepository.hardDeleteById(bookId);
   }
 
   private Book createBookEntity(BookCreateRequest request, String thumbnailUrl) {

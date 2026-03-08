@@ -2,9 +2,11 @@ package com.codeit.project.sb08deokhugamteamgwanwoong.mapper;
 
 import com.codeit.project.sb08deokhugamteamgwanwoong.dto.dashboard.PopularBookDto;
 import com.codeit.project.sb08deokhugamteamgwanwoong.dto.dashboard.PopularReviewDto;
+import com.codeit.project.sb08deokhugamteamgwanwoong.dto.dashboard.PowerUserDto;
 import com.codeit.project.sb08deokhugamteamgwanwoong.entity.Book;
 import com.codeit.project.sb08deokhugamteamgwanwoong.entity.Dashboard;
 import com.codeit.project.sb08deokhugamteamgwanwoong.entity.Review;
+import com.codeit.project.sb08deokhugamteamgwanwoong.entity.User;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
 
@@ -40,4 +42,15 @@ public interface DashboardMapper {
 	@Mapping(source = "review.likeCount", target = "likeCount")
 	@Mapping(source = "review.commentCount", target = "commentCount")
 	PopularReviewDto toPopularReviewDto(Dashboard dashboard, Review review);
+
+	@Mapping(source = "user.id", target = "userId")
+	@Mapping(source = "user.nickname", target = "nickname")
+	@Mapping(source = "dashboard.periodType", target = "period")
+	@Mapping(source = "dashboard.createdAt", target = "createdAt")
+	@Mapping(source = "dashboard.rankingPos", target = "rank")
+	@Mapping(source = "dashboard.score", target = "score")
+	@Mapping(target = "reviewScoreSum", constant = "0.0")
+	@Mapping(target = "likeCount", constant = "0L")
+	@Mapping(target = "commentCount", constant = "0L")
+	PowerUserDto toPowerUserDto(Dashboard dashboard, User user);
 }

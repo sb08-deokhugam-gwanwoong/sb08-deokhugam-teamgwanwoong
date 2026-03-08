@@ -1,5 +1,6 @@
 package com.codeit.project.sb08deokhugamteamgwanwoong.entity;
 
+import com.codeit.project.sb08deokhugamteamgwanwoong.dto.book.BookUpdateRequest;
 import com.codeit.project.sb08deokhugamteamgwanwoong.entity.base.BaseRemovableEntity;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -53,4 +54,18 @@ public class Book extends BaseRemovableEntity {
       this.description = description;
       this.thumbnailUrl = thumbnailUrl;
     }
+
+  // 도서 정보 수정 (더티 체킹)
+  public void update(BookUpdateRequest request) {
+    if (request.title() != null) this.title = request.title();
+    if (request.author() != null) this.author = request.author();
+    if (request.description() != null) this.description = request.description();
+    if (request.publisher() != null) this.publisher = request.publisher();
+    if (request.publishedDate() != null) this.publishedDate = request.publishedDate();
+  }
+
+  // 썸네일 이미지 수정
+  public void updateThumbnailUrl(String thumbnailUrl) {
+      if (thumbnailUrl != null) this.thumbnailUrl = thumbnailUrl;
+  }
 }

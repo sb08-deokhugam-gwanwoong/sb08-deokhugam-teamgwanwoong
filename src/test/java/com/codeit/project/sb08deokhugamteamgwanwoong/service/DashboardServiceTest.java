@@ -8,14 +8,17 @@ import static org.mockito.Mockito.when;
 
 import com.codeit.project.sb08deokhugamteamgwanwoong.dto.dashboard.PopularBookDto;
 import com.codeit.project.sb08deokhugamteamgwanwoong.dto.dashboard.PopularReviewDto;
+import com.codeit.project.sb08deokhugamteamgwanwoong.dto.dashboard.PowerUserDto;
 import com.codeit.project.sb08deokhugamteamgwanwoong.entity.Book;
 import com.codeit.project.sb08deokhugamteamgwanwoong.entity.Dashboard;
 import com.codeit.project.sb08deokhugamteamgwanwoong.entity.Review;
+import com.codeit.project.sb08deokhugamteamgwanwoong.entity.User;
 import com.codeit.project.sb08deokhugamteamgwanwoong.entity.enums.DashboardPeriodEnums;
 import com.codeit.project.sb08deokhugamteamgwanwoong.mapper.DashboardMapper;
 import com.codeit.project.sb08deokhugamteamgwanwoong.repository.BookRepository;
 import com.codeit.project.sb08deokhugamteamgwanwoong.repository.DashboardRepository;
 import com.codeit.project.sb08deokhugamteamgwanwoong.repository.ReviewRepository;
+import com.codeit.project.sb08deokhugamteamgwanwoong.repository.UserRepository;
 import com.codeit.project.sb08deokhugamteamgwanwoong.service.impl.DashboardServiceImpl;
 import java.time.Instant;
 import java.util.List;
@@ -40,6 +43,9 @@ class DashboardServiceTest {
 
 	@Mock
 	private ReviewRepository reviewRepository;
+
+	@Mock
+	private UserRepository userRepository;
 
 	@Mock
 	private DashboardMapper dashboardMapper;
@@ -71,52 +77,18 @@ class DashboardServiceTest {
 		UUID book1Id = UUID.randomUUID();
 		UUID book2Id = UUID.randomUUID();
 
-		Dashboard dashboard1 = Dashboard.builder()
-				.targetId(book1Id)
-				.targetType("BOOK")
-				.periodType(DashboardPeriodEnums.ALL_TIME)
-				.score(90.0)
-				.rankingPos(1)
-				.build();
-
-		Dashboard dashboard2 = Dashboard.builder()
-				.targetId(book2Id)
-				.targetType("BOOK")
-				.periodType(DashboardPeriodEnums.ALL_TIME)
-				.score(80.0)
-				.rankingPos(2)
-				.build();
+		Dashboard dashboard1 = createDashboard(book1Id, "BOOK", DashboardPeriodEnums.ALL_TIME, 90.0, 1);
+		Dashboard dashboard2 = createDashboard(book2Id, "BOOK", DashboardPeriodEnums.ALL_TIME, 80.0, 2);
 
 		Book book1 = createMockBook(book1Id);
 		Book book2 = createMockBook(book2Id);
 
-		PopularBookDto dto1 = new PopularBookDto(
-				UUID.randomUUID(),
-				book1Id,
-				"자바의 정석",
-				"남궁성",
-				"https://example.com/thumb1.jpg",
-				DashboardPeriodEnums.ALL_TIME,
-				1L,
-				90.0,
-				10L,
-				4.5,
-				Instant.now()
-		);
-
-		PopularBookDto dto2 = new PopularBookDto(
-				UUID.randomUUID(),
-				book2Id,
-				"클린 코드",
-				"로버트 마틴",
-				null,
-				DashboardPeriodEnums.ALL_TIME,
-				2L,
-				80.0,
-				5L,
-				4.0,
-				Instant.now()
-		);
+		PopularBookDto dto1 = createPopularBookDto(
+				book1Id, "자바의 정석", "남궁성", "https://example.com/thumb1.jpg",
+				DashboardPeriodEnums.ALL_TIME, 1L, 90.0, 10L, 4.5);
+		PopularBookDto dto2 = createPopularBookDto(
+				book2Id, "클린 코드", "로버트 마틴", null,
+				DashboardPeriodEnums.ALL_TIME, 2L, 80.0, 5L, 4.0);
 
 		when(dashboardRepository.findRecentRankings(
 				eq("BOOK"),
@@ -173,60 +145,18 @@ class DashboardServiceTest {
 		UUID review1Id = UUID.randomUUID();
 		UUID review2Id = UUID.randomUUID();
 
-		Dashboard dashboard1 = Dashboard.builder()
-				.targetId(review1Id)
-				.targetType("REVIEW")
-				.periodType(DashboardPeriodEnums.MONTHLY)
-				.score(85.0)
-				.rankingPos(1)
-				.build();
-
-		Dashboard dashboard2 = Dashboard.builder()
-				.targetId(review2Id)
-				.targetType("REVIEW")
-				.periodType(DashboardPeriodEnums.MONTHLY)
-				.score(70.0)
-				.rankingPos(2)
-				.build();
+		Dashboard dashboard1 = createDashboard(review1Id, "REVIEW", DashboardPeriodEnums.MONTHLY, 85.0, 1);
+		Dashboard dashboard2 = createDashboard(review2Id, "REVIEW", DashboardPeriodEnums.MONTHLY, 70.0, 2);
 
 		Review review1 = createMockReview(review1Id);
 		Review review2 = createMockReview(review2Id);
 
-		PopularReviewDto dto1 = new PopularReviewDto(
-				UUID.randomUUID(),
-				review1Id,
-				UUID.randomUUID(),
-				"자바의 정석",
-				"https://example.com/thumb1.jpg",
-				UUID.randomUUID(),
-				"사용자1",
-				"좋은 책이에요",
-				5.0,
-				DashboardPeriodEnums.MONTHLY,
-				Instant.now(),
-				1L,
-				85.0,
-				10L,
-				3L
-		);
-
-		PopularReviewDto dto2 = new PopularReviewDto(
-				UUID.randomUUID(),
-				review2Id,
-				UUID.randomUUID(),
-				"클린 코드",
-				null,
-				UUID.randomUUID(),
-				"사용자2",
-				"재미있어요",
-				4.0,
-				DashboardPeriodEnums.MONTHLY,
-				Instant.now(),
-				2L,
-				70.0,
-				5L,
-				2L
-		);
+		PopularReviewDto dto1 = createPopularReviewDto(
+				review1Id, "자바의 정석", "https://example.com/thumb1.jpg", "사용자1",
+				"좋은 책이에요", 5.0, 1L, 85.0, 10L, 3L);
+		PopularReviewDto dto2 = createPopularReviewDto(
+				review2Id, "클린 코드", null, "사용자2",
+				"재미있어요", 4.0, 2L, 70.0, 5L, 2L);
 
 		when(dashboardRepository.findRecentRankings(
 				eq("REVIEW"),
@@ -255,6 +185,131 @@ class DashboardServiceTest {
 		assertThat(response.get(1).score()).isEqualTo(70.0);
 	}
 
+	@Test
+	@DisplayName("파워유저: 대시보드 데이터가 없으면 빈 리스트를 반환한다.")
+	void getPowerUsers_returnsEmpty_whenNoDashboardData() {
+		// given
+		when(dashboardRepository.findRecentRankings(
+				eq("USER"),
+				eq(DashboardPeriodEnums.WEEKLY),
+				any(PageRequest.class)
+		)).thenReturn(List.of());
+
+		// when
+		List<PowerUserDto> response = dashboardService.getPowerUsers(DashboardPeriodEnums.WEEKLY);
+
+		// then
+		assertThat(response).isEmpty();
+	}
+
+	@Test
+	@DisplayName("파워유저: 대시보드 데이터가 있으면 점수 순(랭킹 순)으로 파워유저 목록을 조회한다.")
+	void getPowerUsers_returnsOrderedByRanking_whenDashboardDataExists() {
+		// given
+		UUID user1Id = UUID.randomUUID();
+		UUID user2Id = UUID.randomUUID();
+
+		Dashboard dashboard1 = createDashboard(user1Id, "USER", DashboardPeriodEnums.MONTHLY, 95.0, 1);
+		Dashboard dashboard2 = createDashboard(user2Id, "USER", DashboardPeriodEnums.MONTHLY, 80.0, 2);
+
+		User user1 = createMockUser(user1Id, "파워유저1");
+		User user2 = createMockUser(user2Id, "파워유저2");
+
+		PowerUserDto dto1 = createPowerUserDto(user1Id, "파워유저1", DashboardPeriodEnums.MONTHLY, 1L, 95.0);
+		PowerUserDto dto2 = createPowerUserDto(user2Id, "파워유저2", DashboardPeriodEnums.MONTHLY, 2L, 80.0);
+
+		when(dashboardRepository.findRecentRankings(
+				eq("USER"),
+				eq(DashboardPeriodEnums.MONTHLY),
+				any(PageRequest.class)
+		)).thenReturn(List.of(dashboard1, dashboard2));
+
+		when(userRepository.findAllById(anyList())).thenReturn(List.of(user1, user2));
+
+		when(dashboardMapper.toPowerUserDto(dashboard1, user1)).thenReturn(dto1);
+		when(dashboardMapper.toPowerUserDto(dashboard2, user2)).thenReturn(dto2);
+
+		// when
+		List<PowerUserDto> response = dashboardService.getPowerUsers(DashboardPeriodEnums.MONTHLY);
+
+		// then
+		assertThat(response).hasSize(2);
+		assertThat(response.get(0).rank()).isEqualTo(1L);
+		assertThat(response.get(0).userId()).isEqualTo(user1Id);
+		assertThat(response.get(0).nickname()).isEqualTo("파워유저1");
+		assertThat(response.get(0).score()).isEqualTo(95.0);
+
+		assertThat(response.get(1).rank()).isEqualTo(2L);
+		assertThat(response.get(1).userId()).isEqualTo(user2Id);
+		assertThat(response.get(1).nickname()).isEqualTo("파워유저2");
+		assertThat(response.get(1).score()).isEqualTo(80.0);
+	}
+
+	private Dashboard createDashboard(UUID targetId, String targetType, DashboardPeriodEnums periodType,
+			double score, int rankingPos) {
+		return Dashboard.builder()
+				.targetId(targetId)
+				.targetType(targetType)
+				.periodType(periodType)
+				.score(score)
+				.rankingPos(rankingPos)
+				.build();
+	}
+
+	private PopularBookDto createPopularBookDto(UUID bookId, String title, String author, String thumbnailUrl,
+			DashboardPeriodEnums period, long rank, double score, long reviewCount, double rating) {
+		return new PopularBookDto(
+				UUID.randomUUID(),
+				bookId,
+				title,
+				author,
+				thumbnailUrl,
+				period,
+				rank,
+				score,
+				reviewCount,
+				rating,
+				Instant.now()
+		);
+	}
+
+	private PopularReviewDto createPopularReviewDto(UUID reviewId, String bookTitle, String bookThumbnailUrl,
+			String userNickname, String reviewContent, double reviewRating, long rank, double score,
+			long likeCount, long commentCount) {
+		return new PopularReviewDto(
+				UUID.randomUUID(),
+				reviewId,
+				UUID.randomUUID(),
+				bookTitle,
+				bookThumbnailUrl,
+				UUID.randomUUID(),
+				userNickname,
+				reviewContent,
+				reviewRating,
+				DashboardPeriodEnums.MONTHLY,
+				Instant.now(),
+				rank,
+				score,
+				likeCount,
+				commentCount
+		);
+	}
+
+	private PowerUserDto createPowerUserDto(UUID userId, String nickname, DashboardPeriodEnums period,
+			long rank, double score) {
+		return new PowerUserDto(
+				userId,
+				nickname,
+				period,
+				Instant.now(),
+				rank,
+				score,
+				0.0,
+				0L,
+				0L
+		);
+	}
+
 	private Book createMockBook(UUID id) {
 		Book book = org.mockito.Mockito.mock(Book.class);
 		when(book.getId()).thenReturn(id);
@@ -265,5 +320,11 @@ class DashboardServiceTest {
 		Review review = org.mockito.Mockito.mock(Review.class);
 		when(review.getId()).thenReturn(id);
 		return review;
+	}
+
+	private User createMockUser(UUID id, String nickname) {
+		User user = org.mockito.Mockito.mock(User.class);
+		when(user.getId()).thenReturn(id);
+		return user;
 	}
 }

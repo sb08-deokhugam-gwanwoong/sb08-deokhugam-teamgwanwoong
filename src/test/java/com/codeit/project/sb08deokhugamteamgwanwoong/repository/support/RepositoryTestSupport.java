@@ -1,12 +1,13 @@
 package com.codeit.project.sb08deokhugamteamgwanwoong.repository.support;
 
 import com.codeit.project.sb08deokhugamteamgwanwoong.config.JpaConfig;
+import com.codeit.project.sb08deokhugamteamgwanwoong.config.QuerydslConfig;
 import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
 import org.springframework.context.annotation.Import;
 import org.springframework.test.context.ActiveProfiles;
 
 @DataJpaTest
-@Import(JpaConfig.class)
+@Import({JpaConfig.class, QuerydslConfig.class})
 @ActiveProfiles("test")
 public abstract class RepositoryTestSupport {
   /*

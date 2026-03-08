@@ -2,13 +2,19 @@ package com.codeit.project.sb08deokhugamteamgwanwoong.controller;
 
 import com.codeit.project.sb08deokhugamteamgwanwoong.dto.book.BookCreateRequest;
 import com.codeit.project.sb08deokhugamteamgwanwoong.dto.book.BookDto;
+import com.codeit.project.sb08deokhugamteamgwanwoong.dto.book.BookUpdateRequest;
 import com.codeit.project.sb08deokhugamteamgwanwoong.service.BookService;
 import jakarta.validation.Valid;
+import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestPart;
@@ -35,5 +41,45 @@ public class BookController {
     log.info("도서 등록 완료 - 등록된 도서 ID : {}", bookDto.id());
 
     return ResponseEntity.status(HttpStatus.CREATED).body(bookDto);
+  }
+
+  @GetMapping("/{bookId}")
+  public ResponseEntity<BookDto> getBook(@PathVariable("bookId") UUID bookId) {
+    log.info("도서 상세 조회 요청 - bookId: {}", bookId);
+    BookDto bookDto = bookService.getBook(bookId);
+    log.info("도서 상세 조회 완료 - 도서 정보: {}", bookDto.title());
+
+    return ResponseEntity.status(HttpStatus.OK).body(bookDto);
+  }
+
+  @PatchMapping(value = "/{bookId}", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+  public ResponseEntity<BookDto> updateBook(
+      @PathVariable("bookId") UUID bookId,
+      @RequestPart(value = "bookData", required = false)BookUpdateRequest request,
+      @RequestPart(value = "thumbnailImage", required = false) MultipartFile thumbnailImage
+  ) {
+    log.info("도서 정보 수정 요청 - bookId : {}", bookId);
+    BookDto bookDto = bookService.updateBook(bookId, request, thumbnailImage);
+    log.info("도서 정보 수정 완료 - bookId : {}", bookDto.id());
+
+    return ResponseEntity.status(HttpStatus.OK).body(bookDto);
+  }
+
+  @DeleteMapping("/{bookId}")
+  public ResponseEntity<Void> softDeleteBook(@PathVariable("bookId") UUID bookId) {
+    log.info("도서 논리 삭제 요청 - bookId : {}", bookId);
+    bookService.softDeleteBook(bookId);
+    log.info("도서 논리 삭제 완료 - bookId : {}", bookId);
+
+    return ResponseEntity.status(HttpStatus.NO_CONTENT).build();
+  }
+
+  @DeleteMapping("/{bookId}/hard")
+  public ResponseEntity<Void> hardDeleteBook(@PathVariable("bookId") UUID bookId) {
+    log.info("도서 물리 삭제 요청 - bookId : {}", bookId);
+    bookService.hardDeleteBook(bookId);
+    log.info("도서 물리 삭제 완료 - bookId : {}", bookId);
+
+    return ResponseEntity.status(HttpStatus.NO_CONTENT).build();
   }
 }
