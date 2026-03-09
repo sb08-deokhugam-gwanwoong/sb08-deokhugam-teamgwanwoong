@@ -148,6 +148,7 @@ public class NotificationServiceImpl implements NotificationService {
   }
 
   @Override
+  @Transactional
   public void deleteOldNotifications() {
 
     Instant limitDate = Instant.now().minus(Duration.ofDays(7));

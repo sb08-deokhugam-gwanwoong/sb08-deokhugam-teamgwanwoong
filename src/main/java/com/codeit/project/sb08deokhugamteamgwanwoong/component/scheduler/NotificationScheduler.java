@@ -16,7 +16,6 @@ public class NotificationScheduler {
 
   // 매일 01시 00분 실행
   @Scheduled(cron = "0 0 1 * * *", zone = "Asia/Seoul")
-  @Transactional
   public void cleanupNotifications() {
     try {
       notificationService.deleteOldNotifications();
