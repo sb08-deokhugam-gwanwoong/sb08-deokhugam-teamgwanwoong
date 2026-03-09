@@ -10,7 +10,7 @@ import java.util.UUID;
 public interface CommentService {
   CommentDto create(CommentCreateRequest request);
 
-  CursorPageResponseCommentDto findAllComments(UUID reviewId, Instant cursorCreatedAt, int size);
+  CursorPageResponseCommentDto findAllComments(UUID reviewId, String cursor, Instant after, int size);
 
   CommentDto findById(UUID commentId);
 

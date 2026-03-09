@@ -78,7 +78,7 @@ public interface CommentApi {
       @RequestParam @Parameter(description = "리뷰 ID", required = true) UUID reviewId,
       @RequestParam(required = false, defaultValue = "DESC") String direction,
       @RequestParam(required = false) String cursor,
-      @RequestParam(required = false, name = "after") Instant cursorCreatedAt,
+      @RequestParam(required = false) Instant after,
       @RequestParam(defaultValue = "50", name = "limit") int size);
 
   @Operation(
