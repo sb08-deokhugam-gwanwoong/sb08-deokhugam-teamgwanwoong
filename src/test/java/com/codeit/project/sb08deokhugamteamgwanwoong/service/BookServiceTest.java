@@ -9,7 +9,10 @@ import static org.mockito.Mockito.verify;
 
 import com.codeit.project.sb08deokhugamteamgwanwoong.dto.book.BookCreateRequest;
 import com.codeit.project.sb08deokhugamteamgwanwoong.dto.book.BookDto;
+import com.codeit.project.sb08deokhugamteamgwanwoong.dto.book.BookPageRequest;
+import com.codeit.project.sb08deokhugamteamgwanwoong.dto.book.BookSearchCondition;
 import com.codeit.project.sb08deokhugamteamgwanwoong.dto.book.BookUpdateRequest;
+import com.codeit.project.sb08deokhugamteamgwanwoong.dto.book.CursorPageResponseBookDto;
 import com.codeit.project.sb08deokhugamteamgwanwoong.entity.Book;
 import com.codeit.project.sb08deokhugamteamgwanwoong.exception.BusinessException;
 import com.codeit.project.sb08deokhugamteamgwanwoong.exception.enums.BookErrorCode;
@@ -17,7 +20,10 @@ import com.codeit.project.sb08deokhugamteamgwanwoong.mapper.BookMapper;
 import com.codeit.project.sb08deokhugamteamgwanwoong.repository.BookRepository;
 import com.codeit.project.sb08deokhugamteamgwanwoong.service.external.S3Uploader;
 import com.codeit.project.sb08deokhugamteamgwanwoong.service.impl.BookServiceImpl;
+import java.time.Instant;
 import java.time.LocalDate;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 import org.junit.jupiter.api.DisplayName;
@@ -28,6 +34,7 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.Spy;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.data.domain.Pageable;
 import org.springframework.http.MediaType;
 import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.web.multipart.MultipartFile;
@@ -377,5 +384,158 @@ public class BookServiceTest {
     assertThatThrownBy(() -> bookService.hardDeleteBook(bookId))
         .isInstanceOf(BusinessException.class)
         .hasMessageContaining(BookErrorCode.BOOK_NOT_FOUND.getMessage());
+  }
+
+  /*
+  * 도서 목록 검색 (커서 페이징) 관련 테스트
+  * */
+  @DisplayName("도서 목록 검색 시 요청한 limit보다 많은 데이터가 조회되면 hasNext가 true가 되고 초과된 데이터는 잘라낸다.")
+  @Test
+  void searchBooks_HasNext_True() {
+    // given
+    // 프론트엔드에서 limit=2를 요청한 상황
+    BookPageRequest bookPageRequest = new BookPageRequest("자바", "title", "DESC", null, null, 2);
+
+    // DB는 createdAt 값이 필수이기 때문에 mock 데이터에도 세팅해줌
+    Book book1 = Book.builder().title("자바1").build();
+    Book book2 = Book.builder().title("자바2").build();
+    Book book3 = Book.builder().title("자바3").build(); // limit 2보다 1개 더 조회
+
+    // 서비스는 limit + 1 = 3개를 요청. 리포지토리는 3개를 반환하도록 mocking
+    // 서비스 내부에서 .remove()를 사용하므로, 변경 가능한 ArrayList로 묶어서 반환
+    given(bookRepository.findAllByCursor(any(BookSearchCondition.class), any(Pageable.class)))
+        .willReturn(new ArrayList<>(List.of(book1, book2, book3)));
+
+    // Mapper가 엔티티를 DTO로 변환하도록 mocking
+    given(bookMapper.toDto(any(Book.class))).willAnswer(invocation -> {
+      Book b = invocation.getArgument(0);
+      return BookDto.builder()
+          .title(b.getTitle())
+          .createdAt(Instant.now())
+          .build();
+    });
+
+    // when
+    CursorPageResponseBookDto pageResponseBookDto = bookService.searchBooks(bookPageRequest);
+
+    // then
+    assertThat(pageResponseBookDto.hasNext()).isTrue(); // 다음 페이지가 있다고 판단
+    assertThat(pageResponseBookDto.content()).hasSize(2); // 프론트엔드에는 2개만 잘라서 반환
+    assertThat(pageResponseBookDto.content().get(0).title()).isEqualTo("자바1");
+    assertThat(pageResponseBookDto.content().get(1).title()).isEqualTo("자바2");
+  }
+
+  @DisplayName("도서 목록 검색 시 요청한 limit 이하의 데이터가 조회되면 hasNext가 false이다.")
+  @Test
+  void searchBooks_HasNext_False() {
+    // given
+    BookPageRequest bookPageRequest = new BookPageRequest("스프링", "createdAt", "DESC", null, null, 10);
+
+    Book book1 = Book.builder().title("스프링1").build();
+
+    // limit = 10인데, DB에는 1개만 조회된 상황 mocking
+    given(bookRepository.findAllByCursor(any(BookSearchCondition.class), any(Pageable.class)))
+        .willReturn(new ArrayList<>(List.of(book1)));
+
+    given(bookMapper.toDto(any(Book.class))).willAnswer(invocation -> {
+      Book b = invocation.getArgument(0);
+      return BookDto.builder().title(b.getTitle()).createdAt(Instant.now()).build();
+    });
+
+    // when
+    CursorPageResponseBookDto responseBookDto = bookService.searchBooks(bookPageRequest);
+
+    // then
+    assertThat(responseBookDto.hasNext()).isFalse(); // 뒤에 데이터가 더 없다고 판단
+    assertThat(responseBookDto.content()).hasSize(1);
+  }
+
+  @DisplayName("도서 목록 검색 시 평점순(rating) 정렬과 after 파라미터가 정상적으로 파싱 및 적용된다.")
+  @Test
+  void searchBooks_OrderByRating_WithAfter() {
+    // given
+    // after에 날짜 문자열을 넣어 Instant.parse() 로직을 타게 유도
+    BookPageRequest request = new BookPageRequest("자바", "rating", "DESC", "4.5", "2026-03-09T10:00:00Z", 10);
+
+    Book book = Book.builder().title("자바의 정석").build();
+    given(bookRepository.findAllByCursor(any(BookSearchCondition.class), any(Pageable.class)))
+        .willReturn(new ArrayList<>(List.of(book)));
+
+    // rating이 null인 상황을 만들어 삼항 연산자(?:)의 false 분기 테스트
+    given(bookMapper.toDto(any(Book.class))).willReturn(
+        BookDto.builder().title("자바의 정석").rating(null).createdAt(Instant.now()).build()
+    );
+
+    // when
+    CursorPageResponseBookDto response = bookService.searchBooks(request);
+
+    // then
+    assertThat(response.nextCursor()).isEqualTo("0.0"); // null일 때 0.0으로 셋팅되는지 확인
+    assertThat(response.content()).hasSize(1);
+  }
+
+  @DisplayName("도서 목록 검색 시 리뷰개수순(reviewCount) 정렬이 정상적으로 적용된다.")
+  @Test
+  void searchBooks_OrderByReviewCount() {
+    // given
+    BookPageRequest request = new BookPageRequest("자바", "reviewCount", "DESC", null, null, 10);
+
+    Book book = Book.builder().title("자바의 정석").build();
+    given(bookRepository.findAllByCursor(any(BookSearchCondition.class), any(Pageable.class)))
+        .willReturn(new ArrayList<>(List.of(book)));
+
+    // reviewCount가 null인 상황
+    given(bookMapper.toDto(any(Book.class))).willReturn(
+        BookDto.builder().title("자바의 정석").reviewCount(null).createdAt(Instant.now()).build()
+    );
+
+    // when
+    CursorPageResponseBookDto response = bookService.searchBooks(request);
+
+    // then
+    assertThat(response.nextCursor()).isEqualTo("0"); // null일 때 0으로 셋팅되는지 확인
+  }
+
+  @DisplayName("도서 목록 검색 시 출판일순(publishedDate) 정렬이 정상적으로 적용된다.")
+  @Test
+  void searchBooks_OrderByPublishedDate() {
+    // given
+    BookPageRequest request = new BookPageRequest("자바", "publishedDate", "DESC", null, null, 10);
+
+    Book book = Book.builder().title("자바의 정석").build();
+    given(bookRepository.findAllByCursor(any(BookSearchCondition.class), any(Pageable.class)))
+        .willReturn(new ArrayList<>(List.of(book)));
+
+    LocalDate pubDate = LocalDate.of(2023, 1, 1);
+    given(bookMapper.toDto(any(Book.class))).willReturn(
+        BookDto.builder().title("자바의 정석").publishedDate(pubDate).createdAt(Instant.now()).build()
+    );
+
+    // when
+    CursorPageResponseBookDto response = bookService.searchBooks(request);
+
+    // then
+    assertThat(response.nextCursor()).isEqualTo(pubDate.toString()); // 날짜가 문자열로 잘 변환되는지 확인
+  }
+
+  @DisplayName("도서 목록 검색 결과가 없을 경우 빈 리스트와 함께 nextCursor/nextAfter가 null로 반환된다.")
+  @Test
+  void searchBooks_EmptyResult() {
+    // given
+    BookPageRequest request = new BookPageRequest("세상에없는책", "title", "DESC", null, null, 10);
+
+    // DB 조회 결과가 아예 없는 상황(빈 리스트) mocking
+    given(bookRepository.findAllByCursor(any(BookSearchCondition.class), any(Pageable.class)))
+        .willReturn(new ArrayList<>());
+
+    // when
+    CursorPageResponseBookDto response = bookService.searchBooks(request);
+
+    // then
+    // isEmpty() = true 분기를 타서 커서들이 null로 유지되는지 확인
+    assertThat(response.content()).isEmpty();
+    assertThat(response.nextCursor()).isNull();
+    assertThat(response.nextAfter()).isNull();
+    assertThat(response.hasNext()).isFalse();
   }
 }
