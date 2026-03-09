@@ -5,7 +5,10 @@ import com.codeit.project.sb08deokhugamteamgwanwoong.dto.book.BookDto;
 import com.codeit.project.sb08deokhugamteamgwanwoong.dto.book.BookPageRequest;
 import com.codeit.project.sb08deokhugamteamgwanwoong.dto.book.BookUpdateRequest;
 import com.codeit.project.sb08deokhugamteamgwanwoong.dto.book.CursorPageResponseBookDto;
+import com.codeit.project.sb08deokhugamteamgwanwoong.dto.dashboard.CursorPageResponsePopularBookDto;
+import com.codeit.project.sb08deokhugamteamgwanwoong.dto.dashboard.DashboardPageRequest;
 import com.codeit.project.sb08deokhugamteamgwanwoong.service.BookService;
+import com.codeit.project.sb08deokhugamteamgwanwoong.service.DashboardService;
 import jakarta.validation.Valid;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
@@ -31,6 +34,7 @@ import org.springframework.web.multipart.MultipartFile;
 public class BookController {
 
   private final BookService bookService;
+  private final DashboardService dashboardService;
 
   @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
   public ResponseEntity<BookDto> createBook(
@@ -97,5 +101,19 @@ public class BookController {
         responseBookDto.content().size(), responseBookDto.hasNext());
 
     return ResponseEntity.status(HttpStatus.OK).body(responseBookDto);
+  }
+
+  @GetMapping("/popular")
+  public ResponseEntity<CursorPageResponsePopularBookDto> getPopularBooks(
+      @ModelAttribute DashboardPageRequest request
+  ) {
+    log.info("인기 도서 목록 조회 요청 - 기간: {}, cursor: {}, limit: {}",
+        request.period(), request.cursor(), request.limit());
+
+    CursorPageResponsePopularBookDto responseDto = dashboardService.getPopularBooks(request);
+    log.info("인기 도서 목록 조회 완료 - 반환된 데이터 개수: {}, 다음 페이지 존재 여부: {}",
+        responseDto.content().size(), responseDto.hasNext());
+
+    return ResponseEntity.status(HttpStatus.OK).body(responseDto);
   }
 }
