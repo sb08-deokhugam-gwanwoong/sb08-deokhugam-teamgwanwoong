@@ -9,7 +9,7 @@ import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 @Repository
-public interface NotificationRepository extends JpaRepository<Notification, UUID> {
+public interface NotificationRepository extends JpaRepository<Notification, UUID>, NotificationRepositoryCustom {
 
   @Modifying(clearAutomatically = true)
   @Query("""
@@ -17,4 +17,7 @@ public interface NotificationRepository extends JpaRepository<Notification, UUID
       WHERE n.user.id = :userId AND n.isConfirmed = false
       """)
   void allConfirmNotification(@Param("userId") UUID userId);
+
+  // 특정 유저의 전체 알림 개수 조회 (totalElements 전용)
+  long countByUserId(UUID userId);
 }
