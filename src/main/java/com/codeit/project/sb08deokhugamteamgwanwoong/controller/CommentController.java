@@ -41,9 +41,9 @@ public class CommentController implements CommentApi {
       @RequestParam UUID reviewId,
       @RequestParam(required = false, defaultValue = "DESC") String direction,
       @RequestParam(required = false) String cursor,
-      @RequestParam(required = false, name = "after") Instant cursorCreatedAt,
+      @RequestParam(required = false) Instant after,
       @RequestParam(defaultValue = "50", name = "limit") int size) {
-    return ResponseEntity.ok(commentService.findAllComments(reviewId, cursorCreatedAt, size));
+    return ResponseEntity.ok(commentService.findAllComments(reviewId, cursor, after, size));
   }
 
   //댓글 상세 정보 조회
