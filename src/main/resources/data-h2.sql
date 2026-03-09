@@ -47,27 +47,6 @@ INSERT INTO users (id, email, nickname, password, created_at, updated_at) VALUES
 INSERT INTO users (id, email, nickname, password, created_at, updated_at) VALUES (gen_random_uuid(), 'user39@example.com', '개발자39', 'password39!', DATEADD('MINUTE', -22, NOW()), NOW());
 INSERT INTO users (id, email, nickname, password, created_at, updated_at) VALUES (gen_random_uuid(), 'user40@example.com', '개발자40', 'password40!', DATEADD('MINUTE', -21, NOW()), NOW());
 
-INSERT INTO users (id, email, nickname, password, created_at, updated_at) VALUES (gen_random_uuid(), 'user21@example.com', '개발자21', 'password21!', DATEADD('MINUTE', -40, NOW()), NOW());
-INSERT INTO users (id, email, nickname, password, created_at, updated_at) VALUES (gen_random_uuid(), 'user22@example.com', '개발자22', 'password22!', DATEADD('MINUTE', -39, NOW()), NOW());
-INSERT INTO users (id, email, nickname, password, created_at, updated_at) VALUES (gen_random_uuid(), 'user23@example.com', '개발자23', 'password23!', DATEADD('MINUTE', -38, NOW()), NOW());
-INSERT INTO users (id, email, nickname, password, created_at, updated_at) VALUES (gen_random_uuid(), 'user24@example.com', '개발자24', 'password24!', DATEADD('MINUTE', -37, NOW()), NOW());
-INSERT INTO users (id, email, nickname, password, created_at, updated_at) VALUES (gen_random_uuid(), 'user25@example.com', '개발자25', 'password25!', DATEADD('MINUTE', -36, NOW()), NOW());
-INSERT INTO users (id, email, nickname, password, created_at, updated_at) VALUES (gen_random_uuid(), 'user26@example.com', '개발자26', 'password26!', DATEADD('MINUTE', -35, NOW()), NOW());
-INSERT INTO users (id, email, nickname, password, created_at, updated_at) VALUES (gen_random_uuid(), 'user27@example.com', '개발자27', 'password27!', DATEADD('MINUTE', -34, NOW()), NOW());
-INSERT INTO users (id, email, nickname, password, created_at, updated_at) VALUES (gen_random_uuid(), 'user28@example.com', '개발자28', 'password28!', DATEADD('MINUTE', -33, NOW()), NOW());
-INSERT INTO users (id, email, nickname, password, created_at, updated_at) VALUES (gen_random_uuid(), 'user29@example.com', '개발자29', 'password29!', DATEADD('MINUTE', -32, NOW()), NOW());
-INSERT INTO users (id, email, nickname, password, created_at, updated_at) VALUES (gen_random_uuid(), 'user30@example.com', '개발자30', 'password30!', DATEADD('MINUTE', -31, NOW()), NOW());
-INSERT INTO users (id, email, nickname, password, created_at, updated_at) VALUES (gen_random_uuid(), 'user31@example.com', '개발자31', 'password31!', DATEADD('MINUTE', -30, NOW()), NOW());
-INSERT INTO users (id, email, nickname, password, created_at, updated_at) VALUES (gen_random_uuid(), 'user32@example.com', '개발자32', 'password32!', DATEADD('MINUTE', -29, NOW()), NOW());
-INSERT INTO users (id, email, nickname, password, created_at, updated_at) VALUES (gen_random_uuid(), 'user33@example.com', '개발자33', 'password33!', DATEADD('MINUTE', -28, NOW()), NOW());
-INSERT INTO users (id, email, nickname, password, created_at, updated_at) VALUES (gen_random_uuid(), 'user34@example.com', '개발자34', 'password34!', DATEADD('MINUTE', -27, NOW()), NOW());
-INSERT INTO users (id, email, nickname, password, created_at, updated_at) VALUES (gen_random_uuid(), 'user35@example.com', '개발자35', 'password35!', DATEADD('MINUTE', -26, NOW()), NOW());
-INSERT INTO users (id, email, nickname, password, created_at, updated_at) VALUES (gen_random_uuid(), 'user36@example.com', '개발자36', 'password36!', DATEADD('MINUTE', -25, NOW()), NOW());
-INSERT INTO users (id, email, nickname, password, created_at, updated_at) VALUES (gen_random_uuid(), 'user37@example.com', '개발자37', 'password37!', DATEADD('MINUTE', -24, NOW()), NOW());
-INSERT INTO users (id, email, nickname, password, created_at, updated_at) VALUES (gen_random_uuid(), 'user38@example.com', '개발자38', 'password38!', DATEADD('MINUTE', -23, NOW()), NOW());
-INSERT INTO users (id, email, nickname, password, created_at, updated_at) VALUES (gen_random_uuid(), 'user39@example.com', '개발자39', 'password39!', DATEADD('MINUTE', -22, NOW()), NOW());
-INSERT INTO users (id, email, nickname, password, created_at, updated_at) VALUES (gen_random_uuid(), 'user40@example.com', '개발자40', 'password40!', DATEADD('MINUTE', -21, NOW()), NOW());
-
 INSERT INTO books (id, title, author, description, publisher, published_date, isbn, review_count, rating, created_at, updated_at) VALUES (gen_random_uuid(), '헤드 퍼스트 디자인 패턴', '에릭 프리먼', '디자인 패턴 입문서', '한빛미디어', '2022-03-16', 'ISBN021', 0, 0.0, DATEADD('SECOND', 21, NOW()), NOW());
 INSERT INTO books (id, title, author, description, publisher, published_date, isbn, review_count, rating, created_at, updated_at) VALUES (gen_random_uuid(), '엔터프라이즈 애플리케이션 아키텍처 패턴', '마틴 파울러', '엔터프라이즈 개발 바이블', '위키북스', '2015-11-12', 'ISBN022', 0, 0.0, DATEADD('SECOND', 22, NOW()), NOW());
 INSERT INTO books (id, title, author, description, publisher, published_date, isbn, review_count, rating, created_at, updated_at) VALUES (gen_random_uuid(), '코딩 인터뷰 완전 분석', '게일 라크만 맥도웰', '개발자 면접 대비', '인사이트', '2017-08-14', 'ISBN023', 0, 0.0, DATEADD('SECOND', 23, NOW()), NOW());
