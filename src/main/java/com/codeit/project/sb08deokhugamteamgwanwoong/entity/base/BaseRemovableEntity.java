@@ -15,8 +15,4 @@ public abstract class BaseRemovableEntity extends BaseUpdatableEntity {
     public void delete() {
         this.deletedAt = Instant.now();
     }
-
-    public boolean isDeleted() {
-        return deletedAt != null;
-    }
 }
