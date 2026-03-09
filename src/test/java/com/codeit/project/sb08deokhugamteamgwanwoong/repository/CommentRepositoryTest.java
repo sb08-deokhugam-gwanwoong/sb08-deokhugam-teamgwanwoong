@@ -10,6 +10,7 @@ import com.codeit.project.sb08deokhugamteamgwanwoong.entity.User;
 import com.codeit.project.sb08deokhugamteamgwanwoong.repository.support.RepositoryTestSupport;
 import jakarta.persistence.EntityManager;
 import java.time.LocalDate;
+import java.util.List;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -201,5 +202,57 @@ public class CommentRepositoryTest extends RepositoryTestSupport {
       commentRepository.save(comment);
       commentRepository.flush();
     }).isInstanceOf(DataIntegrityViolationException.class);
+  }
+
+  @Test
+  @DisplayName("댓글 삭제 시 논리 삭제가 적용되어야 한다")
+  void softDeleteCommentTest() {
+    //given
+    User user = userRepository.save(User.builder().email("soft@test.com").nickname("논리삭제").password("pass1234!").build());
+    Book book = bookRepository.save(Book.builder().title("테스트 책").author("테스트 작가").isbn("97901").description("책 설명").publisher("테스트 출판사").publishedDate(LocalDate.now()).build());
+    Review review = reviewRepository.save(Review.builder().rating(5).content("조와용").user(user).book(book).build());
+
+    Comment comment = commentRepository.save(Comment.builder()
+        .user(user)
+        .review(review)
+        .content("삭제될 댓글")
+        .build());
+    commentRepository.flush();
+
+    // when
+    comment.delete();
+    commentRepository.flush();
+    entityManager.clear();
+
+    // then
+    Comment found = commentRepository.findById(comment.getId()).orElseThrow();
+    assertThat(found.getDeletedAt()).isNotNull();
+    assertThat(found.getContent()).isEqualTo("삭제될 댓글");
+  }
+
+  @Test
+  @DisplayName("특정 리뷰의 댓글 목록을 페이징하여 조회한다")
+  void findAllByReviewIdPaginationTest() {
+    //given
+    User user = userRepository.save(User.builder().email("page@test.com").nickname("페이징").password("pass1234!").build());
+    Book book = bookRepository.save(Book.builder().title("테스트 책").author("테스트 작가").isbn("97902").description("책 설명").publisher("테스트 출판사").publishedDate(LocalDate.now()).build());
+    Review review = reviewRepository.save(Review.builder().rating(5).content("조와용").user(user).book(book).build());
+
+    for (int i = 1; i <= 10; i++) {
+      commentRepository.save(Comment.builder()
+          .user(user)
+          .review(review)
+          .content("댓글 " + i)
+          .build());
+    }
+    commentRepository.flush();
+    entityManager.clear();
+
+    //when
+    List<Comment> comments = commentRepository.findAllByReviewId(review.getId());
+
+    //then
+    assertThat(comments).hasSize(10);
+    assertThat(comments.get(0).getContent()).contains("댓글");
   }
 }
