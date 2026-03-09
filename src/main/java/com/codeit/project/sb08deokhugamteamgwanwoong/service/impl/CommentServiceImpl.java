@@ -2,6 +2,7 @@ package com.codeit.project.sb08deokhugamteamgwanwoong.service.impl;
 
 import com.codeit.project.sb08deokhugamteamgwanwoong.dto.comment.CommentCreateRequest;
 import com.codeit.project.sb08deokhugamteamgwanwoong.dto.comment.CommentDto;
+import com.codeit.project.sb08deokhugamteamgwanwoong.dto.comment.CommentSearchCondition;
 import com.codeit.project.sb08deokhugamteamgwanwoong.dto.comment.CommentUpdateRequest;
 import com.codeit.project.sb08deokhugamteamgwanwoong.dto.comment.CursorPageResponseCommentDto;
 import com.codeit.project.sb08deokhugamteamgwanwoong.entity.Comment;
@@ -71,14 +72,20 @@ public class CommentServiceImpl implements CommentService {
   }
 
   @Override
-  public CursorPageResponseCommentDto findAllComments(UUID reviewId, Instant cursorCreatedAt, int size) {
-    log.info("[댓글 목록 조회] 시작 - 리뷰ID: {}, 커서: {}, 사이즈: {}", reviewId, cursorCreatedAt, size);
+  public CursorPageResponseCommentDto findAllComments(UUID reviewId, String cursor, Instant after, int size) {
+    log.info("[댓글 목록 조회] 시작 - 리뷰ID: {}, 커서: {}, 사이즈: {}", reviewId, cursor, size);
 
     Review review = reviewRepository.findById(reviewId)
         .orElseThrow(() -> new BusinessException(ReviewErrorCode.REVIEW_NOT_FOUND));
 
-    PageRequest pageable = PageRequest.of(0, size + 1);
-    List<Comment> comments = commentRepository.findCommentsByCursor(reviewId, cursorCreatedAt, pageable);
+    CommentSearchCondition condition = CommentSearchCondition.builder()
+        .reviewId(reviewId)
+        .cursor(cursor)  // String 타입
+        .after(after)    // Instant 타입
+        .limit(size)
+        .build();
+
+    List<Comment> comments = commentRepository.findAllByCursor(condition);
 
     boolean hasNext = comments.size() > size;
     List<Comment> resultComments = hasNext ? comments.subList(0, size) : comments;
@@ -87,10 +94,11 @@ public class CommentServiceImpl implements CommentService {
         .map(commentMapper::toDto)
         .toList();
 
-    UUID nextCursor = resultComments.isEmpty() ? null : resultComments.get(resultComments.size() - 1).getId();
+    String nextCursor = resultComments.isEmpty() ? null : resultComments.get(resultComments.size() - 1).getCreatedAt().toString();
     Instant nextAfter = resultComments.isEmpty() ? null : resultComments.get(resultComments.size() - 1).getCreatedAt();
 
     log.info("[댓글 목록 조회] 완료 - 조회된 개수: {}, 다음 페이지 존재: {}", content.size(), hasNext);
+
     return new CursorPageResponseCommentDto(
         content,
         nextCursor,
