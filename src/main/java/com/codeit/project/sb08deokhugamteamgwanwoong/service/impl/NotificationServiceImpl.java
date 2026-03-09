@@ -147,6 +147,9 @@ public class NotificationServiceImpl implements NotificationService {
     return CursorPageResponseNotificationDto.of(content, totalElements, limit, hasNext);
   }
 
+  /**
+   * 오래된 알림 삭제
+   */
   @Override
   @Transactional
   public void deleteOldNotifications() {

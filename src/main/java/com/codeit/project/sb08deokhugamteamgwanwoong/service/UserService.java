@@ -18,4 +18,7 @@ public interface UserService {
   void delete(UUID userId);
 
   void hardDelete(UUID userId);
+
+  // 논리 삭제 후 일정 기간 지난 사용자 물리 삭제 (스케쥴러 전용)
+  void hardDeleteOldUsers();
 }
