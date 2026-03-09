@@ -1,5 +1,6 @@
 package com.codeit.project.sb08deokhugamteamgwanwoong.repository;
 
+import com.codeit.project.sb08deokhugamteamgwanwoong.dto.review.ReviewSearchCondition;
 import com.codeit.project.sb08deokhugamteamgwanwoong.entity.Book;
 import com.codeit.project.sb08deokhugamteamgwanwoong.entity.Review;
 import com.codeit.project.sb08deokhugamteamgwanwoong.entity.User;
@@ -17,6 +18,8 @@ import org.springframework.boot.test.autoconfigure.orm.jpa.TestEntityManager;
 import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Import;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
 
 import java.time.LocalDate;
 import java.util.List;
@@ -38,6 +41,10 @@ public class ReviewRepositoryTest extends RepositoryTestSupport {
     private User user;
     private Book book;
 
+    private User secondUser;
+    private Book secondBook;
+    private Review firstReview, secondReview, thirdReview;
+
     // 테스트 전용 QueryDSL 설정(결합도 최소화)
     @TestConfiguration
     static class QuerydslTestConfig {
@@ -51,7 +58,7 @@ public class ReviewRepositoryTest extends RepositoryTestSupport {
     }
 
     @BeforeEach
-    public void setUp() {
+    public void setUp() throws InterruptedException {
         user = createUser("test@codeit.com", "testUser");
         book = createBook("testBook", "testAuthor", "9788994492032", "testPublisher", "testDescription", "testThumbnailUrl");
 
@@ -351,6 +358,141 @@ public class ReviewRepositoryTest extends RepositoryTestSupport {
         assertThat(stillExistsReview.get().getContent()).isEqualTo("평범한 책이네요.");
     }
 
+    @Test
+    @DisplayName("QueryDsl: 조건이 모두 기본(created, DESC)일 때 전체 조회")
+    void findAllByCursorWithNoCondition() throws InterruptedException {
+        //given
+        initQueryDslTestData();
+
+        ReviewSearchCondition condition = new ReviewSearchCondition(
+                null, null, null, null, null, "createdAt", Sort.Direction.DESC
+        );
+        PageRequest pageable = PageRequest.of(0, 20);
+
+        //when
+        List<Review> results = reviewRepository.findAllByCursor(condition, pageable);
+
+        //then
+        assertThat(results).hasSize(3);
+        assertThat(results.get(0).getId()).isEqualTo(thirdReview.getId());
+    }
+
+    @Test
+    @DisplayName("QueryDsl: userId와 bookId가 완전 일치 검색")
+    void findAllByUserIdAndBookId() throws InterruptedException {
+        //given
+        initQueryDslTestData();
+
+        ReviewSearchCondition condition = new ReviewSearchCondition(
+                user.getId(), book.getId(), null, null, null, "createdAt", Sort.Direction.DESC
+        );
+        PageRequest pageable = PageRequest.of(0, 20);
+
+        //when
+        List<Review> results = reviewRepository.findAllByCursor(condition, pageable);
+
+        //then
+        assertThat(results).hasSize(1);
+        assertThat(results.get(0).getId()).isEqualTo(firstReview.getId());
+    }
+
+    @Test
+    @DisplayName("QueryDsl: keyword를 통한 검색(닉네임, 책이름, 리뷰내용 부분 일치)")
+    void findAllByCursorWithKeyword() throws InterruptedException {
+        //given
+        initQueryDslTestData();
+
+        ReviewSearchCondition condition = new ReviewSearchCondition(
+                null, null, "testUser", null, null, "createdAt", Sort.Direction.DESC
+        );
+        PageRequest pageable = PageRequest.of(0, 20);
+
+        //when
+        List<Review> results = reviewRepository.findAllByCursor(condition, pageable);
+
+        //then
+        assertThat(results).hasSize(3);
+    }
+
+    @Test
+    @DisplayName("QueryDsl: 평점순(rating) 내림차순 DESC + 커서페이징")
+    void findAllByCursorWithRatingAndDESC() throws InterruptedException {
+        //given
+        initQueryDslTestData();
+
+        ReviewSearchCondition conditon = new ReviewSearchCondition(
+                null, null, null, "5", firstReview.getCreatedAt(), "rating", Sort.Direction.DESC
+        );
+        PageRequest pageable = PageRequest.of(0, 20);
+
+        //when
+        //5점 이하이면서 첫 리뷰 생성일보다 과거인 경우
+        List<Review> results = reviewRepository.findAllByCursor(conditon, pageable);
+
+        //then
+        assertThat(results).hasSize(2);
+        assertThat(results.get(0).getId()).isEqualTo(secondReview.getId());
+        assertThat(results.get(1).getId()).isEqualTo(thirdReview.getId());
+    }
+
+    @Test
+    @DisplayName("QueryDsl: 평점순(rating) 오름차순 ASC + 커서 페이징")
+    void findAllByCursorWithRatingAndASC() throws InterruptedException {
+        //given
+        initQueryDslTestData();
+
+        ReviewSearchCondition conditon = new ReviewSearchCondition(
+                null, null, null, "2", thirdReview.getCreatedAt(), "rating", Sort.Direction.ASC
+        );
+        PageRequest pageable = PageRequest.of(0, 20);
+
+        List<Review> results = reviewRepository.findAllByCursor(conditon, pageable);
+
+        assertThat(results).hasSize(2);
+        assertThat(results.get(0).getId()).isEqualTo(secondReview.getId());
+        assertThat(results.get(1).getId()).isEqualTo(firstReview.getId());
+    }
+
+    @Test
+    @DisplayName("QueryDsl: 최신순(createdAt) 내림차순 DESC + 커서 페이징")
+    void findAllByCursorWithCreatedAtAndDESC() throws InterruptedException {
+        //given
+        initQueryDslTestData();
+
+        String cursorTime = secondReview.getCreatedAt().toString();
+        ReviewSearchCondition condition = new ReviewSearchCondition(
+                null, null, null, cursorTime, null, "createdAt", Sort.Direction.DESC
+        );
+        PageRequest pageable = PageRequest.of(0, 20);
+
+        //when
+        List<Review> results = reviewRepository.findAllByCursor(condition, pageable);
+
+        //then
+        assertThat(results).hasSize(1);
+        assertThat(results.get(0).getId()).isEqualTo(firstReview.getId());
+    }
+
+    @Test
+    @DisplayName("QueryDsl: 최신순(createdAt) 오름차순 ASC + 커서 페이징")
+    void findAllByCursorWithCreatedAtAndASC() throws InterruptedException {
+        //given
+        initQueryDslTestData();
+
+        String cursorTime = firstReview.getCreatedAt().toString();
+        ReviewSearchCondition condition = new ReviewSearchCondition(
+                null, null, null, cursorTime, null, "createdAt", Sort.Direction.ASC
+        );
+        PageRequest pageable = PageRequest.of(0, 20);
+
+        //when
+        List<Review> results = reviewRepository.findAllByCursor(condition, pageable);
+
+        //then
+        assertThat(results).hasSize(2);
+        assertThat(results.get(0).getId()).isEqualTo(secondReview.getId());
+    }
+
     private User createUser(String email, String nickname) {
         return User.builder()
                 .email(email)
@@ -378,6 +520,34 @@ public class ReviewRepositoryTest extends RepositoryTestSupport {
                 .user(author)
                 .book(book)
                 .build();
+    }
+
+    private void initQueryDslTestData() throws InterruptedException {
+        secondUser = createUser("test2@codeit.com", "testUser2");
+        secondBook = createBook("testBook2", "testAuthor2", "9788994492033", "testPublisher2", "testDescription2", "testThumbnailUrl2");
+
+        entityManager.persist(secondUser);
+        entityManager.persist(secondBook);
+
+        firstReview = createReview(5, "정말 유익한 책입니다.", user, book);
+        entityManager.persist(firstReview);
+
+        //생성 시간이 겹치기 때문에 10ms씩 지나고 생성
+        Thread.sleep(10);
+
+        secondReview = createReview(4, "관웅님이 추천해서 읽었는데 좋아요.", secondUser, book);
+        entityManager.persist(secondReview);
+
+        Thread.sleep(10);
+
+        thirdReview = createReview(2, "개인적으로 별로였습니다.", user, secondBook);
+        entityManager.persist(thirdReview);
+
+        flushAndClear();
+
+        firstReview = entityManager.find(Review.class, firstReview.getId());
+        secondReview = entityManager.find(Review.class, secondReview.getId());
+        thirdReview = entityManager.find(Review.class, thirdReview.getId());
     }
 
     private void flushAndClear() {
