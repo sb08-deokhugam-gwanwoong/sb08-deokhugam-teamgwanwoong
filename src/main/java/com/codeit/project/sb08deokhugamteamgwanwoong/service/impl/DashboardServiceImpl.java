@@ -12,6 +12,7 @@ import com.codeit.project.sb08deokhugamteamgwanwoong.entity.Dashboard;
 import com.codeit.project.sb08deokhugamteamgwanwoong.entity.Review;
 import com.codeit.project.sb08deokhugamteamgwanwoong.entity.User;
 import com.codeit.project.sb08deokhugamteamgwanwoong.entity.enums.DashboardPeriodEnums;
+import com.codeit.project.sb08deokhugamteamgwanwoong.entity.enums.DashboardTargetType;
 import com.codeit.project.sb08deokhugamteamgwanwoong.mapper.DashboardMapper;
 import com.codeit.project.sb08deokhugamteamgwanwoong.repository.BookRepository;
 import com.codeit.project.sb08deokhugamteamgwanwoong.repository.DashboardRepository;
@@ -46,7 +47,7 @@ public class DashboardServiceImpl implements DashboardService {
 
 	public List<PopularBookDto> getPopularBooks(DashboardPeriodEnums period) {
 		List<Dashboard> rankings = dashboardRepository.findRecentRankings(
-				"BOOK", period, PageRequest.of(0, 10));
+				DashboardTargetType.BOOK, period, PageRequest.of(0, 10));
 
 		if (rankings.isEmpty()) {
 			return List.of();
@@ -69,7 +70,7 @@ public class DashboardServiceImpl implements DashboardService {
 	@Override
 	public List<PopularReviewDto> getPopularReviews(DashboardPeriodEnums period) {
 		List<Dashboard> rankings = dashboardRepository.findRecentRankings(
-				"REVIEW", period, PageRequest.of(0, 10));
+				DashboardTargetType.REVIEW, period, PageRequest.of(0, 10));
 
 		if (rankings.isEmpty()) {
 			return List.of();
@@ -91,7 +92,7 @@ public class DashboardServiceImpl implements DashboardService {
 	@Override
 	public List<PowerUserDto> getPowerUsers(DashboardPeriodEnums period) {
 		List<Dashboard> rankings = dashboardRepository.findRecentRankings(
-				"USER", period, PageRequest.of(0, 10));
+				DashboardTargetType.USER, period, PageRequest.of(0, 10));
 
 		if (rankings.isEmpty()) {
 			return List.of();
@@ -113,20 +114,10 @@ public class DashboardServiceImpl implements DashboardService {
 	/** 인기 도서 목록 조회 (커서 페이지네이션) */
 	@Override
 	public CursorPageResponsePopularBookDto getPopularBooks(DashboardPageRequest request) {
-		Instant after = parseAfter(request.after());
-		Integer cursorRankingPos = parseCursorRankingPos(request.cursor());
-		int limit = request.limit();
-		// direction에 따라 정렬 방식 분기, limit+1개 조회로 다음 페이지 존재 여부 확인
-		List<Dashboard> rankings = "DESC".equalsIgnoreCase(request.direction())
-				? dashboardRepository.findRecentRankingsByCursorDesc("BOOK", request.period(), after, cursorRankingPos,
-						PageRequest.of(0, limit + 1))
-				: dashboardRepository.findRecentRankingsByCursorAsc("BOOK", request.period(), after, cursorRankingPos,
-						PageRequest.of(0, limit + 1));
-
-		boolean hasNext = rankings.size() > limit;
-		if (hasNext) {
-			rankings = rankings.subList(0, limit);
-		}
+		DashboardPageSlice slice = findRankingsByCursor(DashboardTargetType.BOOK, request);
+		List<Dashboard> rankings = slice.rankings();
+		int limit = slice.limit();
+		boolean hasNext = slice.hasNext();
 
 		// N+1 방지: IN 절로 관련 엔티티 일괄 조회
 		List<UUID> ids = rankings.stream().map(Dashboard::getTargetId).toList();
@@ -149,20 +140,10 @@ public class DashboardServiceImpl implements DashboardService {
 
 	@Override
 	public CursorPageResponsePopularReviewDto getPopularReviews(DashboardPageRequest request) {
-		Instant after = parseAfter(request.after());
-		Integer cursorRankingPos = parseCursorRankingPos(request.cursor());
-		int limit = request.limit();
-		// direction에 따라 정렬 방식 분기, limit+1개 조회로 다음 페이지 존재 여부 확인
-		List<Dashboard> rankings = "DESC".equalsIgnoreCase(request.direction())
-				? dashboardRepository.findRecentRankingsByCursorDesc("REVIEW", request.period(), after, cursorRankingPos,
-						PageRequest.of(0, limit + 1))
-				: dashboardRepository.findRecentRankingsByCursorAsc("REVIEW", request.period(), after, cursorRankingPos,
-						PageRequest.of(0, limit + 1));
-
-		boolean hasNext = rankings.size() > limit;
-		if (hasNext) {
-			rankings = rankings.subList(0, limit);
-		}
+		DashboardPageSlice slice = findRankingsByCursor(DashboardTargetType.REVIEW, request);
+		List<Dashboard> rankings = slice.rankings();
+		int limit = slice.limit();
+		boolean hasNext = slice.hasNext();
 
 		// N+1 방지: IN 절로 관련 엔티티 일괄 조회
 		List<UUID> ids = rankings.stream().map(Dashboard::getTargetId).toList();
@@ -188,19 +169,10 @@ public class DashboardServiceImpl implements DashboardService {
 	/** 파워 유저 목록 조회 (커서 페이지네이션) */
 	@Override
 	public CursorPageResponsePowerUserDto getPowerUsers(DashboardPageRequest request) {
-		Instant after = parseAfter(request.after());
-		Integer cursorRankingPos = parseCursorRankingPos(request.cursor());
-		int limit = request.limit();
-		List<Dashboard> rankings = "DESC".equalsIgnoreCase(request.direction())
-				? dashboardRepository.findRecentRankingsByCursorDesc("USER", request.period(), after, cursorRankingPos,
-						PageRequest.of(0, limit + 1))
-				: dashboardRepository.findRecentRankingsByCursorAsc("USER", request.period(), after, cursorRankingPos,
-						PageRequest.of(0, limit + 1));
-
-		boolean hasNext = rankings.size() > limit;
-		if (hasNext) {
-			rankings = rankings.subList(0, limit);
-		}
+		DashboardPageSlice slice = findRankingsByCursor(DashboardTargetType.USER, request);
+		List<Dashboard> rankings = slice.rankings();
+		int limit = slice.limit();
+		boolean hasNext = slice.hasNext();
 
 		// N+1 방지: IN 절로 관련 엔티티 일괄 조회
 		List<UUID> ids = rankings.stream().map(Dashboard::getTargetId).toList();
@@ -219,6 +191,28 @@ public class DashboardServiceImpl implements DashboardService {
 		}
 
 		return new CursorPageResponsePowerUserDto(content, nextCursor, nextAfter, limit, null, hasNext);
+	}
+
+	private DashboardPageSlice findRankingsByCursor(DashboardTargetType targetType, DashboardPageRequest request) {
+		Instant after = parseAfter(request.after());
+		Integer cursorRankingPos = parseCursorRankingPos(request.cursor());
+		int limit = request.limit();
+		// direction에 따라 정렬 방식 분기, limit+1개 조회로 다음 페이지 존재 여부 확인
+		List<Dashboard> rankings = "DESC".equalsIgnoreCase(request.direction())
+				? dashboardRepository.findRecentRankingsByCursorDesc(targetType, request.period(), after, cursorRankingPos,
+						PageRequest.of(0, limit + 1))
+				: dashboardRepository.findRecentRankingsByCursorAsc(targetType, request.period(), after, cursorRankingPos,
+						PageRequest.of(0, limit + 1));
+
+		boolean hasNext = rankings.size() > limit;
+		if (hasNext) {
+			rankings = rankings.subList(0, limit);
+		}
+
+		return new DashboardPageSlice(rankings, hasNext, limit);
+	}
+
+	private record DashboardPageSlice(List<Dashboard> rankings, boolean hasNext, int limit) {
 	}
 
 	private Instant parseAfter(String after) {
