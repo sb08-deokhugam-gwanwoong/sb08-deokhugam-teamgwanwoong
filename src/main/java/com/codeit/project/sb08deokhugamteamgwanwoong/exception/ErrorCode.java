@@ -9,9 +9,4 @@ public interface ErrorCode {
     String getCode();               // EMPL-NOT_FOUND
     HttpStatus getHttpStatus();     // 404
     String getMessage();            // 직원을 찾을 수 없습니다.
-
-    // 알림 발송 여부 (기본값: false)
-    default boolean shouldAlert() {
-        return false;
-    }
 }

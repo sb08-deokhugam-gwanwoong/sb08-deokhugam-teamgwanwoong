@@ -1,5 +1,6 @@
 package com.codeit.project.sb08deokhugamteamgwanwoong.service.impl;
 
+import com.codeit.project.sb08deokhugamteamgwanwoong.dto.notification.CursorPageResponseNotificationDto;
 import com.codeit.project.sb08deokhugamteamgwanwoong.dto.notification.NotificationDto;
 import com.codeit.project.sb08deokhugamteamgwanwoong.dto.notification.NotificationUpdateRequest;
 import com.codeit.project.sb08deokhugamteamgwanwoong.entity.Notification;
@@ -12,15 +13,21 @@ import com.codeit.project.sb08deokhugamteamgwanwoong.mapper.NotificationMapper;
 import com.codeit.project.sb08deokhugamteamgwanwoong.repository.NotificationRepository;
 import com.codeit.project.sb08deokhugamteamgwanwoong.repository.UserRepository;
 import com.codeit.project.sb08deokhugamteamgwanwoong.service.NotificationService;
+import java.time.Instant;
+import java.util.List;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.domain.Sort.Direction;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 @Slf4j
 @Service
 @RequiredArgsConstructor
+@Transactional(readOnly = true)
 public class NotificationServiceImpl implements NotificationService {
 
   private final NotificationRepository notificationRepository;
@@ -99,6 +106,44 @@ public class NotificationServiceImpl implements NotificationService {
     notificationRepository.allConfirmNotification(requestUserId);
 
     log.info("[모든 알림 읽음 처리 성공] requestUserId: {}", requestUserId);
+  }
+
+  /**
+   * 알림 목록 조회
+   * @param userId      유저 Id
+   * @param direction   정렬 방향
+   * @param cursor      마지막 생성 일자
+   * @param after       마지막 생성 일자
+   * @param limit       조회 개수
+   * @return            CursorPageResponseNotificationDto
+   */
+  @Override
+  public CursorPageResponseNotificationDto getNotifications(
+      UUID userId, Direction direction,
+      Instant cursor, Instant after, int limit) {
+
+    log.info("[알림 목록 조회 시작] userId: {}, limit: {}", userId, limit);
+
+    PageRequest pageable = PageRequest.of(0, limit, Sort.by(direction, "createdAt"));
+
+    // 데이터 조회
+    List<Notification> notifications = notificationRepository.findAllNotification(userId, cursor, after, pageable);
+
+    // 전체 개수 조회
+    long totalElements = notificationRepository.countByUserId(userId);
+
+    List<NotificationDto> notiList = notifications.stream()
+        .map(notificationMapper::toDto)
+        .toList();
+
+    // 다음 페이지 여부 확인
+    boolean hasNext = notifications.size() > limit;
+
+    List<NotificationDto> content = hasNext ? notiList.subList(0, limit) : notiList;
+
+    log.info("[알림 목록 조회 완료] 현재 조회 개수: {}, hasNext: {}", content.size(), hasNext);
+
+    return CursorPageResponseNotificationDto.of(content, totalElements, limit, hasNext);
   }
 
   /**
