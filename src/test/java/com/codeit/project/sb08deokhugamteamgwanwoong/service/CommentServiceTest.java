@@ -6,7 +6,6 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.BDDMockito.then;
 import static org.mockito.Mockito.times;
-import static org.mockito.Mockito.verify;
 
 import com.codeit.project.sb08deokhugamteamgwanwoong.dto.comment.CommentCreateRequest;
 import com.codeit.project.sb08deokhugamteamgwanwoong.dto.comment.CommentDto;
@@ -46,6 +45,8 @@ public class CommentServiceTest {
   private ReviewRepository reviewRepository;
   @Mock
   private CommentMapper commentMapper;
+  @Mock
+  private NotificationService notificationService;
 
   @InjectMocks
   private CommentServiceImpl commentService;

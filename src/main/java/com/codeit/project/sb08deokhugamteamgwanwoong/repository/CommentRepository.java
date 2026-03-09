@@ -1,19 +1,17 @@
 package com.codeit.project.sb08deokhugamteamgwanwoong.repository;
 
 import com.codeit.project.sb08deokhugamteamgwanwoong.entity.Comment;
+import java.time.Instant;
 import java.util.List;
-import org.springframework.data.domain.Pageable;
+import java.util.UUID;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
-import java.time.Instant;
-import java.util.UUID;
-
 @Repository
-public interface CommentRepository extends JpaRepository<Comment, UUID> {
+public interface CommentRepository extends JpaRepository<Comment, UUID>, CommentRepositoryCustom {
     // @Query 애노테이션은 기본적으로 SELECT 쿼리임으로 @Modifying 애노테이션을 추가하여 조회가 아님을 명시
     // 메모리에 올려두지 않고 DB에 직접 쿼리 - 데이터 불일치 막음
     @Modifying(clearAutomatically = true)
@@ -24,14 +22,6 @@ public interface CommentRepository extends JpaRepository<Comment, UUID> {
     @Query("DELETE FROM Comment c WHERE c.review.id = :reviewId")
     void hardDeleteAllByReviewId(@Param("reviewId") UUID reviewId);
 
-  // 특정 리뷰의 댓글 중 삭제되지 않은 것들을 최신순으로 페이징 조회
-  @Query("SELECT c FROM Comment c WHERE c.review.id = :reviewId " +
-      "AND (:cursorCreatedAt IS NULL OR c.createdAt < :cursorCreatedAt) " +
-      "AND c.deletedAt IS NULL " +
-      "ORDER BY c.createdAt DESC")
-  List<Comment> findCommentsByCursor(
-      @Param("reviewId") UUID reviewId,
-      @Param("cursorCreatedAt") Instant cursorCreatedAt,
-      Pageable pageable
-  );
+  List<Comment> findAllByReviewId(UUID reviewId);
+
 }

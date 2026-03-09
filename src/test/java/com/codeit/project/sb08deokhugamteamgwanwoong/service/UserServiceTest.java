@@ -6,10 +6,12 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.BDDMockito.given;
+import static org.mockito.Mockito.verify;
 
 import com.codeit.project.sb08deokhugamteamgwanwoong.dto.user.UserDto;
 import com.codeit.project.sb08deokhugamteamgwanwoong.dto.user.UserLoginRequest;
 import com.codeit.project.sb08deokhugamteamgwanwoong.dto.user.UserRegisterRequest;
+import com.codeit.project.sb08deokhugamteamgwanwoong.dto.user.UserUpdateRequest;
 import com.codeit.project.sb08deokhugamteamgwanwoong.entity.User;
 import com.codeit.project.sb08deokhugamteamgwanwoong.exception.BusinessException;
 import com.codeit.project.sb08deokhugamteamgwanwoong.exception.enums.UserErrorCode;
@@ -139,5 +141,130 @@ public class UserServiceTest {
     assertThatThrownBy(() -> userService.login(request))
         .isInstanceOf(BusinessException.class)
         .hasFieldOrPropertyWithValue("errorCode", UserErrorCode.LOGIN_FAILED);
+  }
+
+  @Test
+  @DisplayName("유저 조회: 존재하는 유저 ID로 조회하면 성공하고, UserDto를 반환해야 한다.")
+  void getUserByIdTest() {
+    // Given
+    UUID userId = UUID.randomUUID();
+    User user = User.builder()
+        .email("test@test.com")
+        .nickname("Tester")
+        .password("password1234!")
+        .build();
+    UserDto userDto = new UserDto(userId, "test@test.com", "Tester", Instant.now());
+
+    // Mocking
+    given(userRepository.findById(userId)).willReturn(Optional.of(user));
+    given(userMapper.toDto(user)).willReturn(userDto);
+
+    // When
+    UserDto result = userService.getUserById(userId);
+
+    // Then
+    assertThat(result.email()).isEqualTo("test@test.com");
+    assertThat(result.nickname()).isEqualTo("Tester");
+  }
+
+  @Test
+  @DisplayName("유저 조회 실패: 존재하지 않는 유저 ID로 조회하면 예외가 발생해야 한다.")
+  void getUserById_Fail_Test() {
+    // Given
+    UUID userId = UUID.randomUUID();
+
+    // Mocking
+    given(userRepository.findById(userId)).willReturn(Optional.empty());
+
+    // When & Then
+    assertThatThrownBy(() -> userService.getUserById(userId))
+        .isInstanceOf(BusinessException.class)
+        .hasFieldOrPropertyWithValue("errorCode", UserErrorCode.USER_NOT_FOUND);
+  }
+
+  @Test
+  @DisplayName("유저 수정: 새로운 닉네임으로 수정하면 성공적으로 반영되어야 한다.")
+  void updateUserNickname_Test() {
+    // Given
+    UUID userId = UUID.randomUUID();
+    User user = User.builder()
+        .email("test@test.com")
+        .nickname("Tester")
+        .password("password1234!")
+        .build();
+    UserUpdateRequest request = new UserUpdateRequest("NewTester");
+
+    // Mocking
+    given(userRepository.findById(userId)).willReturn(Optional.of(user));
+    given(userRepository.existsByNickname("NewTester")).willReturn(false); // 중복 X
+
+    // When
+    userService.update(userId, request);
+
+    // Then
+    assertThat(user.getNickname()).isEqualTo("NewTester");
+  }
+
+  @Test
+  @DisplayName("유저 수정 실패: 이미 사용 중인 닉네임으로 수정하면 예외가 발생해야 한다.")
+  void updateUserNickname_Fail_Test() {
+    // Given
+    UUID userId = UUID.randomUUID();
+    User user = User.builder()
+        .email("test@test.com")
+        .nickname("Tester")
+        .password("password1234!")
+        .build();
+    UserUpdateRequest request = new UserUpdateRequest("DuplicateTester");
+
+    given(userRepository.findById(userId)).willReturn(Optional.of(user));
+    given(userRepository.existsByNickname("DuplicateTester")).willReturn(true); // 중복 O
+
+    // When & Then
+    assertThatThrownBy(() -> userService.update(userId, request))
+        .isInstanceOf(BusinessException.class)
+        .hasFieldOrPropertyWithValue("errorCode", UserErrorCode.NICKNAME_ALREADY_EXISTS);
+  }
+
+  @Test
+  @DisplayName("논리 삭제: 유저 삭제 호출 시 deletedAt 필드가 채워져야 한다.")
+  void deleteUser_Test() {
+    // Given
+    UUID userId = UUID.randomUUID();
+    User user = User.builder()
+        .email("test@test.com")
+        .nickname("Tester")
+        .password("password12345!")
+        .build();
+
+    // Mocking
+    given(userRepository.findById(userId)).willReturn(Optional.of(user));
+
+    // When
+    userService.delete(userId);
+
+    // Then
+    assertThat(user.getDeletedAt()).isNotNull();
+  }
+
+  @Test
+  @DisplayName("물리 삭제: 논리 삭제된 유저도 찾아와서 완전히 삭제되어야 한다.")
+  void deleteUser_Fail_Test() {
+    // Given
+    UUID userId = UUID.randomUUID();
+    User user = User.builder()
+        .email("test@test.com")
+        .nickname("Tester")
+        .password("password12345!")
+        .build();
+
+    // Mocking
+    given(userRepository.findByIdIncludeDeleted(userId)).willReturn(Optional.of(user));
+
+    // When
+    userService.hardDelete(userId);
+
+    // Then
+    verify(userRepository).delete(user);
   }
 }
