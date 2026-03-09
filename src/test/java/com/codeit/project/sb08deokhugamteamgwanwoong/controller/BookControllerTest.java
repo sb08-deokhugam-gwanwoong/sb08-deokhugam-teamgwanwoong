@@ -14,11 +14,15 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import com.codeit.project.sb08deokhugamteamgwanwoong.controller.support.ControllerTestSupport;
 import com.codeit.project.sb08deokhugamteamgwanwoong.dto.book.BookCreateRequest;
 import com.codeit.project.sb08deokhugamteamgwanwoong.dto.book.BookDto;
+import com.codeit.project.sb08deokhugamteamgwanwoong.dto.book.BookPageRequest;
 import com.codeit.project.sb08deokhugamteamgwanwoong.dto.book.BookUpdateRequest;
+import com.codeit.project.sb08deokhugamteamgwanwoong.dto.book.CursorPageResponseBookDto;
 import com.codeit.project.sb08deokhugamteamgwanwoong.exception.BusinessException;
 import com.codeit.project.sb08deokhugamteamgwanwoong.exception.enums.BookErrorCode;
 import com.codeit.project.sb08deokhugamteamgwanwoong.exception.enums.GlobalErrorCode;
+import java.time.Instant;
 import java.time.LocalDate;
+import java.util.List;
 import java.util.UUID;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -574,5 +578,67 @@ public class BookControllerTest extends ControllerTestSupport {
     mockMvc.perform(delete("/api/books/{bookId}/hard", bookId))
         .andDo(print())
         .andExpect(status().isInternalServerError()); // 500 검증
+  }
+
+  /*
+  * 도서 목록 검색 관련 테스트
+  * */
+  @DisplayName("도서 목록 검색 API 호출 시 파라미터를 잘 매핑해서 200 응답과 목록을 반환한다.")
+  @Test
+  void searchBooks_Success() throws Exception {
+    // given
+    BookDto bookDto = BookDto.builder()
+        .id(UUID.randomUUID())
+        .title("자바의 정석")
+        .author("남궁성")
+        .build();
+
+    CursorPageResponseBookDto responseBookDto = CursorPageResponseBookDto.builder()
+        .content(List.of(bookDto))
+        .nextCursor("자바의 정석")
+        .nextAfter(Instant.now())
+        .size(10)
+        .hasNext(false)
+        .build();
+
+    // 서비스 메서드 mocking
+    given(bookService.searchBooks(any(BookPageRequest.class))).willReturn(responseBookDto);
+
+    // when & then
+    mockMvc.perform(get("/api/books")
+        .param("keyword", "자바")
+        .param("limit", "10")
+        .param("orderBy", "title")
+        .param("direction", "DESC"))
+        .andDo(print())
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.content[0].title").value("자바의 정석"))
+        .andExpect(jsonPath("$.size").value(10))
+        .andExpect(jsonPath("$.hasNext").value(false));
+  }
+
+  @DisplayName("도서 목록 검색 시 파라미터 타입이 맞지 않으면 400 에러를 반환한다.")
+  @Test
+  void searchBooks_Fail_BadRequest() throws Exception {
+    // when & then
+    // limit에 문자열을 넣어서 400 에러 유도
+    mockMvc.perform(get("/api/books")
+        .param("limit", "number"))
+        .andDo(print())
+        .andExpect(status().isBadRequest());
+  }
+
+  @DisplayName("도서 목록 검색 중 예기치 않은 서버 내부 에러가 발생하면 500 에러를 반환한다.")
+  @Test
+  void searchBooks_Fail_InternalServerError() throws Exception {
+    // given
+    given(bookService.searchBooks(any(BookPageRequest.class)))
+        .willThrow(new BusinessException(GlobalErrorCode.INTERNAL_SERVER_ERROR, "예기치 않은 서버 에러 발생"));
+
+    // when & then
+    mockMvc.perform(get("/api/books")
+        .param("keyword", "자바"))
+        .andDo(print())
+        .andExpect(status().isInternalServerError());
   }
 }

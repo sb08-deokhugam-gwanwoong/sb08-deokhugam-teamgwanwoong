@@ -1,19 +1,24 @@
 package com.codeit.project.sb08deokhugamteamgwanwoong.service.impl;
 
+import com.codeit.project.sb08deokhugamteamgwanwoong.dto.dashboard.CursorPageResponsePopularBookDto;
+import com.codeit.project.sb08deokhugamteamgwanwoong.dto.dashboard.CursorPageResponsePopularReviewDto;
+import com.codeit.project.sb08deokhugamteamgwanwoong.dto.dashboard.CursorPageResponsePowerUserDto;
+import com.codeit.project.sb08deokhugamteamgwanwoong.dto.dashboard.DashboardPageRequest;
 import com.codeit.project.sb08deokhugamteamgwanwoong.dto.dashboard.PopularBookDto;
 import com.codeit.project.sb08deokhugamteamgwanwoong.dto.dashboard.PopularReviewDto;
 import com.codeit.project.sb08deokhugamteamgwanwoong.dto.dashboard.PowerUserDto;
 import com.codeit.project.sb08deokhugamteamgwanwoong.entity.Book;
-import com.codeit.project.sb08deokhugamteamgwanwoong.entity.User;
 import com.codeit.project.sb08deokhugamteamgwanwoong.entity.Dashboard;
+import com.codeit.project.sb08deokhugamteamgwanwoong.entity.Review;
+import com.codeit.project.sb08deokhugamteamgwanwoong.entity.User;
 import com.codeit.project.sb08deokhugamteamgwanwoong.entity.enums.DashboardPeriodEnums;
 import com.codeit.project.sb08deokhugamteamgwanwoong.mapper.DashboardMapper;
-import com.codeit.project.sb08deokhugamteamgwanwoong.entity.Review;
 import com.codeit.project.sb08deokhugamteamgwanwoong.repository.BookRepository;
 import com.codeit.project.sb08deokhugamteamgwanwoong.repository.DashboardRepository;
 import com.codeit.project.sb08deokhugamteamgwanwoong.repository.ReviewRepository;
 import com.codeit.project.sb08deokhugamteamgwanwoong.repository.UserRepository;
 import com.codeit.project.sb08deokhugamteamgwanwoong.service.DashboardService;
+import java.time.Instant;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -103,6 +108,140 @@ public class DashboardServiceImpl implements DashboardService {
 				.filter(r -> userMap.containsKey(r.getTargetId()))
 				.map(r -> dashboardMapper.toPowerUserDto(r, userMap.get(r.getTargetId())))
 				.toList();
+	}
+
+	/** 인기 도서 목록 조회 (커서 페이지네이션) */
+	@Override
+	public CursorPageResponsePopularBookDto getPopularBooks(DashboardPageRequest request) {
+		Instant after = parseAfter(request.after());
+		Integer cursorRankingPos = parseCursorRankingPos(request.cursor());
+		int limit = request.limit();
+		// direction에 따라 정렬 방식 분기, limit+1개 조회로 다음 페이지 존재 여부 확인
+		List<Dashboard> rankings = "DESC".equalsIgnoreCase(request.direction())
+				? dashboardRepository.findRecentRankingsByCursorDesc("BOOK", request.period(), after, cursorRankingPos,
+						PageRequest.of(0, limit + 1))
+				: dashboardRepository.findRecentRankingsByCursorAsc("BOOK", request.period(), after, cursorRankingPos,
+						PageRequest.of(0, limit + 1));
+
+		boolean hasNext = rankings.size() > limit;
+		if (hasNext) {
+			rankings = rankings.subList(0, limit);
+		}
+
+		// N+1 방지: IN 절로 관련 엔티티 일괄 조회
+		List<UUID> ids = rankings.stream().map(Dashboard::getTargetId).toList();
+		Map<UUID, Book> bookMap = bookRepository.findAllById(ids).stream().collect(Collectors.toMap(Book::getId, b -> b));
+		List<PopularBookDto> content = rankings.stream()
+				.filter(r -> bookMap.containsKey(r.getTargetId()))
+				.map(r -> dashboardMapper.toPopularBookDto(r, bookMap.get(r.getTargetId())))
+				.toList();
+
+		String nextCursor = null;
+		Instant nextAfter = null;
+		if (!content.isEmpty()) {
+			Dashboard last = rankings.get(rankings.size() - 1);
+			nextCursor = String.valueOf(last.getRankingPos());
+			nextAfter = last.getCreatedAt();
+		}
+
+		return new CursorPageResponsePopularBookDto(content, nextCursor, nextAfter, limit, null, hasNext);
+	}
+
+	@Override
+	public CursorPageResponsePopularReviewDto getPopularReviews(DashboardPageRequest request) {
+		Instant after = parseAfter(request.after());
+		Integer cursorRankingPos = parseCursorRankingPos(request.cursor());
+		int limit = request.limit();
+		// direction에 따라 정렬 방식 분기, limit+1개 조회로 다음 페이지 존재 여부 확인
+		List<Dashboard> rankings = "DESC".equalsIgnoreCase(request.direction())
+				? dashboardRepository.findRecentRankingsByCursorDesc("REVIEW", request.period(), after, cursorRankingPos,
+						PageRequest.of(0, limit + 1))
+				: dashboardRepository.findRecentRankingsByCursorAsc("REVIEW", request.period(), after, cursorRankingPos,
+						PageRequest.of(0, limit + 1));
+
+		boolean hasNext = rankings.size() > limit;
+		if (hasNext) {
+			rankings = rankings.subList(0, limit);
+		}
+
+		// N+1 방지: IN 절로 관련 엔티티 일괄 조회
+		List<UUID> ids = rankings.stream().map(Dashboard::getTargetId).toList();
+		Map<UUID, Review> reviewMap = reviewRepository.findAllById(ids).stream()
+				.collect(Collectors.toMap(Review::getId, r -> r));
+		List<PopularReviewDto> content = rankings.stream()
+				.filter(r -> reviewMap.containsKey(r.getTargetId()))
+				.map(r -> dashboardMapper.toPopularReviewDto(r, reviewMap.get(r.getTargetId())))
+				.toList();
+
+		// 다음 페이지 요청용 커서
+		String nextCursor = null;
+		Instant nextAfter = null;
+		if (!content.isEmpty()) {
+			Dashboard last = rankings.get(rankings.size() - 1);
+			nextCursor = String.valueOf(last.getRankingPos());
+			nextAfter = last.getCreatedAt();
+		}
+
+		return new CursorPageResponsePopularReviewDto(content, nextCursor, nextAfter, limit, null, hasNext);
+	}
+
+	/** 파워 유저 목록 조회 (커서 페이지네이션) */
+	@Override
+	public CursorPageResponsePowerUserDto getPowerUsers(DashboardPageRequest request) {
+		Instant after = parseAfter(request.after());
+		Integer cursorRankingPos = parseCursorRankingPos(request.cursor());
+		int limit = request.limit();
+		List<Dashboard> rankings = "DESC".equalsIgnoreCase(request.direction())
+				? dashboardRepository.findRecentRankingsByCursorDesc("USER", request.period(), after, cursorRankingPos,
+						PageRequest.of(0, limit + 1))
+				: dashboardRepository.findRecentRankingsByCursorAsc("USER", request.period(), after, cursorRankingPos,
+						PageRequest.of(0, limit + 1));
+
+		boolean hasNext = rankings.size() > limit;
+		if (hasNext) {
+			rankings = rankings.subList(0, limit);
+		}
+
+		// N+1 방지: IN 절로 관련 엔티티 일괄 조회
+		List<UUID> ids = rankings.stream().map(Dashboard::getTargetId).toList();
+		Map<UUID, User> userMap = userRepository.findAllById(ids).stream().collect(Collectors.toMap(User::getId, u -> u));
+		List<PowerUserDto> content = rankings.stream()
+				.filter(r -> userMap.containsKey(r.getTargetId()))
+				.map(r -> dashboardMapper.toPowerUserDto(r, userMap.get(r.getTargetId())))
+				.toList();
+
+		String nextCursor = null;
+		Instant nextAfter = null;
+		if (!content.isEmpty()) {
+			Dashboard last = rankings.get(rankings.size() - 1);
+			nextCursor = String.valueOf(last.getRankingPos());
+			nextAfter = last.getCreatedAt();
+		}
+
+		return new CursorPageResponsePowerUserDto(content, nextCursor, nextAfter, limit, null, hasNext);
+	}
+
+	private Instant parseAfter(String after) {
+		if (after == null || after.isBlank()) {
+			return null;
+		}
+		try {
+			return Instant.parse(after);
+		} catch (Exception e) {
+			return null;
+		}
+	}
+
+	/** cursor 쿼리 파라미터를 rankingPos(Integer)로 파싱, 첫 페이지는 -1 */
+	private Integer parseCursorRankingPos(String cursor) {
+		if (cursor == null || cursor.isBlank()) {
+			return -1;
+		}
+		try {
+			return Integer.parseInt(cursor);
+		} catch (NumberFormatException e) {
+			return -1;
+		}
 	}
 }
 
