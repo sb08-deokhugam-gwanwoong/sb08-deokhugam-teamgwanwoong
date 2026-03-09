@@ -17,11 +17,14 @@ import com.codeit.project.sb08deokhugamteamgwanwoong.dto.book.BookDto;
 import com.codeit.project.sb08deokhugamteamgwanwoong.dto.book.BookPageRequest;
 import com.codeit.project.sb08deokhugamteamgwanwoong.dto.book.BookUpdateRequest;
 import com.codeit.project.sb08deokhugamteamgwanwoong.dto.book.CursorPageResponseBookDto;
+import com.codeit.project.sb08deokhugamteamgwanwoong.dto.dashboard.CursorPageResponsePopularBookDto;
+import com.codeit.project.sb08deokhugamteamgwanwoong.dto.dashboard.DashboardPageRequest;
 import com.codeit.project.sb08deokhugamteamgwanwoong.exception.BusinessException;
 import com.codeit.project.sb08deokhugamteamgwanwoong.exception.enums.BookErrorCode;
 import com.codeit.project.sb08deokhugamteamgwanwoong.exception.enums.GlobalErrorCode;
 import java.time.Instant;
 import java.time.LocalDate;
+import java.util.Collections;
 import java.util.List;
 import java.util.UUID;
 import org.junit.jupiter.api.DisplayName;
@@ -638,6 +641,58 @@ public class BookControllerTest extends ControllerTestSupport {
     // when & then
     mockMvc.perform(get("/api/books")
         .param("keyword", "자바"))
+        .andDo(print())
+        .andExpect(status().isInternalServerError());
+  }
+
+  /*
+   * 인기 도서 목록 조회 관련 테스트
+   */
+  @DisplayName("인기 도서 목록 조회 API 호출 시 파라미터를 잘 매핑해서 200 응답과 목록을 반환한다.")
+  @Test
+  void getPopularBooks_Success() throws Exception {
+    // given
+    CursorPageResponsePopularBookDto responsePopularBookDto = new CursorPageResponsePopularBookDto(
+        Collections.emptyList(),
+        "1",
+        Instant.now(),
+        10,
+        null,
+        false
+    );
+
+    given(dashboardService.getPopularBooks(any(DashboardPageRequest.class))).willReturn(responsePopularBookDto);
+
+    // when & then
+    mockMvc.perform(get("/api/books/popular")
+        .param("period", "WEEKLY")
+        .param("limit", "10"))
+        .andDo(print())
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.size").value(10))
+        .andExpect(jsonPath("$.hasNext").value(false));
+  }
+
+  @DisplayName("인기 도서 목록 조회 시 파라미터 타입이 맞지 않으면(예: limit에 문자열) 400 에러를 반환한다.")
+  @Test
+  void getPopularBooks_Fail_BadRequest() throws Exception {
+    // when & then
+    mockMvc.perform(get("/api/books/popular")
+            .param("limit", "number")) // 숫자가 들어가야 할 곳에 문자열을 넣어서 타입 미스매치 유도
+        .andDo(print())
+        .andExpect(status().isBadRequest());
+  }
+
+  @DisplayName("인기 도서 목록 조회 중 서버 내부 에러가 발생하면 500 에러를 반환한다.")
+  @Test
+  void getPopularBooks_Fail_InternalServerError() throws Exception {
+    // given
+    // 서비스에서 예기치 못한 에러가 터지는 상황을 Mocking
+    given(dashboardService.getPopularBooks(any(DashboardPageRequest.class)))
+        .willThrow(new BusinessException(GlobalErrorCode.INTERNAL_SERVER_ERROR, "예기치 않은 서버 에러 발생"));
+
+    // when & then
+    mockMvc.perform(get("/api/books/popular"))
         .andDo(print())
         .andExpect(status().isInternalServerError());
   }
