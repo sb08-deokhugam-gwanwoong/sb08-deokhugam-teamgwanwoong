@@ -13,6 +13,7 @@ import com.codeit.project.sb08deokhugamteamgwanwoong.mapper.NotificationMapper;
 import com.codeit.project.sb08deokhugamteamgwanwoong.repository.NotificationRepository;
 import com.codeit.project.sb08deokhugamteamgwanwoong.repository.UserRepository;
 import com.codeit.project.sb08deokhugamteamgwanwoong.service.NotificationService;
+import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
@@ -144,6 +145,18 @@ public class NotificationServiceImpl implements NotificationService {
     log.info("[알림 목록 조회 완료] 현재 조회 개수: {}, hasNext: {}", content.size(), hasNext);
 
     return CursorPageResponseNotificationDto.of(content, totalElements, limit, hasNext);
+  }
+
+  @Override
+  public void deleteOldNotifications() {
+
+    Instant limitDate = Instant.now().minus(Duration.ofDays(7));
+
+    log.info("[오래된 알림 삭제 시작] 기준 시간: {}", limitDate);
+
+    notificationRepository.deleteOldConfirmedNotifications(limitDate);
+
+    log.info("[오래된 알림 삭제 완료]");
   }
 
   /**
