@@ -6,32 +6,56 @@ import com.codeit.project.sb08deokhugamteamgwanwoong.dto.book.BookPageRequest;
 import com.codeit.project.sb08deokhugamteamgwanwoong.dto.book.BookSearchCondition;
 import com.codeit.project.sb08deokhugamteamgwanwoong.dto.book.BookUpdateRequest;
 import com.codeit.project.sb08deokhugamteamgwanwoong.dto.book.CursorPageResponseBookDto;
+import com.codeit.project.sb08deokhugamteamgwanwoong.dto.book.NaverBookDto;
 import com.codeit.project.sb08deokhugamteamgwanwoong.entity.Book;
 import com.codeit.project.sb08deokhugamteamgwanwoong.exception.BusinessException;
 import com.codeit.project.sb08deokhugamteamgwanwoong.exception.enums.BookErrorCode;
+import com.codeit.project.sb08deokhugamteamgwanwoong.exception.enums.GlobalErrorCode;
 import com.codeit.project.sb08deokhugamteamgwanwoong.mapper.BookMapper;
 import com.codeit.project.sb08deokhugamteamgwanwoong.repository.BookRepository;
 import com.codeit.project.sb08deokhugamteamgwanwoong.service.BookService;
 import com.codeit.project.sb08deokhugamteamgwanwoong.service.external.S3Uploader;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import java.time.Instant;
+import java.util.Base64;
 import java.util.List;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
+import org.springframework.http.HttpEntity;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpMethod;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.client.RestTemplate;
 import org.springframework.web.multipart.MultipartFile;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
 public class BookServiceImpl implements BookService {
 
+  private static final String NAVER_CLIENT_ID = "${naver.api.client-id}";
+  private static final String NAVER_CLIENT_SECRET = "${naver.api.client-secret}";
+  private static final String NAVER_SEARCH_URL = "${naver.url.search.book}";
+
   private final BookRepository bookRepository;
   private final BookMapper bookMapper;
   private final S3Uploader s3Uploader;
+
+  @Value(NAVER_CLIENT_ID)
+  private String naverClientId;
+  @Value(NAVER_CLIENT_SECRET)
+  private String naverClientSecret;
+  @Value(NAVER_SEARCH_URL)
+  private String naverBookSearchUrl;
 
   @Override
   @Transactional
@@ -195,6 +219,66 @@ public class BookServiceImpl implements BookService {
         .build();
   }
 
+  @Override
+  public NaverBookDto getBookInfoByIsbn(String isbn) {
+    // 1. 네이버 API 요청 URL 구성
+    // yaml에 설정된 기본 book.json을 ISBN 상세 검색용인 book_adv.json으로 변환하고 d_isbn 파라미터 적용
+    String apiURL  = naverBookSearchUrl.replace("book.json", "book_adv.json") + "?d_isbn=" + isbn;
+
+    // 2. HTTP 헤더에 인증 정보 세팅
+    RestTemplate restTemplate = new RestTemplate();
+    HttpHeaders headers = new HttpHeaders();
+    headers.set("X-Naver-Client-Id", naverClientId);
+    headers.set("X-Naver-Client-Secret", naverClientSecret);
+    HttpEntity<String> entity = new HttpEntity<>(headers);
+
+    try {
+      // 3. 네이버 API 호출
+      ResponseEntity<String> response = restTemplate.exchange(apiURL, HttpMethod.GET, entity, String.class);
+
+      // 4. JSON 응답 파싱
+      ObjectMapper objectMapper = new ObjectMapper();
+      JsonNode root = objectMapper.readTree(response.getBody());
+      JsonNode items = root.path("items");
+
+      // 검색 결과가 없는 경우 404 예외처리
+      if (items.isEmpty()) {
+        throw new BusinessException(BookErrorCode.BOOK_NOT_FOUND, "해당 ISBN의 도서 정보를 찾을 수 없습니다.");
+      }
+
+      // 5. 첫번째 결과 데이터 추출
+      JsonNode bookNode = items.get(0);
+
+      // 네이버 API는 출판일을 "20260310" 형태의 문자열로 응답하므로 "YYYY-MM-DD" 형태로 포맷팅
+      String pubDateStr = bookNode.path("pubdate").asText();
+      String formattedDate = "";
+      if (pubDateStr.length() == 8) {
+        formattedDate = pubDateStr.substring(0, 4) + "-" + pubDateStr.substring(4, 6) + "-" + pubDateStr.substring(6, 8);
+      }
+
+      String imageUrl = bookNode.path("image").asText();
+      String base64Image = getBase64ImageFromUrl(imageUrl);
+
+      // 6. DTO 변환 및 리턴
+      return NaverBookDto.builder()
+          .title(bookNode.path("title").asText())
+          .author(bookNode.path("author").asText())
+          .publisher(bookNode.path("publisher").asText())
+          .description(bookNode.path("description").asText())
+          .publishedDate(formattedDate)
+          .isbn(bookNode.path("isbn").asText())
+          .thumbnailImage(base64Image) // 네이버에서 제공하는 이미지 URL를 Base64 변환해서 삽입
+          .build();
+
+    } catch (BusinessException e) {
+      throw e;
+    } catch (Exception e) {
+      log.error("Naver API 호출 실패 - ISBN: {}, 원인: {}", isbn, e.getMessage());
+      throw new BusinessException(GlobalErrorCode.INTERNAL_SERVER_ERROR, "네이버 도서 정보를 가져오는 중 서버 오류가 발생했습니다.");
+    }
+
+  }
+
   private Book createBookEntity(BookCreateRequest request, String thumbnailUrl) {
     return Book.builder()
         .title(request.title())
@@ -205,5 +289,22 @@ public class BookServiceImpl implements BookService {
         .publishedDate(request.publishedDate())
         .thumbnailUrl(thumbnailUrl)
         .build();
+  }
+
+  // 이미지 URL을 읽어서 Base64 인코딩된 문자열로 변환하는 헬퍼 메서드
+  private String getBase64ImageFromUrl(String imageUrl) {
+    if (imageUrl == null || imageUrl.isBlank()) {
+      return null;
+    }
+    try {
+      RestTemplate restTemplate = new RestTemplate();
+      byte[] imageBytes = restTemplate.getForObject(imageUrl, byte[].class);
+      if (imageBytes != null) {
+        return Base64.getEncoder().encodeToString(imageBytes);
+      }
+    } catch (Exception e) {
+      log.warn("이미지 다운로드 및 Base64 변환 실패 - URL: {}", imageUrl, e);
+    }
+    return null;
   }
 }
