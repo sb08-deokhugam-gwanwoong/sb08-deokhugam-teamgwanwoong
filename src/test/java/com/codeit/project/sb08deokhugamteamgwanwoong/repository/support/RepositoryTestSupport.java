@@ -1,13 +1,14 @@
 package com.codeit.project.sb08deokhugamteamgwanwoong.repository.support;
 
 import com.codeit.project.sb08deokhugamteamgwanwoong.config.JpaConfig;
+import com.codeit.project.sb08deokhugamteamgwanwoong.config.QuerydslConfig;
 import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
 import org.springframework.context.annotation.Import;
 import org.springframework.test.context.ActiveProfiles;
 
 @DataJpaTest
+@Import({JpaConfig.class, QuerydslConfig.class})
 @ActiveProfiles("test")
-@Import(JpaConfig.class)
 public abstract class RepositoryTestSupport {
   /*
    * 이 Support 추상 클래스는 테스트 코드의 응집도, 결합도를 생각했을 때

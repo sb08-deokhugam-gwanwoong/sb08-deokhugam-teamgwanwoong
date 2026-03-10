@@ -15,9 +15,9 @@ CREATE TABLE "users" (
                          "email"         VARCHAR(50)     NOT NULL,
                          "nickname"      VARCHAR(50)     NOT NULL,
                          "password"      VARCHAR(255)    NOT NULL, -- 해싱된 비밀번호 저장을 위해 길이 상향
-                         "created_at"    TIMESTAMPTZ     DEFAULT NOW() NOT NULL,
-                         "updated_at"    TIMESTAMPTZ     NULL,
-                         "deleted_at"    TIMESTAMPTZ     NULL,
+                         "created_at"    TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP NOT NULL,
+                         "updated_at"    TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP NOT NULL,
+                         "deleted_at"    TIMESTAMP WITH TIME ZONE NULL,
                          CONSTRAINT "PK_USERS" PRIMARY KEY ("id"),
                          CONSTRAINT "UQ_USERS_EMAIL" UNIQUE ("email"),
                          CONSTRAINT "UQ_USERS_NICKNAME" UNIQUE ("nickname")
@@ -40,9 +40,9 @@ CREATE TABLE "books" (
                          "thumbnail_url"  TEXT            NULL,
                          "review_count"   INTEGER         DEFAULT 0 NOT NULL,
                          "rating"         DOUBLE PRECISION DEFAULT 0.0 NOT NULL,
-                         "created_at"     TIMESTAMPTZ     DEFAULT NOW() NOT NULL,
-                         "updated_at"     TIMESTAMPTZ     NOT NULL,
-                         "deleted_at"     TIMESTAMPTZ     NULL,
+                         "created_at"    TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP NOT NULL,
+                         "updated_at"    TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP NOT NULL,
+                         "deleted_at"    TIMESTAMP WITH TIME ZONE NULL,
                          CONSTRAINT "PK_BOOKS" PRIMARY KEY ("id"),
                          CONSTRAINT "UQ_BOOKS_ISBN" UNIQUE ("isbn")
 );
@@ -58,9 +58,9 @@ CREATE TABLE "reviews" (
                            "content"       TEXT            NOT NULL,
                            "like_count"    INTEGER         DEFAULT 0 NOT NULL,
                            "comment_count" INTEGER         DEFAULT 0 NOT NULL,
-                           "created_at"    TIMESTAMPTZ     DEFAULT NOW() NOT NULL,
-                           "updated_at"    TIMESTAMPTZ     NULL,
-                           "deleted_at"    TIMESTAMPTZ     NULL,
+                           "created_at"    TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP NOT NULL,
+                           "updated_at"    TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP NOT NULL,
+                           "deleted_at"    TIMESTAMP WITH TIME ZONE NULL,
                            CONSTRAINT "PK_REVIEWS" PRIMARY KEY ("id"),
     -- 한 사용자가 한 도서에 대해 하나의 리뷰만 작성 가능하도록 설정
                            CONSTRAINT "unique_user_book_review" UNIQUE ("book_id", "user_id")
@@ -73,10 +73,10 @@ CREATE TABLE "comments" (
                             "id"            UUID            NOT NULL,
                             "user_id"       UUID            NOT NULL,
                             "review_id"     UUID            NOT NULL,
-                            "content"       TEXT            NOT NULL,
-                            "created_at"    TIMESTAMPTZ     DEFAULT NOW() NOT NULL,
-                            "updated_at"    TIMESTAMPTZ     NULL,
-                            "deleted_at"    TIMESTAMPTZ     NULL,
+                            "content"       VARCHAR(500)            NOT NULL,
+                            "created_at"    TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP NOT NULL,
+                            "updated_at"    TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP NOT NULL,
+                            "deleted_at"    TIMESTAMP WITH TIME ZONE NULL,
                             CONSTRAINT "PK_COMMENTS" PRIMARY KEY ("id")
 );
 
@@ -87,7 +87,7 @@ CREATE TABLE "review_likes" (
                                 "id"            UUID            NOT NULL,
                                 "review_id"     UUID            NOT NULL,
                                 "user_id"       UUID            NOT NULL,
-                                "created_at"    TIMESTAMPTZ     DEFAULT NOW() NOT NULL,
+                                "created_at"    TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP NOT NULL,
                                 CONSTRAINT "PK_REVIEW_LIKES" PRIMARY KEY ("id"),
     -- 한 사용자가 한 리뷰에 대해 좋아요를 한 번만 누를 수 있도록 유니크 설정
                                 CONSTRAINT "UQ_REVIEW_LIKE_USER" UNIQUE ("review_id", "user_id")
@@ -100,11 +100,11 @@ CREATE TABLE "notifications" (
                                  "id"            UUID            NOT NULL,
                                  "review_id"     UUID            NOT NULL,
                                  "user_id"       UUID            NOT NULL,
-                                 "content"       VARCHAR(100)    NOT NULL,
+                                 "message"       VARCHAR(100)    NOT NULL,
                                  "is_confirmed"  BOOLEAN         DEFAULT FALSE NOT NULL,
-                                 "review_title"  TEXT            NOT NULL,
-                                 "created_at"    TIMESTAMPTZ     DEFAULT NOW() NOT NULL,
-                                 "updated_at"    TIMESTAMPTZ     NULL,
+                                 "review_content" TEXT           NOT NULL,
+                                 "created_at"    TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP NOT NULL,
+                                 "updated_at"    TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP NOT NULL,
                                  CONSTRAINT "PK_NOTIFICATIONS" PRIMARY KEY ("id")
 );
 
@@ -118,7 +118,7 @@ CREATE TABLE "dashboard" (
                              "period_type"   VARCHAR(20)     NOT NULL, -- 'DAILY', 'WEEKLY' 등
                              "score"         DOUBLE PRECISION NOT NULL,
                              "ranking_pos"   INTEGER         NOT NULL,
-                             "created_at"    DATE            NOT NULL,
+                             "created_at"    TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP NOT NULL,
                              CONSTRAINT "PK_DASHBOARD" PRIMARY KEY ("id")
 );
 

@@ -10,36 +10,50 @@ version = '0.0.1-SNAPSHOT'
 description = 'SB08-Deokhugam-teamGwanwoong'
 
 // jacoco 리포트
+def jacocoExcludePatterns = [
+        "**/*Application*",
+        "**/Q*",
+        "**/*Config*",
+        "**/*Dto*",
+        "**/*Request*",
+        "**/*Response*",
+        "**/*Exception*",
+        "**/*MapperImpl*",
+        "**/*TestController*",
+        "**/config/**"
+]
+
 jacocoTestReport {
     dependsOn test // 리포트 생성 전 테스트 실행
     reports {
         xml.required = true
         html.required = true
     }
+
+    // classDirectories에서 패턴을 걷어냅니다.
+    afterEvaluate {
+        classDirectories.setFrom(files(classDirectories.files.collect {
+            fileTree(dir: it, exclude: jacocoExcludePatterns)
+        }))
+    }
     finalizedBy 'jacocoTestCoverageVerification'
 }
 
 jacocoTestCoverageVerification {
+    afterEvaluate {
+        classDirectories.setFrom(files(classDirectories.files.collect {
+            fileTree(dir: it, exclude: jacocoExcludePatterns)
+        }))
+    }
     violationRules {
         rule {
             enabled = true
             element = 'CLASS'
-
             limit {
                 counter = 'LINE'
                 value = 'COVEREDRATIO'
                 minimum = 0.80
             }
-
-            excludes = [
-                    '**/*Application*',
-                    '**/Q*',
-                    '**/*Config*',
-                    '**/*Dto*',
-                    '**/*Request*',
-                    '**/*Response*',
-                    '**/*Exception*'
-            ]
         }
     }
 }

@@ -1,13 +1,19 @@
 package com.codeit.project.sb08deokhugamteamgwanwoong.controller.support;
 
 import com.codeit.project.sb08deokhugamteamgwanwoong.config.MDCLoggingInterceptor;
+import com.codeit.project.sb08deokhugamteamgwanwoong.controller.BookController;
+import com.codeit.project.sb08deokhugamteamgwanwoong.controller.CommentController;
+import com.codeit.project.sb08deokhugamteamgwanwoong.controller.ReviewController;
+import com.codeit.project.sb08deokhugamteamgwanwoong.controller.UserController;
 import com.codeit.project.sb08deokhugamteamgwanwoong.mapper.BookMapper;
 import com.codeit.project.sb08deokhugamteamgwanwoong.mapper.CommentMapper;
+import com.codeit.project.sb08deokhugamteamgwanwoong.mapper.DashboardMapper;
 import com.codeit.project.sb08deokhugamteamgwanwoong.mapper.NotificationMapper;
 import com.codeit.project.sb08deokhugamteamgwanwoong.mapper.ReviewMapper;
 import com.codeit.project.sb08deokhugamteamgwanwoong.mapper.UserMapper;
 import com.codeit.project.sb08deokhugamteamgwanwoong.service.BookService;
 import com.codeit.project.sb08deokhugamteamgwanwoong.service.CommentService;
+import com.codeit.project.sb08deokhugamteamgwanwoong.service.DashboardService;
 import com.codeit.project.sb08deokhugamteamgwanwoong.service.NotificationService;
 import com.codeit.project.sb08deokhugamteamgwanwoong.service.ReviewService;
 import com.codeit.project.sb08deokhugamteamgwanwoong.service.UserService;
@@ -19,6 +25,10 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
 @WebMvcTest(controllers = {
+    UserController.class,
+    ReviewController.class,
+    BookController.class,
+    CommentController.class
 })
 @Import(MDCLoggingInterceptor.class)
 public abstract class ControllerTestSupport {
@@ -45,6 +55,9 @@ public abstract class ControllerTestSupport {
   @MockitoBean
   protected BookService bookService;
 
+  @MockitoBean
+  protected DashboardService dashboardService;
+
   /* Mapper 부분 */
   @MockitoBean
   protected UserMapper userMapper;
@@ -60,4 +73,7 @@ public abstract class ControllerTestSupport {
 
   @MockitoBean
   protected BookMapper bookMapper;
+
+  @MockitoBean
+  protected DashboardMapper dashboardMapper;
 }
