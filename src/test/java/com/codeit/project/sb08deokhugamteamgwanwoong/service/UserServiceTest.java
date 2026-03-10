@@ -61,7 +61,7 @@ public class UserServiceTest {
     UserDto expectedDto = new UserDto(uuid, request.email(), request.nickname(), Instant.now());
 
     // Mocking
-    given(userRepository.existsByEmail(request.email())).willReturn(false);
+    given(userRepository.existsByEmailAndDeletedAtIsNull(request.email())).willReturn(false);
     given(userRepository.save(any(User.class))).willReturn(user);
     given(userMapper.toDto(user)).willReturn(expectedDto);
 
@@ -82,7 +82,7 @@ public class UserServiceTest {
     UserRegisterRequest request = new UserRegisterRequest(email, "Tester", "password123!");
 
     // Mocking - 해당 이메일은 존재한다는 가정
-    given(userRepository.existsByEmail(email)).willReturn(true);
+    given(userRepository.existsByEmailAndDeletedAtIsNull(email)).willReturn(true);
 
     // When
     BusinessException exception = assertThrows(BusinessException.class, () -> {
@@ -115,7 +115,7 @@ public class UserServiceTest {
 
     // Mocking
     // 리포지토리 -> 유저 반환
-    given(userRepository.findByEmailAndPassword(email, password)).willReturn(Optional.of(user));
+    given(userRepository.findByEmailAndPasswordAndDeletedAtIsNull(email, password)).willReturn(Optional.of(user));
     // 매퍼 -> DTO 반환
     given(userMapper.toDto(user)).willReturn(expectedDto);
 
@@ -135,7 +135,7 @@ public class UserServiceTest {
     UserLoginRequest request = new UserLoginRequest("nonUser@test.com", "nonPassword123!");
 
     // Mocking
-    given(userRepository.findByEmailAndPassword(anyString(), anyString())).willReturn(Optional.empty());
+    given(userRepository.findByEmailAndPasswordAndDeletedAtIsNull(anyString(), anyString())).willReturn(Optional.empty());
 
     // When & Then
     assertThatThrownBy(() -> userService.login(request))
@@ -183,6 +183,22 @@ public class UserServiceTest {
   }
 
   @Test
+  @DisplayName("유저 조회 실패: 유저는 존재하지만 이미 탈퇴(Soft Delete) 상태라면 예외가 발생해야 한다.")
+  void getUserById_SoftDeleted_Fail_Test() {
+    // Given
+    UUID userId = UUID.randomUUID();
+    User user = User.builder().email("test@test.com").nickname("Tester").build();
+    ReflectionTestUtils.setField(user, "deletedAt", Instant.now()); // 탈퇴 처리
+
+    given(userRepository.findById(userId)).willReturn(Optional.of(user));
+
+    // When & Then
+    assertThatThrownBy(() -> userService.getUserById(userId))
+        .isInstanceOf(BusinessException.class)
+        .hasFieldOrPropertyWithValue("errorCode", UserErrorCode.USER_NOT_FOUND);
+  }
+
+  @Test
   @DisplayName("유저 수정: 새로운 닉네임으로 수정하면 성공적으로 반영되어야 한다.")
   void updateUserNickname_Test() {
     // Given
@@ -196,7 +212,7 @@ public class UserServiceTest {
 
     // Mocking
     given(userRepository.findById(userId)).willReturn(Optional.of(user));
-    given(userRepository.existsByNickname("NewTester")).willReturn(false); // 중복 X
+    given(userRepository.existsByNicknameAndDeletedAtIsNull("NewTester")).willReturn(false); // 중복 X
 
     // When
     userService.update(userId, request);
@@ -218,7 +234,7 @@ public class UserServiceTest {
     UserUpdateRequest request = new UserUpdateRequest("DuplicateTester");
 
     given(userRepository.findById(userId)).willReturn(Optional.of(user));
-    given(userRepository.existsByNickname("DuplicateTester")).willReturn(true); // 중복 O
+    given(userRepository.existsByNicknameAndDeletedAtIsNull("DuplicateTester")).willReturn(true); // 중복 O
 
     // When & Then
     assertThatThrownBy(() -> userService.update(userId, request))
