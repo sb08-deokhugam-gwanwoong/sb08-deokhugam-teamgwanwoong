@@ -9,6 +9,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
+import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -34,5 +35,7 @@ public interface ReviewRepository extends JpaRepository<Review, UUID>, ReviewRep
     @Query(value = "DELETE FROM reviews WHERE id = :id", nativeQuery = true)
     void hardDeleteById(@Param("id") UUID id);
 
+    @Query("SELECT r FROM Review r JOIN FETCH r.book WHERE r.createdAt >= :since")
+    List<Review> findAllByCreatedAtAfter(@Param("since") Instant since);
 
 }
