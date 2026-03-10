@@ -13,11 +13,14 @@ import org.springframework.stereotype.Repository;
 @Repository
 public interface UserRepository extends JpaRepository<User, UUID> {
 
-  boolean existsByEmail(String email);
+  // 탈퇴하지 않은 유저 중 중복 체크 (이메일)
+  boolean existsByEmailAndDeletedAtIsNull(String email);
 
-  Optional<User> findByEmailAndPassword(String email, String password);
+  // 로그인 (탈퇴한 회원은 X)
+  Optional<User> findByEmailAndPasswordAndDeletedAtIsNull(String email, String password);
 
-  boolean existsByNickname(String nickname);
+  // 탈퇴하지 않은 유저 중 중복 체크 (닉네임)
+  boolean existsByNicknameAndDeletedAtIsNull(String nickname);
 
   @Query(value = "SELECT * FROM users WHERE id = :userId", nativeQuery = true)
   Optional<User> findByIdIncludeDeleted(@Param("userId") UUID userId);
