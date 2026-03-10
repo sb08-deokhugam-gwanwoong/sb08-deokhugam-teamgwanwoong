@@ -477,7 +477,7 @@ public class ReviewControllerTest extends ControllerTestSupport {
                 .given(reviewService).hardDeleteReview(notFoundReviewId, requestUserId);
 
         //when & then
-        mockMvc.perform(delete("/api/reviews/{reviewId}/hard", reviewId)
+        mockMvc.perform(delete("/api/reviews/{reviewId}/hard", notFoundReviewId)
                         .header("Deokhugam-Request-User-ID", requestUserId.toString()))
                 .andExpect(status().isNotFound());
 
