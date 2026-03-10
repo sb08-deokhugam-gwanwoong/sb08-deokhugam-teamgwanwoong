@@ -1,8 +1,9 @@
 package com.codeit.project.sb08deokhugamteamgwanwoong.controller;
 
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyInt;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.BDDMockito.given;
+import static org.mockito.Mockito.verify;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -48,8 +49,7 @@ public class NotificationControllerTest extends ControllerTestSupport {
           Instant.now()
       );
 
-      given(notificationService.update(any(UUID.class), any(UUID.class),
-          any(NotificationUpdateRequest.class)))
+      given(notificationService.update(eq(notificationId), eq(userId), any(NotificationUpdateRequest.class)))
           .willReturn(response);
 
       // When & Then
@@ -73,6 +73,8 @@ public class NotificationControllerTest extends ControllerTestSupport {
       mockMvc.perform(patch("/api/notifications/read-all")
               .header("Deokhugam-Request-User-ID", userId))
           .andExpect(status().isNoContent());
+
+      verify(notificationService).allConfirmNotification(eq(userId));
     }
   }
 
@@ -89,9 +91,7 @@ public class NotificationControllerTest extends ControllerTestSupport {
       CursorPageResponseNotificationDto response = CursorPageResponseNotificationDto.of(
           Collections.emptyList(), 0, 20, false);
 
-      given(
-          notificationService.getNotifications(any(UUID.class), any(Direction.class), any(), any(),
-              anyInt()))
+      given(notificationService.getNotifications(eq(userId), eq(Direction.DESC), any(), any(), eq(20)))
           .willReturn(response);
 
       // When & Then
