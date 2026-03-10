@@ -6,6 +6,7 @@ import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
+import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
@@ -21,4 +22,7 @@ public interface ReviewLikeRepository extends JpaRepository<ReviewLike, UUID> {
 
     @Query("SELECT rl.review.id FROM ReviewLike rl where rl.user.id = :userId AND rl.review.id IN :reviewIds")
     Set<UUID> findLikedReviewIds(@Param("userId") UUID userId, @Param("reviewIds") List<UUID> reviewIds);
+
+    @Query("SELECT rl FROM ReviewLike rl JOIN FETCH rl.user WHERE rl.createdAt >= :since")
+    List<ReviewLike> findAllByCreatedAtAfter(@Param("since") Instant since);
 }

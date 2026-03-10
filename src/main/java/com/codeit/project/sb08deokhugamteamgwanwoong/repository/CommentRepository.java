@@ -24,4 +24,7 @@ public interface CommentRepository extends JpaRepository<Comment, UUID>, Comment
 
   List<Comment> findAllByReviewId(UUID reviewId);
 
+  @Query("SELECT c FROM Comment c JOIN FETCH c.user WHERE c.deletedAt IS NULL AND c.createdAt >= :since")
+  List<Comment> findAllByCreatedAtAfter(@Param("since") Instant since);
+
 }

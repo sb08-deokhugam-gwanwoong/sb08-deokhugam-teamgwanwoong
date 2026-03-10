@@ -137,6 +137,23 @@ class CommentServiceTest {
   }
 
   @Test
+  @DisplayName("댓글 작성 실패 - 존재하지 않는 리뷰에 댓글을 달 경우 예외 발생")
+  void createComment_Fail_ReviewNotFound() {
+    //given
+    CommentCreateRequest request = new CommentCreateRequest(reviewId, userId, "테스트");
+
+    // 유저는 존재하지만, 리뷰는 존재하지 않음!
+    given(userRepository.findById(userId)).willReturn(Optional.of(user));
+    given(reviewRepository.findById(reviewId)).willReturn(Optional.empty());
+
+    //when & then
+    assertThatThrownBy(() -> commentService.create(request))
+        .isInstanceOf(BusinessException.class)
+        .extracting("errorCode")
+        .isEqualTo(ReviewErrorCode.REVIEW_NOT_FOUND);
+  }
+
+  @Test
   @DisplayName("댓글 수정 성공")
   void updateComment_Success() {
     //given
@@ -233,6 +250,20 @@ class CommentServiceTest {
   }
 
   @Test
+  @DisplayName("댓글 논리 삭제 실패 - 존재하지 않는 댓글일 경우 예외 발생")
+  void softDelete_Fail_NotFound() {
+    //given
+    UUID notFoundId = UUID.randomUUID();
+    given(commentRepository.findById(notFoundId)).willReturn(Optional.empty());
+
+    //when & then
+    assertThatThrownBy(() -> commentService.softDelete(notFoundId, userId))
+        .isInstanceOf(BusinessException.class)
+        .extracting("errorCode")
+        .isEqualTo(CommentErrorCode.COMMENT_NOT_FOUND);
+  }
+
+  @Test
   @DisplayName("댓글 물리 삭제 성공")
   void hardDelete_Success() {
     //given
@@ -324,6 +355,20 @@ class CommentServiceTest {
     assertThat(result).isNotNull();
     assertThat(result.id()).isEqualTo(targetId);
     then(commentRepository).should().findById(targetId);
+  }
+
+  @Test
+  @DisplayName("댓글 상세 조회 실패 - 존재하지 않는 댓글일 경우 예외 발생")
+  void findById_Fail_NotFound() {
+    //given
+    UUID notFoundId = UUID.randomUUID();
+    given(commentRepository.findById(notFoundId)).willReturn(Optional.empty());
+
+    //when & then
+    assertThatThrownBy(() -> commentService.findById(notFoundId))
+        .isInstanceOf(BusinessException.class)
+        .extracting("errorCode")
+        .isEqualTo(CommentErrorCode.COMMENT_NOT_FOUND);
   }
 
   @Test
