@@ -225,16 +225,17 @@ public class ReviewServiceImpl implements ReviewService {
         findUser(requestUserId);
         validateDeletePermission(review, requestUserId);
 
-        // 리뷰와 연관된 댓글 한번에 논리 삭제(벌크 연산)
-        commentRepository.softDeleteAllByReviewId(reviewId, Instant.now());
-
         review.getBook().removeReviewRating(review.getRating());
 
         // 논리 삭제를 위해 deletedAt 갱신
         review.delete();
 
-        // 명시적으로 save() 호출해서 변경된 상태를 DB에 강제로 반영
-        reviewRepository.save(review);
+        // 명시적으로 saveAndFlush() 호출해서 캐시를 비우고 변경된 상태를 DB에 강제로 반영
+        reviewRepository.saveAndFlush(review);
+
+        // 리뷰와 연관된 댓글 한번에 논리 삭제(벌크 연산)
+        commentRepository.softDeleteAllByReviewId(reviewId, Instant.now());
+
         log.info("Service: 리뷰 논리 삭제 로직 성공 - reviewId: {}, requestUserId: {}", reviewId, requestUserId);
     }
 

@@ -323,8 +323,8 @@ public class ReviewServiceTest {
         reviewService.softDeleteReview(review.getId(), user.getId());
 
         //then
+        then(reviewRepository).should().saveAndFlush(review);
         then(commentRepository).should().softDeleteAllByReviewId(eq(review.getId()), any(Instant.class));
-        then(reviewRepository).should().save(review);
     }
 
     @Test
