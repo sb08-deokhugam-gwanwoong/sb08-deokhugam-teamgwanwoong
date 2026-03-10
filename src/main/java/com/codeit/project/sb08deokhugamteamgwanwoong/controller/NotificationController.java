@@ -37,7 +37,7 @@ public class NotificationController implements NotificationApi {
   }
 
   @Override
-  public ResponseEntity<Void> markAllAsRead(UUID requestUserId) {
+  public ResponseEntity<Void> markAllAsRead(@RequestHeader("Deokhugam-Request-User-ID") UUID requestUserId) {
 
     notificationService.allConfirmNotification(requestUserId);
 
