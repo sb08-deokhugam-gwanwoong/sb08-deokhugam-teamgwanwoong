@@ -9,6 +9,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.MethodArgumentNotValidException;
+import org.springframework.web.bind.MissingRequestHeaderException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
@@ -80,6 +81,25 @@ public class GlobalExceptionHandler {
 
         // details 필드에 넣기 위해 리스트로 변환
         List<ErrorResponse.Detail> details = List.of(new ErrorResponse.Detail(e.getName(), detailsMessage, e.getValue()));
+
+        ErrorResponse response = ErrorResponse.of(code, INVALID_REQUEST, request.getRequestURI(), details);
+
+        return ResponseEntity.status(code.getHttpStatus()).body(response);
+    }
+
+    @ExceptionHandler(MissingRequestHeaderException.class)
+    public ResponseEntity<ErrorResponse> handleMissingRequestHeader(MissingRequestHeaderException e, HttpServletRequest request) {
+
+        ErrorCode code = GlobalErrorCode.INVALID_INPUT;
+        String headerName = e.getHeaderName();
+        String errorMessage = String.format("필수 헤더 '%s'가 누락되었습니다.", headerName);
+
+        log.warn("필수 헤더 누락: code={}, message={}, path={}",
+                code.getCode(), errorMessage, request.getRequestURI());
+
+        List<ErrorResponse.Detail> details = List.of(
+                new ErrorResponse.Detail(headerName, errorMessage, null)
+        );
 
         ErrorResponse response = ErrorResponse.of(code, INVALID_REQUEST, request.getRequestURI(), details);
 
