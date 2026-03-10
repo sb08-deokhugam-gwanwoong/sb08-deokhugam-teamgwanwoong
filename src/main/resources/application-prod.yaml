@@ -3,11 +3,21 @@ server:
 
 spring:
   datasource:
-    # Railway 환경 변수 사용 (개별 변수 조합, 더 안전함)
     url: jdbc:postgresql://${PGHOST}:${PGPORT}/${PGDATABASE} # 내부 통신은 5432가 기본값입니다. (28102는 외부 접속용)
     username: ${PGUSER}
     password: ${PGPASSWORD}
     driver-class-name: org.postgresql.Driver
+
+  # AWS S3 설정 추가 (환경 변수로 주입)
+  cloud:
+    aws:
+      s3:
+        bucket: ${AWS_BUCKET_NAME}
+      region:
+        static: ${AWS_REGION}
+      credentials:
+        access-key: ${AWS_ACCESS_KEY}
+        secret-key: ${AWS_SECRET_KEY}
 
   sql:
     init:
@@ -24,5 +34,22 @@ spring:
 
 logging:
   level:
-    org.hibernate.SQL: warn # 운영 환경에서는 SQL 로그 레벨을 warn 이상으로
-    org.hibernate.orm.jdbc.bind: warn
+    org.hibernate.SQL: info # 운영 환경에서는 SQL 로그 레벨을 warn 이상으로
+    org.hibernate.orm.jdbc.bind: info
+  # 로그 패턴 추가 (운영 환경 트러블슈팅을 위한 MDC request_id, client_ip 유지)
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{36} - [%X{request_id}] [%X{client_ip}] %msg%n"
+
+# Naver API 설정 추가
+naver:
+  api:
+    client-id: ${NAVER_CLIENT_ID}
+    client-secret: ${NAVER_CLIENT_SECRET}
+  url:
+    search:
+      book: "https://openapi.naver.com/v1/search/book.json"
+
+# OCR API 설정 추가 (추후 구현 시 사용)
+ocr:
+  api:
+    key: ${OCR_API_KEY:dummy-key}
