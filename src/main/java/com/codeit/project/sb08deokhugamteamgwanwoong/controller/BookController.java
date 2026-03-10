@@ -1,11 +1,16 @@
 package com.codeit.project.sb08deokhugamteamgwanwoong.controller;
 
+import com.codeit.project.sb08deokhugamteamgwanwoong.controller.docs.BookApi;
 import com.codeit.project.sb08deokhugamteamgwanwoong.dto.book.BookCreateRequest;
 import com.codeit.project.sb08deokhugamteamgwanwoong.dto.book.BookDto;
 import com.codeit.project.sb08deokhugamteamgwanwoong.dto.book.BookPageRequest;
 import com.codeit.project.sb08deokhugamteamgwanwoong.dto.book.BookUpdateRequest;
 import com.codeit.project.sb08deokhugamteamgwanwoong.dto.book.CursorPageResponseBookDto;
+import com.codeit.project.sb08deokhugamteamgwanwoong.dto.book.NaverBookDto;
+import com.codeit.project.sb08deokhugamteamgwanwoong.dto.dashboard.CursorPageResponsePopularBookDto;
+import com.codeit.project.sb08deokhugamteamgwanwoong.dto.dashboard.DashboardPageRequest;
 import com.codeit.project.sb08deokhugamteamgwanwoong.service.BookService;
+import com.codeit.project.sb08deokhugamteamgwanwoong.service.DashboardService;
 import jakarta.validation.Valid;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
@@ -20,6 +25,7 @@ import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RequestPart;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
@@ -28,9 +34,10 @@ import org.springframework.web.multipart.MultipartFile;
 @RestController
 @RequiredArgsConstructor
 @RequestMapping("/api/books")
-public class BookController {
+public class BookController implements BookApi {
 
   private final BookService bookService;
+  private final DashboardService dashboardService;
 
   @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
   public ResponseEntity<BookDto> createBook(
@@ -44,6 +51,17 @@ public class BookController {
     log.info("도서 등록 완료 - 등록된 도서 ID : {}", bookDto.id());
 
     return ResponseEntity.status(HttpStatus.CREATED).body(bookDto);
+  }
+
+  @GetMapping("/info")
+  public ResponseEntity<NaverBookDto> getBookInfoByIsbn(
+      @RequestParam("isbn") String isbn
+  ) {
+    log.info("Naver API 도서 정보 조회 요청 - ISBN: {}", isbn);
+    NaverBookDto response = bookService.getBookInfoByIsbn(isbn);
+    log.info("Naver API 도서 정보 조회 완료 - 도서 정보: {}", response.title());
+
+    return ResponseEntity.status(HttpStatus.OK).body(response);
   }
 
   @GetMapping("/{bookId}")
@@ -97,5 +115,19 @@ public class BookController {
         responseBookDto.content().size(), responseBookDto.hasNext());
 
     return ResponseEntity.status(HttpStatus.OK).body(responseBookDto);
+  }
+
+  @GetMapping("/popular")
+  public ResponseEntity<CursorPageResponsePopularBookDto> getPopularBooks(
+      @ModelAttribute DashboardPageRequest request
+  ) {
+    log.info("인기 도서 목록 조회 요청 - 기간: {}, cursor: {}, limit: {}",
+        request.period(), request.cursor(), request.limit());
+
+    CursorPageResponsePopularBookDto responseDto = dashboardService.getPopularBooks(request);
+    log.info("인기 도서 목록 조회 완료 - 반환된 데이터 개수: {}, 다음 페이지 존재 여부: {}",
+        responseDto.content().size(), responseDto.hasNext());
+
+    return ResponseEntity.status(HttpStatus.OK).body(responseDto);
   }
 }

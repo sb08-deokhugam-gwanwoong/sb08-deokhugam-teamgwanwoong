@@ -6,6 +6,7 @@ import com.codeit.project.sb08deokhugamteamgwanwoong.entity.Review;
 import com.codeit.project.sb08deokhugamteamgwanwoong.entity.ReviewLike;
 import com.codeit.project.sb08deokhugamteamgwanwoong.entity.User;
 import com.codeit.project.sb08deokhugamteamgwanwoong.exception.BusinessException;
+import com.codeit.project.sb08deokhugamteamgwanwoong.exception.enums.BookErrorCode;
 import com.codeit.project.sb08deokhugamteamgwanwoong.exception.enums.ReviewErrorCode;
 import com.codeit.project.sb08deokhugamteamgwanwoong.exception.enums.UserErrorCode;
 import com.codeit.project.sb08deokhugamteamgwanwoong.mapper.ReviewLikeMapper;
@@ -285,7 +286,7 @@ public class ReviewServiceImpl implements ReviewService {
 
     private Book findBook(UUID bookId) {
         return bookRepository.findById(bookId)
-                .orElseThrow(IllegalArgumentException::new);
+                .orElseThrow(() -> new BusinessException(BookErrorCode.BOOK_NOT_FOUND));
     }
 
     private void validateUpdatePermission(Review review, UUID userId) {

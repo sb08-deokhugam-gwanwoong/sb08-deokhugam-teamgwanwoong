@@ -9,13 +9,16 @@ import static org.mockito.Mockito.times;
 
 import com.codeit.project.sb08deokhugamteamgwanwoong.dto.comment.CommentCreateRequest;
 import com.codeit.project.sb08deokhugamteamgwanwoong.dto.comment.CommentDto;
+import com.codeit.project.sb08deokhugamteamgwanwoong.dto.comment.CommentSearchCondition;
 import com.codeit.project.sb08deokhugamteamgwanwoong.dto.comment.CommentUpdateRequest;
+import com.codeit.project.sb08deokhugamteamgwanwoong.dto.comment.CursorPageResponseCommentDto;
 import com.codeit.project.sb08deokhugamteamgwanwoong.entity.Book;
 import com.codeit.project.sb08deokhugamteamgwanwoong.entity.Comment;
 import com.codeit.project.sb08deokhugamteamgwanwoong.entity.Review;
 import com.codeit.project.sb08deokhugamteamgwanwoong.entity.User;
 import com.codeit.project.sb08deokhugamteamgwanwoong.exception.BusinessException;
 import com.codeit.project.sb08deokhugamteamgwanwoong.exception.enums.CommentErrorCode;
+import com.codeit.project.sb08deokhugamteamgwanwoong.exception.enums.ReviewErrorCode;
 import com.codeit.project.sb08deokhugamteamgwanwoong.mapper.CommentMapper;
 import com.codeit.project.sb08deokhugamteamgwanwoong.repository.CommentRepository;
 import com.codeit.project.sb08deokhugamteamgwanwoong.repository.ReviewRepository;
@@ -23,6 +26,7 @@ import com.codeit.project.sb08deokhugamteamgwanwoong.repository.UserRepository;
 import com.codeit.project.sb08deokhugamteamgwanwoong.service.impl.CommentServiceImpl;
 import java.time.Instant;
 import java.time.LocalDate;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
@@ -35,7 +39,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.test.util.ReflectionTestUtils;
 
 @ExtendWith(MockitoExtension.class)
-public class CommentServiceTest {
+class CommentServiceTest {
 
   @Mock
   private CommentRepository commentRepository;
@@ -97,6 +101,7 @@ public class CommentServiceTest {
         .review(review)
         .build();
     ReflectionTestUtils.setField(comment, "id", UUID.randomUUID());
+    ReflectionTestUtils.setField(comment, "createdAt", Instant.now());
   }
 
   @Test
@@ -104,13 +109,6 @@ public class CommentServiceTest {
   void createComment_Success() {
     //given
     CommentCreateRequest request = new CommentCreateRequest(reviewId, userId, "테스트 댓글입니다");
-
-    Comment comment = Comment.builder()
-        .content(request.content())
-        .user(user)
-        .review(review)
-        .build();
-    ReflectionTestUtils.setField(comment, "id", UUID.randomUUID());
 
     //stubbing
     given(userRepository.findById(userId)).willReturn(Optional.of(user));
@@ -203,5 +201,156 @@ public class CommentServiceTest {
         .isInstanceOf(BusinessException.class)
         .extracting("errorCode")
         .isEqualTo(CommentErrorCode.COMMENT_NOT_FOUND);
+  }
+
+  @Test
+  @DisplayName("댓글 논리 삭제 성공")
+  void softDelete_Success() {
+    //given
+    UUID commentId = comment.getId();
+    given(commentRepository.findById(commentId)).willReturn(Optional.of(comment));
+
+    //when
+    commentService.softDelete(commentId, userId);
+
+    //then
+    assertThat(comment.getDeletedAt()).isNotNull();
+  }
+
+  @Test
+  @DisplayName("댓글 논리 삭제 실패 - 작성자가 아닐 경우")
+  void softDelete_Fail_Unauthorized() {
+    //given
+    UUID commentId = comment.getId();
+    UUID anotherUserId = UUID.randomUUID();
+    given(commentRepository.findById(commentId)).willReturn(Optional.of(comment));
+
+    //when & then
+    assertThatThrownBy(() -> commentService.softDelete(commentId, anotherUserId))
+        .isInstanceOf(BusinessException.class)
+        .extracting("errorCode")
+        .isEqualTo(CommentErrorCode.COMMENT_DELETE_DENIED);
+  }
+
+  @Test
+  @DisplayName("댓글 물리 삭제 성공")
+  void hardDelete_Success() {
+    //given
+    UUID commentId = comment.getId();
+    given(commentRepository.findById(commentId)).willReturn(Optional.of(comment));
+
+    //when
+    commentService.hardDelete(commentId, userId);
+
+    //then
+    then(commentRepository).should(times(1)).delete(comment);
+  }
+
+  @Test
+  @DisplayName("댓글 물리 삭제 실패 - 작성자가 아닐 경우")
+  void hardDelete_Fail_Unauthorized() {
+    //given
+    UUID commentId = comment.getId();
+    UUID anotherUserId = UUID.randomUUID();
+    given(commentRepository.findById(commentId)).willReturn(Optional.of(comment));
+
+    //when & then
+    assertThatThrownBy(() -> commentService.hardDelete(commentId, anotherUserId))
+        .isInstanceOf(BusinessException.class)
+        .extracting("errorCode")
+        .isEqualTo(CommentErrorCode.COMMENT_DELETE_DENIED);
+  }
+
+  @Test
+  @DisplayName("댓글 목록 조회 성공")
+  void findAllComments_Success() {
+    //given
+    given(reviewRepository.findById(reviewId)).willReturn(Optional.of(review));
+
+    List<Comment> comments = List.of(comment);
+    given(commentRepository.findAllByCursor(any(CommentSearchCondition.class))).willReturn(comments);
+
+    CommentDto commentDto = new CommentDto(
+        comment.getId(),
+        reviewId,
+        userId,
+        "웅제",
+        "기존 댓글 내용",
+        Instant.now(),
+        Instant.now()
+    );
+    given(commentMapper.toDto(any(Comment.class))).willReturn(commentDto);
+
+    //when
+    CursorPageResponseCommentDto response = commentService.findAllComments(reviewId, null, null, 10);
+
+    //then
+    assertThat(response.content()).hasSize(1);
+    assertThat(response.hasNext()).isFalse();
+    assertThat(response.content().get(0).content()).isEqualTo("기존 댓글 내용");
+  }
+
+  @Test
+  @DisplayName("댓글 목록 조회 실패 - 리뷰가 존재하지 않을 경우")
+  void findAllComments_Fail_ReviewNotFound() {
+    //given
+    UUID notFoundReviewId = UUID.randomUUID();
+    given(reviewRepository.findById(notFoundReviewId)).willReturn(Optional.empty());
+
+    //when & then
+    assertThatThrownBy(() -> commentService.findAllComments(notFoundReviewId, null, null, 10))
+        .isInstanceOf(BusinessException.class)
+        .extracting("errorCode")
+        .isEqualTo(ReviewErrorCode.REVIEW_NOT_FOUND);
+  }
+
+  @Test
+  @DisplayName("댓글 상세 조회 시 해당 댓글의 DTO를 반환한다")
+  void findById_Success() {
+    //given
+    UUID targetId = comment.getId(); // commentId 대신 필드의 comment에서 ID 추출
+
+    CommentDto expectedDto = new CommentDto(
+        targetId, reviewId, userId, "웅제", "기존 댓글 내용", Instant.now(), Instant.now()
+    );
+
+    given(commentRepository.findById(targetId)).willReturn(Optional.of(comment));
+    given(commentMapper.toDto(comment)).willReturn(expectedDto);
+
+    //when
+    CommentDto result = commentService.findById(targetId);
+
+    //then
+    assertThat(result).isNotNull();
+    assertThat(result.id()).isEqualTo(targetId);
+    then(commentRepository).should().findById(targetId);
+  }
+
+  @Test
+  @DisplayName("남이 내 리뷰에 댓글을 달면 알림이 생성되어야 한다")
+  void createComment_ShouldNotify_WhenOtherUserComments() {
+    //given
+    User reviewAuthor = User.builder()
+        .email("author@test.com")
+        .nickname("리뷰어")
+        .build();
+    ReflectionTestUtils.setField(reviewAuthor, "id", UUID.randomUUID()); // 서로 다른 ID 보장
+
+    ReflectionTestUtils.setField(review, "user", reviewAuthor);
+
+    CommentCreateRequest request = new CommentCreateRequest(reviewId, userId, "알림 가는지 확인!");
+
+    given(userRepository.findById(userId)).willReturn(Optional.of(user));
+    given(reviewRepository.findById(reviewId)).willReturn(Optional.of(review));
+    given(commentRepository.save(any(Comment.class))).willReturn(comment);
+
+    CommentDto dto = new CommentDto(comment.getId(), reviewId, userId, "웅제", "알림!", Instant.now(), Instant.now());
+    given(commentMapper.toDto(any(Comment.class))).willReturn(dto);
+
+    //when
+    commentService.create(request);
+
+    //then
+    then(notificationService).should(times(1)).createNotification(any(), any(), any());
   }
 }

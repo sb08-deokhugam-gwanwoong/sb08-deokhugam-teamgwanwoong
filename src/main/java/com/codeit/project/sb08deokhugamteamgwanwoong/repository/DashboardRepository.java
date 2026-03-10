@@ -2,6 +2,7 @@ package com.codeit.project.sb08deokhugamteamgwanwoong.repository;
 
 import com.codeit.project.sb08deokhugamteamgwanwoong.entity.Dashboard;
 import com.codeit.project.sb08deokhugamteamgwanwoong.entity.enums.DashboardPeriodEnums;
+import com.codeit.project.sb08deokhugamteamgwanwoong.entity.enums.DashboardTargetType;
 import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
@@ -22,7 +23,7 @@ public interface DashboardRepository extends JpaRepository<Dashboard, UUID> {
 	    ORDER BY d.createdAt DESC, d.rankingPos ASC
 	    """)
 	List<Dashboard> findRecentRankings(
-			@Param("targetType") String targetType,
+			@Param("targetType") DashboardTargetType targetType,
 			@Param("periodType") DashboardPeriodEnums periodType,
 			Pageable pageable
 	);
@@ -36,7 +37,7 @@ public interface DashboardRepository extends JpaRepository<Dashboard, UUID> {
 	    ORDER BY d.createdAt DESC, d.rankingPos ASC
 	    """)
 	List<Dashboard> findRecentRankingsByCursorDesc(
-			@Param("targetType") String targetType,
+			@Param("targetType") DashboardTargetType targetType,
 			@Param("periodType") DashboardPeriodEnums periodType,
 			@Param("after") Instant after,
 			@Param("cursorRankingPos") Integer cursorRankingPos,
@@ -52,7 +53,7 @@ public interface DashboardRepository extends JpaRepository<Dashboard, UUID> {
 	    ORDER BY d.createdAt ASC, d.rankingPos ASC
 	    """)
 	List<Dashboard> findRecentRankingsByCursorAsc(
-			@Param("targetType") String targetType,
+			@Param("targetType") DashboardTargetType targetType,
 			@Param("periodType") DashboardPeriodEnums periodType,
 			@Param("after") Instant after,
 			@Param("cursorRankingPos") Integer cursorRankingPos,
