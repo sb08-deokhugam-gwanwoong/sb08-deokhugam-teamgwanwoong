@@ -98,4 +98,11 @@ public class Review extends BaseRemovableEntity {
             this.content = newContent;
         }
     }
+
+    public void restore(Integer rating, String content) {
+        this.rating = rating;
+        this.content = content;
+
+        super.undelete();
+    }
 }

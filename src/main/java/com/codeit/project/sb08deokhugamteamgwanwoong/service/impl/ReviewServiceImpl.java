@@ -148,22 +148,35 @@ public class ReviewServiceImpl implements ReviewService {
         UUID userId = request.userId();
         log.info("Service: 리뷰 생성 로직 시작 - bookId: {}, userId: {}", bookId, userId);
 
-        // 이미 작성한 리뷰가 있는 경우
-        if (reviewRepository.existsByBookIdAndUserId(bookId, userId)) {
-            throw new BusinessException(ReviewErrorCode.REVIEW_ALREADY_EXISTS);
-        }
         User user = findUser(userId);
         Book book = findBook(bookId);
 
-        Review review = Review.builder()
-                .rating(request.rating())
-                .content(request.content())
-                .user(user)
-                .book(book)
-                .build();
+        Optional<Review> optionalReview = reviewRepository.findByBookIdAndUserIdIncludeDeleted(bookId, userId);
 
-        Review savedReview = reviewRepository.save(review);
+        Review savedReview;
 
+        if (optionalReview.isPresent()) {
+            Review exisstingReview = optionalReview.get();
+
+            if (exisstingReview.getDeletedAt() == null) {
+                throw new BusinessException(ReviewErrorCode.REVIEW_ALREADY_EXISTS);
+            }
+
+            else {
+                exisstingReview.restore(request.rating(), request.content());
+                savedReview = reviewRepository.save(exisstingReview);
+            }
+        } else {
+            Review newReview = Review.builder()
+                    .rating(request.rating())
+                    .content(request.content())
+                    .user(user)
+                    .book(book)
+                    .build();
+            savedReview = reviewRepository.save(newReview);
+        }
+
+        // 도서의 평점/ 리뷰 수 증가 반영
         book.addReviewRating(request.rating());
 
         log.info("Service: 리뷰 생성 성공 - ID: {}", savedReview.getId());
