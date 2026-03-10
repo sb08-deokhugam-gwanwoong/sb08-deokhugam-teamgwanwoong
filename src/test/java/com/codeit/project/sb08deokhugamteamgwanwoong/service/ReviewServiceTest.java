@@ -418,6 +418,7 @@ public class ReviewServiceTest {
         //given
         given(reviewRepository.findByIdIncludeDeleted(review.getId())).willReturn(Optional.of(review));
         given(userRepository.findById(user.getId())).willReturn(Optional.of(user));
+        given(bookRepository.findById(review.getBook().getId())).willReturn(Optional.of(book));
 
         //when
         reviewService.hardDeleteReview(review.getId(), user.getId());
