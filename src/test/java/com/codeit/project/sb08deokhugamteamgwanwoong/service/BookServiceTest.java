@@ -2,10 +2,15 @@ package com.codeit.project.sb08deokhugamteamgwanwoong.service;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.BDDMockito.given;
+import static org.mockito.Mockito.mockConstruction;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 import com.codeit.project.sb08deokhugamteamgwanwoong.dto.book.BookCreateRequest;
 import com.codeit.project.sb08deokhugamteamgwanwoong.dto.book.BookDto;
@@ -13,9 +18,11 @@ import com.codeit.project.sb08deokhugamteamgwanwoong.dto.book.BookPageRequest;
 import com.codeit.project.sb08deokhugamteamgwanwoong.dto.book.BookSearchCondition;
 import com.codeit.project.sb08deokhugamteamgwanwoong.dto.book.BookUpdateRequest;
 import com.codeit.project.sb08deokhugamteamgwanwoong.dto.book.CursorPageResponseBookDto;
+import com.codeit.project.sb08deokhugamteamgwanwoong.dto.book.NaverBookDto;
 import com.codeit.project.sb08deokhugamteamgwanwoong.entity.Book;
 import com.codeit.project.sb08deokhugamteamgwanwoong.exception.BusinessException;
 import com.codeit.project.sb08deokhugamteamgwanwoong.exception.enums.BookErrorCode;
+import com.codeit.project.sb08deokhugamteamgwanwoong.exception.enums.GlobalErrorCode;
 import com.codeit.project.sb08deokhugamteamgwanwoong.mapper.BookMapper;
 import com.codeit.project.sb08deokhugamteamgwanwoong.repository.BookRepository;
 import com.codeit.project.sb08deokhugamteamgwanwoong.service.external.S3Uploader;
@@ -23,6 +30,7 @@ import com.codeit.project.sb08deokhugamteamgwanwoong.service.impl.BookServiceImp
 import java.time.Instant;
 import java.time.LocalDate;
 import java.util.ArrayList;
+import java.util.Base64;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -32,11 +40,18 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mapstruct.factory.Mappers;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
+import org.mockito.MockedConstruction;
 import org.mockito.Spy;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.data.domain.Pageable;
+import org.springframework.http.HttpEntity;
+import org.springframework.http.HttpMethod;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.mock.web.MockMultipartFile;
+import org.springframework.test.util.ReflectionTestUtils;
+import org.springframework.web.client.RestTemplate;
 import org.springframework.web.multipart.MultipartFile;
 
 @ExtendWith(MockitoExtension.class)
@@ -170,6 +185,206 @@ public class BookServiceTest {
         .hasMessageContaining("이미 존재하는 ISBN입니다.");
   }
 
+  /*
+  * 네이버 도서 검색 API 연동 테스트
+  * */
+  @DisplayName("네이버 API를 통해 ISBN으로 도서 정보를 성공적으로 가져온다. (이미지 Base64 변환 포함)")
+  @Test
+  void getBookInfoByIsbn_Success() {
+    // given
+    String isbn = "9788994492032";
+
+    // @Value 강제 주입 (단위 테스트 환경)
+    ReflectionTestUtils.setField(bookService, "naverBookSearchUrl", "https://openapi.naver.com/v1/search/book.json");
+    ReflectionTestUtils.setField(bookService, "naverClientId", "test-client-id");
+    ReflectionTestUtils.setField(bookService, "naverClientSecret", "test-client-secret");
+
+    // 네이버에서 줄 가짜 JSON 응답
+    String mockJsonResponse = """
+        {
+          "items": [
+            {
+              "title": "자바의 정석",
+              "author": "남궁성",
+              "publisher": "도우출판",
+              "description": "자바 기본서",
+              "pubdate": "20160127",
+              "isbn": "9788994492032",
+              "image": "https://example.com/image.jpg"
+            }
+          ]
+        }
+        """;
+
+    // 네이버에서 다운받을 가짜 이미지 바이트 배열
+    byte[] mockImageBytes = "dummy image content".getBytes();
+
+    // RestTemplate 생성자 가로채기
+    try (MockedConstruction<RestTemplate> mocked = mockConstruction(RestTemplate.class,
+        (mock, context) -> {
+          // 1. 도서 정보 조회 (exchange) 호출 시 가짜 JSON 반환
+          when(mock.exchange(anyString(), eq(HttpMethod.GET), any(HttpEntity.class), eq(String.class)))
+              .thenReturn(new ResponseEntity<>(mockJsonResponse, HttpStatus.OK));
+
+          // 2. 이미지 다운로드 (getForObject) 호출 시 가짜 바이트 배열 반환
+          when(mock.getForObject(anyString(), eq(byte[].class)))
+              .thenReturn(mockImageBytes);
+        })) {
+
+      // when
+      NaverBookDto result = bookService.getBookInfoByIsbn(isbn);
+
+      // then
+      assertThat(result.title()).isEqualTo("자바의 정석");
+      assertThat(result.author()).isEqualTo("남궁성");
+      assertThat(result.publishedDate()).isEqualTo("2016-01-27"); // 날짜 포맷팅 검증
+
+      // 이미지가 Base64로 잘 인코딩되었는지 검증
+      String expectedBase64 = Base64.getEncoder().encodeToString(mockImageBytes);
+      assertThat(result.thumbnailImage()).isEqualTo(expectedBase64);
+    }
+  }
+
+  @DisplayName("네이버 API 검색 결과가 비어있으면 BOOK_NOT_FOUND 예외를 던진다.")
+  @Test
+  void getBookInfoByIsbn_Fail_EmptyItems() {
+    // given
+    String isbn = "1234567890123";
+    ReflectionTestUtils.setField(bookService, "naverBookSearchUrl", "https://openapi.naver.com/v1/search/book.json");
+
+    // items 배열이 비어있는 가짜 JSON 응답
+    String mockEmptyResponse = "{ \"items\": [] }";
+
+    try (MockedConstruction<RestTemplate> mocked = mockConstruction(RestTemplate.class,
+        (mock, context) -> {
+          when(mock.exchange(anyString(), eq(HttpMethod.GET), any(HttpEntity.class), eq(String.class)))
+              .thenReturn(new ResponseEntity<>(mockEmptyResponse, HttpStatus.OK));
+        })) {
+
+      // when & then
+      BusinessException exception = assertThrows(BusinessException.class, () -> {
+        bookService.getBookInfoByIsbn(isbn);
+      });
+      assertThat(exception.getErrorCode()).isEqualTo(BookErrorCode.BOOK_NOT_FOUND);
+    }
+  }
+
+  @DisplayName("네이버 API 연동 중 예기치 않은 통신 에러가 발생하면 INTERNAL_SERVER_ERROR 예외를 던진다.")
+  @Test
+  void getBookInfoByIsbn_Fail_InternalError() {
+    // given
+    String isbn = "9788994492032";
+    ReflectionTestUtils.setField(bookService, "naverBookSearchUrl", "https://openapi.naver.com/v1/search/book.json");
+
+    try (MockedConstruction<RestTemplate> mocked = mockConstruction(RestTemplate.class,
+        (mock, context) -> {
+          // 통신 중 런타임 에러(예: 타임아웃)가 터지는 상황 가정
+          when(mock.exchange(anyString(), eq(HttpMethod.GET), any(HttpEntity.class), eq(String.class)))
+              .thenThrow(new RuntimeException("네이버 서버 연결 시간 초과"));
+        })) {
+
+      // when & then
+      BusinessException exception = assertThrows(BusinessException.class, () -> {
+        bookService.getBookInfoByIsbn(isbn);
+      });
+      assertThat(exception.getErrorCode()).isEqualTo(GlobalErrorCode.INTERNAL_SERVER_ERROR);
+    }
+  }
+
+  @DisplayName("네이버 API 응답에 이미지 URL이 비어있으면(blank) 썸네일은 null을 반환한다.")
+  @Test
+  void getBookInfoByIsbn_Success_BlankImageUrl() {
+    // given
+    String isbn = "9788994492032";
+    ReflectionTestUtils.setField(bookService, "naverBookSearchUrl", "https://openapi.naver.com/v1/search/book.json");
+
+    // image 필드가 아예 비어있는 가짜 JSON 응답
+    String mockJsonResponse = """
+        {
+          "items": [
+            {
+              "title": "자바의 정석",
+              "isbn": "9788994492032",
+              "image": "" 
+            }
+          ]
+        }
+        """;
+
+    try (MockedConstruction<RestTemplate> mocked = mockConstruction(RestTemplate.class,
+        (mock, context) -> {
+          when(mock.exchange(anyString(), eq(HttpMethod.GET), any(HttpEntity.class), eq(String.class)))
+              .thenReturn(new ResponseEntity<>(mockJsonResponse, HttpStatus.OK));
+        })) {
+
+      // when
+      NaverBookDto result = bookService.getBookInfoByIsbn(isbn);
+
+      // then
+      // imageUrl.isBlank() 분기를 타서 null이 반환되어야 함
+      assertThat(result.title()).isEqualTo("자바의 정석");
+      assertThat(result.thumbnailImage()).isNull();
+    }
+  }
+
+  @DisplayName("이미지 다운로드 결과(byte 배열)가 null이면 썸네일은 null을 반환한다.")
+  @Test
+  void getBookInfoByIsbn_Success_NullImageBytes() {
+    // given
+    String isbn = "9788994492032";
+    ReflectionTestUtils.setField(bookService, "naverBookSearchUrl", "https://openapi.naver.com/v1/search/book.json");
+
+    // 정상적인 이미지 URL이 포함된 JSON 응답
+    String mockJsonResponse = "{ \"items\": [ { \"title\": \"자바의 정석\", \"isbn\": \"9788994492032\", \"image\": \"https://example.com/image.jpg\" } ] }";
+
+    try (MockedConstruction<RestTemplate> mocked = mockConstruction(RestTemplate.class,
+        (mock, context) -> {
+          when(mock.exchange(anyString(), eq(HttpMethod.GET), any(HttpEntity.class), eq(String.class)))
+              .thenReturn(new ResponseEntity<>(mockJsonResponse, HttpStatus.OK));
+
+          // RestTemplate이 이미지를 다운받지 못하고 null을 반환하는 상황 mocking
+          when(mock.getForObject(anyString(), eq(byte[].class)))
+              .thenReturn(null);
+        })) {
+
+      // when
+      NaverBookDto result = bookService.getBookInfoByIsbn(isbn);
+
+      // then
+      // imageBytes != null 분기의 false를 타서 맨 아래 return null이 실행되어야 함
+      assertThat(result.thumbnailImage()).isNull();
+    }
+  }
+
+  @DisplayName("이미지 다운로드 중 예외가 발생하면(catch), 에러를 반환하고 썸네일은 null을 반환한다.")
+  @Test
+  void getBookInfoByIsbn_Success_ImageDownloadException() {
+    // given
+    String isbn = "9788994492032";
+    ReflectionTestUtils.setField(bookService, "naverBookSearchUrl", "https://openapi.naver.com/v1/search/book.json");
+
+    String mockJsonResponse = "{ \"items\": [ { \"title\": \"자바의 정석\", \"isbn\": \"9788994492032\", \"image\": \"https://example.com/image.jpg\" } ] }";
+
+    try (MockedConstruction<RestTemplate> mocked = mockConstruction(RestTemplate.class,
+        (mock, context) -> {
+          when(mock.exchange(anyString(), eq(HttpMethod.GET), any(HttpEntity.class), eq(String.class)))
+              .thenReturn(new ResponseEntity<>(mockJsonResponse, HttpStatus.OK));
+
+          // RestTemplate이 이미지를 받다가 타임아웃/404 등 런타임 예외를 터뜨리는 상황 mocking
+          when(mock.getForObject(anyString(), eq(byte[].class)))
+              .thenThrow(new RuntimeException("이미지 서버 연결 실패"));
+        })) {
+
+      // when
+      NaverBookDto result = bookService.getBookInfoByIsbn(isbn);
+
+      // then
+      // catch (Exception e) 블록을 타서 로그를 찍고 맨 아래 return null이 실행되어야 함
+      // 전체 API 로직은 실패하지 않고 도서 정보는 정상 반환되어야 함
+      assertThat(result.title()).isEqualTo("자바의 정석");
+      assertThat(result.thumbnailImage()).isNull();
+    }
+  }
   /*
   * 도서 상세 조회 관련 테스트
   * */
