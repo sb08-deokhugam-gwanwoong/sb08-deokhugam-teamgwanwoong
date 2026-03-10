@@ -146,6 +146,11 @@ public class CommentRepositoryTest extends RepositoryTestSupport {
           .review(review)
           .content("댓글 " + i)
           .build());
+      try {
+        Thread.sleep(10);
+      } catch (InterruptedException e) {
+        throw new RuntimeException(e);
+      }
     }
     flushAndClear();
 
