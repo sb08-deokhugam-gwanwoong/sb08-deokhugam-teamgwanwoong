@@ -21,7 +21,7 @@ public interface ReviewRepository extends JpaRepository<Review, UUID>, ReviewRep
 
     // 비관적 락을 통해 동시성 제어를 해결 - 트랜잭션이 실행 중이면 다른 트랙잭션은 수행할 수 없음
     @Lock(LockModeType.PESSIMISTIC_WRITE)
-    @Query("SELECT r FROM Review r WHERE r.id = :reviewId")
+    @Query("SELECT r FROM Review r JOIN FETCH r.book WHERE r.id = :reviewId")
     Optional<Review> findByIdWithPessimisticLock(@Param("reviewId") UUID reviewId);
 
     boolean existsByBookIdAndUserId(UUID bookId, UUID userId);
@@ -33,6 +33,4 @@ public interface ReviewRepository extends JpaRepository<Review, UUID>, ReviewRep
     @Modifying(clearAutomatically = true)
     @Query(value = "DELETE FROM reviews WHERE id = :id", nativeQuery = true)
     void hardDeleteById(@Param("id") UUID id);
-
-
 }

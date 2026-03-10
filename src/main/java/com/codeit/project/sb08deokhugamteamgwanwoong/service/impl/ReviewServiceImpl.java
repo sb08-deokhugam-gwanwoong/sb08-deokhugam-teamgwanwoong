@@ -163,6 +163,9 @@ public class ReviewServiceImpl implements ReviewService {
                 .build();
 
         Review savedReview = reviewRepository.save(review);
+
+        book.addReviewRating(request.rating());
+
         log.info("Service: 리뷰 생성 성공 - ID: {}", savedReview.getId());
 
         return reviewMapper.toDto(savedReview, false, book.getThumbnailUrl());
@@ -225,6 +228,8 @@ public class ReviewServiceImpl implements ReviewService {
         // 리뷰와 연관된 댓글 한번에 논리 삭제(벌크 연산)
         commentRepository.softDeleteAllByReviewId(reviewId, Instant.now());
 
+        review.getBook().removeReviewRating(review.getRating());
+
         // 논리 삭제를 위해 deletedAt 갱신
         review.delete();
 
@@ -241,7 +246,14 @@ public class ReviewServiceImpl implements ReviewService {
         findUser(requestUserId);
         validateUpdatePermission(review, requestUserId);
 
+        Integer oldRating = review.getRating();
+
         review.update(request.rating(), request.content());
+
+        if (!oldRating.equals(request.rating())) {
+            review.getBook().updateReviewRating(oldRating, request.rating());
+        }
+
         log.info("Service: 리뷰 수정 완료 - ID: {}", reviewId);
 
         return reviewMapper.toDto(review, findIsLiked(reviewId, requestUserId), review.getBook().getThumbnailUrl());
@@ -262,8 +274,15 @@ public class ReviewServiceImpl implements ReviewService {
         // 리뷰와 연관된 좋아요 한번에 물리 삭제(벌크 연산)
         reviewLikeRepository.hardDeleteAllByReviewId(reviewId);
 
+        //가짜 프록시가 아닌 확실한 Book을 조회해서 가져옴
+        Book book = bookRepository.findById(review.getBook().getId())
+                        .orElseThrow(() -> new BusinessException(BookErrorCode.BOOK_NOT_FOUND));
+
+        book.removeReviewRating(review.getRating());
+
         // @SQLRestriction을 통해서 deleted_at이 null이 아닌 경우 삭제 시 해당 Review를 찾을 수 없음
         reviewRepository.hardDeleteById(reviewId);
+
         log.info("Service: 리뷰 물리 삭제 로직 성공 - reviewId: {}, requestUserId: {}", reviewId, requestUserId);
     }
 
