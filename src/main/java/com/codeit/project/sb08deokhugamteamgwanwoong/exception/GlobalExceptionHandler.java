@@ -9,6 +9,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.MethodArgumentNotValidException;
+import org.springframework.web.bind.MissingServletRequestParameterException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
@@ -22,6 +23,7 @@ public class GlobalExceptionHandler {
     private static final String INCORRECT_PARAMETER = "'%s' 파라미터 값이 올바르지 않습니다. (허용된 값: %s)";
     private static final String INVALID_PARAMETER_FORMAT = "'%s' 파라미터의 형식이 올바르지 않습니다.";
     private static final String INVALID_REQUEST = "잘못된 접근입니다.";
+    private static final String MISSING_PARAMETER = "'%s' 필수 파라미터가 누락되었습니다.";
 
 
     @ExceptionHandler(BusinessException.class)
@@ -82,6 +84,28 @@ public class GlobalExceptionHandler {
         List<ErrorResponse.Detail> details = List.of(new ErrorResponse.Detail(e.getName(), detailsMessage, e.getValue()));
 
         ErrorResponse response = ErrorResponse.of(code, INVALID_REQUEST, request.getRequestURI(), details);
+
+        return ResponseEntity.status(code.getHttpStatus()).body(response);
+    }
+
+    // 파라미터 누락 예외
+    @ExceptionHandler(MissingServletRequestParameterException.class)
+    public ResponseEntity<ErrorResponse> handleMissingParameter(
+        MissingServletRequestParameterException e, HttpServletRequest request
+    ) {
+        ErrorCode code = GlobalErrorCode.INVALID_INPUT;
+
+        String detailsMessage = String.format(MISSING_PARAMETER, e.getParameterName());
+
+        // ErrorResponse.Detail 객체로 포장
+        List<ErrorResponse.Detail> details = List.of(
+            new ErrorResponse.Detail(e.getParameterName(), detailsMessage, "null")
+        );
+
+        ErrorResponse response = ErrorResponse.of(code, INVALID_REQUEST, request.getRequestURI(), details);
+
+        log.error("필수 파라미터 누락 : code={}, message={}, path={}, details={}",
+            code.getCode(), code.getMessage(), request.getRequestURI(), details);
 
         return ResponseEntity.status(code.getHttpStatus()).body(response);
     }
