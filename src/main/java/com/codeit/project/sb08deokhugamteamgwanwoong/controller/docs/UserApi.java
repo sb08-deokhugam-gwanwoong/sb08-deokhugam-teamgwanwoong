@@ -1,5 +1,7 @@
 package com.codeit.project.sb08deokhugamteamgwanwoong.controller.docs;
 
+import com.codeit.project.sb08deokhugamteamgwanwoong.dto.dashboard.CursorPageResponsePowerUserDto;
+import com.codeit.project.sb08deokhugamteamgwanwoong.dto.dashboard.DashboardPageRequest;
 import com.codeit.project.sb08deokhugamteamgwanwoong.dto.user.UserDto;
 import com.codeit.project.sb08deokhugamteamgwanwoong.dto.user.UserLoginRequest;
 import com.codeit.project.sb08deokhugamteamgwanwoong.dto.user.UserRegisterRequest;
@@ -12,9 +14,11 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import java.util.UUID;
+import org.springdoc.core.annotations.ParameterObject;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -193,4 +197,29 @@ public interface UserApi {
   )
   @DeleteMapping("/{userId}/hard")
   ResponseEntity<Void> hardDeleteUser(@PathVariable @Parameter(description = "사용자 ID", required = true) UUID userId);
+
+  @Operation(
+      summary = "파워 유저 목록 조회",
+      description = "기간별 파워 유저 목록을 조회합니다.",
+      operationId = "getPowerUsers",
+      responses = {
+          @ApiResponse(
+              responseCode = "200",
+              description = "파워 유저 목록 조회 성공",
+              content = @Content(schema = @Schema(implementation = CursorPageResponsePowerUserDto.class))
+          ),
+          @ApiResponse(
+              responseCode = "400",
+              description = "잘못된 요청 (랭킹 기간 오류, 정렬 방향 오류 등)",
+              content = @Content(schema = @Schema(implementation = CursorPageResponsePowerUserDto.class))
+          ),
+          @ApiResponse(
+              responseCode = "500",
+              description = "서버 내부 오류",
+              content = @Content(schema = @Schema(implementation = CursorPageResponsePowerUserDto.class))
+          )
+      }
+  )
+  @GetMapping("/power")
+  ResponseEntity<CursorPageResponsePowerUserDto> getPowerUsers(@ParameterObject @ModelAttribute DashboardPageRequest request);
 }
