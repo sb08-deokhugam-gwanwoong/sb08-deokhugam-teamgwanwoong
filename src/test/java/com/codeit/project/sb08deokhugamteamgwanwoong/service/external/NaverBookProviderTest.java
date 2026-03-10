@@ -1,12 +1,18 @@
 package com.codeit.project.sb08deokhugamteamgwanwoong.service.external;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.springframework.test.web.client.match.MockRestRequestMatchers.method;
 import static org.springframework.test.web.client.match.MockRestRequestMatchers.requestTo;
+import static org.springframework.test.web.client.response.MockRestResponseCreators.withServerError;
 import static org.springframework.test.web.client.response.MockRestResponseCreators.withSuccess;
 
 import com.codeit.project.sb08deokhugamteamgwanwoong.config.ExternalApiConfig;
 import com.codeit.project.sb08deokhugamteamgwanwoong.dto.book.NaverBookDto;
+import com.codeit.project.sb08deokhugamteamgwanwoong.exception.BusinessException;
+import com.codeit.project.sb08deokhugamteamgwanwoong.exception.enums.GlobalErrorCode;
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -74,5 +80,51 @@ public class NaverBookProviderTest {
     assertThat(naverBookDto.isbn()).isEqualTo("9788965402602");
     assertThat(naverBookDto.publisher()).isEqualTo("위키북스");
     // 날짜 형식 변환 등은 구현 단계에서 처리해야 함
+  }
+
+  @DisplayName("네이버 API 응답에 items가 비어있으면 BusinessException을 던진다.")
+  @Test
+  void getBookMetadata_Fail_EmptyItems() {
+    // given
+    String query = "존재하지않는책";
+    String encodedQuery = URLEncoder.encode(query, StandardCharsets.UTF_8);
+    String expectedUrl = "https://openapi.naver.com/v1/search/book.json?query=" + encodedQuery + "&display=1";
+
+    // items 리스트가 비어있는 JSON 응답
+    String mockResponse = "{\"items\": []}";
+
+    mockServer.expect(requestTo(expectedUrl))
+        .andExpect(method(HttpMethod.GET))
+        .andRespond(withSuccess(mockResponse, MediaType.APPLICATION_JSON));
+
+    // when & then
+    BusinessException exception = assertThrows(BusinessException.class, () -> {
+      naverBookProvider.getBookMetadata(query);
+    });
+
+    assertThat(exception.getErrorCode()).isEqualTo(GlobalErrorCode.INTERNAL_SERVER_ERROR);
+    assertThat(exception.getMessage()).contains("도서 정보를 찾을 수 없습니다");
+  }
+
+  @DisplayName("네이버 API 호출 중 통신 예외(500 등)가 발생하면 catch 블록을 타고 BusinessException을 던진다.")
+  @Test
+  void getBookMetadata_Fail_NetworkException() {
+    // given
+    String query = "에러나는책";
+    String encodedQuery = URLEncoder.encode(query, StandardCharsets.UTF_8);
+    String expectedUrl = "https://openapi.naver.com/v1/search/book.json?query=" + encodedQuery + "&display=1";
+
+    // 네이버 서버 측에서 500 에러를 반환하는 상황 모킹
+    mockServer.expect(requestTo(expectedUrl))
+        .andExpect(method(HttpMethod.GET))
+        .andRespond(withServerError());
+
+    // when & then
+    BusinessException exception = assertThrows(BusinessException.class, () -> {
+      naverBookProvider.getBookMetadata(query);
+    });
+
+    assertThat(exception.getErrorCode()).isEqualTo(GlobalErrorCode.INTERNAL_SERVER_ERROR);
+    assertThat(exception.getMessage()).contains("Naver API 호출 중 오류 발생");
   }
 }
