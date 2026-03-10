@@ -3,12 +3,14 @@ package com.codeit.project.sb08deokhugamteamgwanwoong.repository;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import com.codeit.project.sb08deokhugamteamgwanwoong.dto.comment.CommentSearchCondition;
 import com.codeit.project.sb08deokhugamteamgwanwoong.entity.Book;
 import com.codeit.project.sb08deokhugamteamgwanwoong.entity.Comment;
 import com.codeit.project.sb08deokhugamteamgwanwoong.entity.Review;
 import com.codeit.project.sb08deokhugamteamgwanwoong.entity.User;
 import com.codeit.project.sb08deokhugamteamgwanwoong.repository.support.RepositoryTestSupport;
 import jakarta.persistence.EntityManager;
+import java.time.Instant;
 import java.time.LocalDate;
 import java.util.List;
 import org.junit.jupiter.api.DisplayName;
@@ -248,11 +250,139 @@ public class CommentRepositoryTest extends RepositoryTestSupport {
     commentRepository.flush();
     entityManager.clear();
 
+    //when 첫 번째 페이지 조회 (사이즈 5)
+    CommentSearchCondition condition = new CommentSearchCondition(review.getId(), null, null, 5);
+    List<Comment> comments = commentRepository.findAllByCursor(condition);
+
+    //then
+    assertThat(comments).hasSize(6);
+    assertThat(comments.get(0).getContent()).isEqualTo("댓글 10"); // 최신순(DESC) 정렬 검증
+  }
+
+  @Test
+  @DisplayName("특정 리뷰의 모든 댓글을 논리 삭제한다")
+  void softDeleteAllByReviewIdTest() {
+    //given
+    User user = userRepository.save(User.builder().email("softall@test.com").nickname("전체논리삭제").password("pass1234!").build());
+    Book book = bookRepository.save(Book.builder().title("테스트 책").author("테스트 작가").isbn("97903").description("책 설명").publisher("테스트 출판사").publishedDate(LocalDate.now()).build());
+    Review review = reviewRepository.save(Review.builder().rating(5).content("조와용").user(user).book(book).build());
+
+    commentRepository.save(Comment.builder().user(user).review(review).content("댓글 1").build());
+    commentRepository.save(Comment.builder().user(user).review(review).content("댓글 2").build());
+    commentRepository.flush();
+
+    //when
+    commentRepository.softDeleteAllByReviewId(review.getId(), Instant.now());
+    entityManager.clear();
+
+    //then
+    List<Comment> comments = commentRepository.findAllByReviewId(review.getId());
+    assertThat(comments).allMatch(comment -> comment.getDeletedAt() != null);
+  }
+
+  @Test
+  @DisplayName("특정 리뷰의 모든 댓글을 물리 삭제한다")
+  void hardDeleteAllByReviewIdTest() {
+    //given
+    User user = userRepository.save(User.builder().email("hardall@test.com").nickname("전체물리삭제").password("pass1234!").build());
+    Book book = bookRepository.save(Book.builder().title("테스트 책").author("테스트 작가").isbn("97904").description("책 설명").publisher("테스트 출판사").publishedDate(LocalDate.now()).build());
+    Review review = reviewRepository.save(Review.builder().rating(5).content("조와용").user(user).book(book).build());
+
+    commentRepository.save(Comment.builder().user(user).review(review).content("댓글 1").build());
+    commentRepository.save(Comment.builder().user(user).review(review).content("댓글 2").build());
+    commentRepository.flush();
+
+    //when
+    commentRepository.hardDeleteAllByReviewId(review.getId());
+    entityManager.clear();
+
+    //then
+    List<Comment> comments = commentRepository.findAllByReviewId(review.getId());
+    assertThat(comments).isEmpty();
+  }
+
+  @Test
+  @DisplayName("특정 리뷰의 모든 댓글을 조회한다")
+  void findAllByReviewIdTest() {
+    //given
+    User user = userRepository.save(User.builder().email("findall@test.com").nickname("전체조회").password("pass1234!").build());
+    Book book = bookRepository.save(Book.builder().title("테스트 책").author("테스트 작가").isbn("97905").description("책 설명").publisher("테스트 출판사").publishedDate(LocalDate.now()).build());
+    Review review = reviewRepository.save(Review.builder().rating(5).content("조와용").user(user).book(book).build());
+
+    commentRepository.save(Comment.builder().user(user).review(review).content("댓글 1").build());
+    commentRepository.save(Comment.builder().user(user).review(review).content("댓글 2").build());
+    commentRepository.flush();
+    entityManager.clear();
+
     //when
     List<Comment> comments = commentRepository.findAllByReviewId(review.getId());
 
     //then
-    assertThat(comments).hasSize(10);
-    assertThat(comments.get(0).getContent()).contains("댓글");
+    assertThat(comments).hasSize(2);
+  }
+
+  @Test
+  @DisplayName("커서 기반 페이징 조회 시 삭제된 댓글은 결과에서 제외되어야 한다")
+  void findAllByCursorExcludeDeletedTest() {
+    //given
+    User user = userRepository.save(User.builder().email("cursor_del@test.com").nickname("커서삭제").password("pass1234!").build());
+    Book book = bookRepository.save(Book.builder().title("테스트 책").author("테스트 작가").isbn("97906").description("책 설명").publisher("테스트 출판사").publishedDate(LocalDate.now()).build());
+    Review review = reviewRepository.save(Review.builder().rating(5).content("조와용").user(user).book(book).build());
+
+    Comment comment1 = commentRepository.save(Comment.builder().user(user).review(review).content("댓글 1").build());
+    try { Thread.sleep(100); } catch (InterruptedException e) {}
+    Comment comment2 = commentRepository.save(Comment.builder().user(user).review(review).content("댓글 2").build());
+    try { Thread.sleep(100); } catch (InterruptedException e) {}
+    Comment comment3 = commentRepository.save(Comment.builder().user(user).review(review).content("댓글 3").build());
+    commentRepository.flush();
+
+    //when
+    comment2.delete();
+    commentRepository.flush();
+    entityManager.clear();
+
+    CommentSearchCondition condition = new CommentSearchCondition(review.getId(), null, null, 10);
+    List<Comment> comments = commentRepository.findAllByCursor(condition);
+
+    //then
+    assertThat(comments).hasSize(2);
+    assertThat(comments).extracting("content").containsExactly("댓글 3", "댓글 1");
+  }
+
+  @Test
+  @DisplayName("커서 기반 페이징 조회 시 다음 페이지를 정상적으로 조회해야 한다")
+  void findAllByCursorNextPageTest() {
+    //given
+    User user = userRepository.save(User.builder().email("cursor_next@test.com").nickname("커서다음").password("pass1234!").build());
+    Book book = bookRepository.save(Book.builder().title("테스트 책").author("테스트 작가").isbn("97907").description("책 설명").publisher("테스트 출판사").publishedDate(LocalDate.now()).build());
+    Review review = reviewRepository.save(Review.builder().rating(5).content("조와용").user(user).book(book).build());
+
+    for (int i = 1; i <= 10; i++) {
+      commentRepository.save(Comment.builder().user(user).review(review).content("댓글 " + i).build());
+      try {
+        Thread.sleep(100); // 10ms -> 100ms로 늘려서 시간 차이를 확실하게 둠
+      } catch (InterruptedException e) {
+        throw new RuntimeException(e);
+      }
+    }
+    commentRepository.flush();
+    entityManager.clear();
+
+    //when
+    CommentSearchCondition firstCondition = new CommentSearchCondition(review.getId(), null, null, 5);
+    List<Comment> firstPage = commentRepository.findAllByCursor(firstCondition);
+
+    // 마지막 요소의 createdAt을 커서로 사용
+    String cursor = firstPage.get(4).getCreatedAt().toString();
+    Instant after = firstPage.get(4).getCreatedAt();
+
+    // after에도 값을 넣어줌
+    CommentSearchCondition secondCondition = new CommentSearchCondition(review.getId(), cursor, after, 5);
+    List<Comment> secondPage = commentRepository.findAllByCursor(secondCondition);
+
+    //then
+    assertThat(secondPage).hasSize(5);
+    assertThat(secondPage.get(0).getContent()).isEqualTo("댓글 5");
+    assertThat(secondPage.get(4).getContent()).isEqualTo("댓글 1");
   }
 }
