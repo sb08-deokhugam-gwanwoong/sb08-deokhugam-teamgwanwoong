@@ -17,7 +17,6 @@ public class UserCleanupScheduler {
   // 매일 00시 00분 실행
   @Scheduled(cron = "0 0 0 * * *", zone = "Asia/Seoul")
   public void cleanupUser() {
-
     try {
       userService.hardDeleteOldUsers();
     } catch (Exception e) {
