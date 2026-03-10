@@ -23,4 +23,6 @@ public interface NotificationService {
       Instant after,
       int limit
   );
+
+  void deleteOldNotifications();
 }
