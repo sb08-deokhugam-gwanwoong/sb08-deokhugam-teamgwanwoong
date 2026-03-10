@@ -70,8 +70,8 @@ public class BookServiceTest {
   private BookMapper bookMapper = Mappers.getMapper(BookMapper.class);
 
   /*
-  * 도서 등록 관련 테스트
-  * */
+   * 도서 등록 관련 테스트
+   * */
   @DisplayName("도서를 정상적으로 등록할 수 있다. (이미지 포함)")
   @Test
   void createBook_Success_WithImage() {
@@ -186,8 +186,8 @@ public class BookServiceTest {
   }
 
   /*
-  * 네이버 도서 검색 API 연동 테스트
-  * */
+   * 네이버 도서 검색 API 연동 테스트
+   * */
   @DisplayName("네이버 API를 통해 ISBN으로 도서 정보를 성공적으로 가져온다. (이미지 Base64 변환 포함)")
   @Test
   void getBookInfoByIsbn_Success() {
@@ -386,8 +386,8 @@ public class BookServiceTest {
     }
   }
   /*
-  * 도서 상세 조회 관련 테스트
-  * */
+   * 도서 상세 조회 관련 테스트
+   * */
   @DisplayName("존재하는 도서 ID로 조회하면 도서 정보를 정상적으로 반환한다.")
   @Test
   void getBook_Success() {
@@ -423,8 +423,8 @@ public class BookServiceTest {
   }
 
   /*
-  * 도서 정보 수정 관련 테스트
-  * */
+   * 도서 정보 수정 관련 테스트
+   * */
   @DisplayName("도서 정보를 수정할 때 새로운 이미지가 있으면 기존 S3 이미지를 지우고 새 이미지를 업로드한다.")
   @Test
   void updateBook_Success_WithNewImage() {
@@ -509,9 +509,34 @@ public class BookServiceTest {
         .hasMessageContaining(BookErrorCode.BOOK_NOT_FOUND.getMessage());
   }
 
+  // 엔티티 도메인 테스트에서 부족한 커버리지 내용 추가
+  @DisplayName("[Domain Test] 도서 정보를 업데이트한다. (null 파라미터는 기존 값을 유지한다)")
+  @Test
+  void update_BookEntity() {
+    Book book = Book.builder().title("기존 제목").author("기존 저자").build();
+    BookUpdateRequest request = BookUpdateRequest.builder().title("수정된 제목").author(null).build();
+
+    book.update(request);
+
+    assertThat(book.getTitle()).isEqualTo("수정된 제목");
+    assertThat(book.getAuthor()).isEqualTo("기존 저자"); // 유지됨
+  }
+
+  @DisplayName("[Domain Test] 썸네일 이미지가 null일 경우 업데이트하지 않고, 값이 있으면 업데이트한다.")
+  @Test
+  void updateThumbnailUrl_BookEntity() {
+    Book book = Book.builder().thumbnailUrl("old.jpg").build();
+
+    book.updateThumbnailUrl(null);
+    assertThat(book.getThumbnailUrl()).isEqualTo("old.jpg");
+
+    book.updateThumbnailUrl("new.jpg");
+    assertThat(book.getThumbnailUrl()).isEqualTo("new.jpg");
+  }
+
   /*
-  * 도서 삭제(논리/물리) 관련 테스트
-  * */
+   * 도서 삭제(논리/물리) 관련 테스트
+   * */
   @DisplayName("존재하는 도서를 논리 삭제하면 정상적으로 처리된다.")
   @Test
   void softDeleteBook_Success() {
@@ -602,8 +627,8 @@ public class BookServiceTest {
   }
 
   /*
-  * 도서 목록 검색 (커서 페이징) 관련 테스트
-  * */
+   * 도서 목록 검색 (커서 페이징) 관련 테스트
+   * */
   @DisplayName("도서 목록 검색 시 요청한 limit보다 많은 데이터가 조회되면 hasNext가 true가 되고 초과된 데이터는 잘라낸다.")
   @Test
   void searchBooks_HasNext_True() {
@@ -752,5 +777,58 @@ public class BookServiceTest {
     assertThat(response.nextCursor()).isNull();
     assertThat(response.nextAfter()).isNull();
     assertThat(response.hasNext()).isFalse();
+  }
+
+  /*
+   * Book 엔티티 내부 비즈니스 로직(도메인) 단위 테스트
+   * 원래는 BookTest.java로 분리하는 것이 좋으나, 편의상 통합하여 작성함
+   * 리뷰 관련 테스트
+   */
+  @DisplayName("[Domain Test] 리뷰 개수를 증가 및 감소시킨다. (0 이하로는 감소하지 않음)")
+  @Test
+  void reviewCount_Increase_Decrease_BookEntity() {
+    Book book = Book.builder().build(); // 기본 reviewCount = 0
+    ReflectionTestUtils.setField(book, "reviewCount", 0);
+
+    book.decreaseReviewCount(); // 방어 로직
+    assertThat(book.getReviewCount()).isEqualTo(0);
+
+    book.increaseReviewCount();
+    assertThat(book.getReviewCount()).isEqualTo(1);
+
+    book.decreaseReviewCount();
+    assertThat(book.getReviewCount()).isEqualTo(0);
+  }
+
+  @DisplayName("[Domain Test] 리뷰가 삭제될 때 평점과 개수가 올바르게 업데이트된다.")
+  @Test
+  void removeReviewRating_BookEntity() {
+    Book book = Book.builder().build();
+    ReflectionTestUtils.setField(book, "rating", 4.5);
+    ReflectionTestUtils.setField(book, "reviewCount", 2);
+
+    book.removeReviewRating(4); // 4점짜리 삭제 (else 분기)
+    assertThat(book.getReviewCount()).isEqualTo(1);
+    assertThat(book.getRating()).isEqualTo(5.0);
+
+    book.removeReviewRating(5); // 나머지 1개 삭제 (if 분기)
+    assertThat(book.getReviewCount()).isEqualTo(0);
+    assertThat(book.getRating()).isEqualTo(0.0);
+  }
+
+  @DisplayName("[Domain Test] 리뷰 별점이 수정될 때 평점이 올바르게 다시 계산된다.")
+  @Test
+  void updateReviewRating_BookEntity() {
+    Book book = Book.builder().build();
+    ReflectionTestUtils.setField(book, "reviewCount", 0);
+
+    book.updateReviewRating(5, 1); // 0개일 때 방어 로직
+    assertThat(book.getRating()).isEqualTo(0.0);
+
+    ReflectionTestUtils.setField(book, "reviewCount", 2);
+    ReflectionTestUtils.setField(book, "rating", 4.0); // 4, 4
+
+    book.updateReviewRating(4, 5); // 4 -> 5로 수정 (총점 9)
+    assertThat(book.getRating()).isEqualTo(4.5);
   }
 }
