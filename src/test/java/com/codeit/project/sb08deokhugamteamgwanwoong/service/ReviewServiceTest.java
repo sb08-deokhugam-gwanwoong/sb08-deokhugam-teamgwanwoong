@@ -59,11 +59,13 @@ public class ReviewServiceTest {
     private ReviewUpdateRequest updateRequest;
     private Review review;
     private User user;
+    private User otherUser;
     private Book book;
 
     @BeforeEach
     void setup() {
         UUID userId = UUID.randomUUID();
+        UUID otherUserId = UUID.randomUUID();
         UUID bookId = UUID.randomUUID();
         UUID reviewId = UUID.randomUUID();
 
@@ -73,6 +75,13 @@ public class ReviewServiceTest {
                 .password("testPassword!")
                 .build();
         ReflectionTestUtils.setField(user, "id", userId);
+
+        otherUser = User.builder()
+                .email("test2@codeit.com")
+                .nickname("testUser2")
+                .password("testPassword!")
+                .build();
+        ReflectionTestUtils.setField(otherUser, "id", otherUserId);
 
         book = Book.builder()
                 .title("testBook")
@@ -230,9 +239,9 @@ public class ReviewServiceTest {
     @DisplayName("리뷰 좋아요 테스트 - 처음 누르는 경우: 본인 리뷰는 알림이 오지 않음")
     void create_reviewLike_success_new_same_user() {
         //given
-        given(reviewRepository.findByIdWithPessimisticLock(any())).willReturn(Optional.of(review));
-        given(userRepository.findById(any())).willReturn(Optional.of(user));
-        given(reviewLikeRepository.findByReviewIdAndUserId(any(), any())).willReturn(Optional.empty());
+        given(reviewRepository.findByIdWithPessimisticLock(review.getId())).willReturn(Optional.of(review));
+        given(userRepository.findById(user.getId())).willReturn(Optional.of(user));
+        given(reviewLikeRepository.findByReviewIdAndUserId(review.getId(), user.getId())).willReturn(Optional.empty());
         given(reviewLikeMapper.toDto(any(), any(), anyBoolean())).willReturn(new ReviewLikeDto(review.getId(), user.getId(), true));
 
         //when
@@ -248,13 +257,6 @@ public class ReviewServiceTest {
     @DisplayName("리뷰 좋아요 - 다른 사람 리뷰에 처음 좋아요를 누른 경우, 알림 발송")
     void create_reviewLike_success_new_other_user() {
         //when
-        User otherUser = User.builder()
-                .email("test2@codeit.com")
-                .nickname("testUser2")
-                .password("testPassword!")
-                .build();
-        ReflectionTestUtils.setField(otherUser, "id", UUID.randomUUID());
-
         given(reviewRepository.findByIdWithPessimisticLock(any())).willReturn(Optional.of(review));
         given(userRepository.findById(otherUser.getId())).willReturn(Optional.of(otherUser));
         given(reviewLikeRepository.findByReviewIdAndUserId(review.getId(), otherUser.getId())).willReturn(Optional.empty());
@@ -341,13 +343,6 @@ public class ReviewServiceTest {
     @DisplayName("리뷰 논리 삭제 - 실패(삭제 권한이 없는 유저)")
     void soft_delete_review_fail_no_permission() {
         //given
-        User otherUser = User.builder()
-                .email("test2@codeit.com")
-                .nickname("testUser2")
-                .password("testPassword!")
-                .build();
-        ReflectionTestUtils.setField(otherUser, "id", UUID.randomUUID());
-
         given(reviewRepository.findByIdWithPessimisticLock(review.getId())).willReturn(Optional.of(review));
         given(userRepository.findById(otherUser.getId())).willReturn(Optional.of(otherUser));
 
@@ -362,7 +357,7 @@ public class ReviewServiceTest {
     void modify_review_success() {
         //given
         UUID reviewId = review.getId();
-        UUID requestUserId = user.getId();
+        UUID requestUserId = review.getUser().getId();
 
         given(reviewRepository.findByIdWithPessimisticLock(reviewId)).willReturn(Optional.of(review));
         given(userRepository.findById(requestUserId)).willReturn(Optional.of(user));
@@ -388,16 +383,16 @@ public class ReviewServiceTest {
     void modify_review_fail_not_author() {
         //given
         UUID reviewId = review.getId();
-        UUID differentUserId = UUID.randomUUID();
+        UUID otherUserId = UUID.randomUUID();
 
         User differentUser = User.builder().nickname("otherUser").build();
-        ReflectionTestUtils.setField(differentUser, "id", differentUserId);
+        ReflectionTestUtils.setField(differentUser, "id", otherUserId);
 
         given(reviewRepository.findByIdWithPessimisticLock(reviewId)).willReturn(Optional.of(review));
-        given(userRepository.findById(differentUserId)).willReturn(Optional.of(differentUser));
+        given(userRepository.findById(otherUserId)).willReturn(Optional.of(differentUser));
 
         //when & then
-        assertThatThrownBy(() -> reviewService.updateReview(reviewId, updateRequest, differentUserId))
+        assertThatThrownBy(() -> reviewService.updateReview(reviewId, updateRequest, otherUserId))
                 .isInstanceOf(BusinessException.class)
                 .hasFieldOrPropertyWithValue("errorCode", ReviewErrorCode.REVIEW_EDIT_PERMISSION_DENIED);
     }
@@ -436,13 +431,6 @@ public class ReviewServiceTest {
     @Test
     @DisplayName("리뷰 물리 삭제 테스트 - 실패(삭제 권한이 없는 유저)")
     void hard_delete_review_fail_no_permission() {
-        User otherUser = User.builder()
-                .email("test2@codeit.com")
-                .nickname("testUser2")
-                .password("testPassword!")
-                .build();
-        ReflectionTestUtils.setField(otherUser, "id", UUID.randomUUID());
-
         //given
         given(reviewRepository.findByIdIncludeDeleted(review.getId())).willReturn(Optional.of(review));
         given(userRepository.findById(otherUser.getId())).willReturn(Optional.of(otherUser));
