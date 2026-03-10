@@ -65,7 +65,7 @@ public class UserServiceImpl implements UserService {
 
     log.info("[로그인 시작] email: {}", request.email());
 
-    User user = userRepository.findByEmailAndPassword(request.email(), request.password())
+    User user = userRepository.findByEmailAndPasswordAndDeletedAtIsNull(request.email(), request.password())
         .orElseThrow(() -> {
           log.warn("[로그인 실패] 이메일 또는 비밀번호가 일치하지 않습니다. email: {}", request.email());
           return new BusinessException(UserErrorCode.LOGIN_FAILED);
@@ -179,7 +179,7 @@ public class UserServiceImpl implements UserService {
    * @param nickname 닉네임
    */
   private void validateDuplicateNickname(String nickname) {
-    if (userRepository.existsByNickname(nickname)) {
+    if (userRepository.existsByNicknameAndDeletedAtIsNull(nickname)) {
       log.warn("[중복 검증 실패] 이미 존재하는 닉네임입니다. nickname: {}", nickname);
       throw new BusinessException(UserErrorCode.NICKNAME_ALREADY_EXISTS);
     }
@@ -190,7 +190,7 @@ public class UserServiceImpl implements UserService {
    * @param email 이메일
    */
   private void validateDuplicateEmail(String email) {
-    if (userRepository.existsByEmail(email)) {
+    if (userRepository.existsByEmailAndDeletedAtIsNull(email)) {
       log.warn("[중복 검증 실패] 이미 존재하는 이메일입니다. email: {}", email);
       throw new BusinessException(UserErrorCode.EMAIL_ALREADY_EXISTS);
     }
@@ -205,12 +205,14 @@ public class UserServiceImpl implements UserService {
 
     if ("hard".equals(type)) {
       return userRepository.findByIdIncludeDeleted(userId)
+          .filter(u -> u.getDeletedAt() == null) // 탈퇴하지 않은 유저인지 검증
           .orElseThrow(() -> {
             log.warn("[유저 조회 실패] 물리 삭제할 유저가 존재하지 않습니다. userId: {}", userId);
             return new BusinessException(UserErrorCode.USER_NOT_FOUND);
           });
     } else {
       return userRepository.findById(userId)
+          .filter(u -> u.getDeletedAt() == null) // 탈퇴하지 않은 유저인지 검증
           .orElseThrow(() -> {
             log.warn("[유저 조회 실패] 해당 유저가 존재하지 않습니다. userId: {}", userId);
             return new BusinessException(UserErrorCode.USER_NOT_FOUND);

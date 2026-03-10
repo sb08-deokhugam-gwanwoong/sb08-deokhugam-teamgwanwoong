@@ -115,7 +115,7 @@ public class UserRepositoryTest extends RepositoryTestSupport {
     em.clear();
 
     // When
-    Optional<User> result = userRepository.findByEmailAndPassword(email, password);
+    Optional<User> result = userRepository.findByEmailAndPasswordAndDeletedAtIsNull(email, password);
 
     // Then
     assertThat(result).isPresent(); // 결과가 존재하는가
@@ -135,7 +135,7 @@ public class UserRepositoryTest extends RepositoryTestSupport {
     String password = "nonPassword1234!";
 
     // When
-    Optional<User> result = userRepository.findByEmailAndPassword(nonExistentEmail, password);
+    Optional<User> result = userRepository.findByEmailAndPasswordAndDeletedAtIsNull(nonExistentEmail, password);
 
     // Then
     assertThat(result).isEmpty();
@@ -144,7 +144,7 @@ public class UserRepositoryTest extends RepositoryTestSupport {
 
   @Test
   @DisplayName("닉네임 중복 확인: 존재하는 닉네임 조회 시 true를 반환해야 한다.")
-  void existsByNicknameTest() {
+  void existsByNicknameAndDeletedAtIsNullTest() {
     // Given
     String nickname = "중복닉네임";
     User user = User.builder()
@@ -157,8 +157,8 @@ public class UserRepositoryTest extends RepositoryTestSupport {
     em.clear();
 
     // When
-    boolean exists = userRepository.existsByNickname(nickname);
-    boolean nonExists = userRepository.existsByNickname("없는닉네임");
+    boolean exists = userRepository.existsByNicknameAndDeletedAtIsNull(nickname);
+    boolean nonExists = userRepository.existsByNicknameAndDeletedAtIsNull("없는닉네임");
 
     assertThat(exists).isTrue();
     assertThat(nonExists).isFalse();
