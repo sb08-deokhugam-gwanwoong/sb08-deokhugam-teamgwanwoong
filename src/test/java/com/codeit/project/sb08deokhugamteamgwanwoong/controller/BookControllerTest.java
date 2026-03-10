@@ -17,6 +17,7 @@ import com.codeit.project.sb08deokhugamteamgwanwoong.dto.book.BookDto;
 import com.codeit.project.sb08deokhugamteamgwanwoong.dto.book.BookPageRequest;
 import com.codeit.project.sb08deokhugamteamgwanwoong.dto.book.BookUpdateRequest;
 import com.codeit.project.sb08deokhugamteamgwanwoong.dto.book.CursorPageResponseBookDto;
+import com.codeit.project.sb08deokhugamteamgwanwoong.dto.book.NaverBookDto;
 import com.codeit.project.sb08deokhugamteamgwanwoong.dto.dashboard.CursorPageResponsePopularBookDto;
 import com.codeit.project.sb08deokhugamteamgwanwoong.dto.dashboard.DashboardPageRequest;
 import com.codeit.project.sb08deokhugamteamgwanwoong.exception.BusinessException;
@@ -242,6 +243,74 @@ public class BookControllerTest extends ControllerTestSupport {
         )
         .andDo(print())
         .andExpect(status().isCreated());
+  }
+
+  @DisplayName("ISBN으로 도서 정보 조회 시 200 응답과 도서 정보를 반환한다.")
+  @Test
+  void getBookInfoByIsbn_Success() throws Exception {
+    // given
+    String isbn = "9788965402602";
+    NaverBookDto responseDto = NaverBookDto.builder()
+        .title("자바의 정석")
+        .author("남궁성")
+        .publisher("도우출판")
+        .description("자바의 정석 기초편")
+        .publishedDate("2016-01-01")
+        .isbn(isbn)
+        .thumbnailImage("base64_encoded_dummy_iamge_date")
+        .build();
+
+    // 서비스 메서드가 호출되면 만들어둔 가짜 DTO 반환하도록 mocking
+    given(bookService.getBookInfoByIsbn(isbn)).willReturn(responseDto);
+
+    // when & then
+    mockMvc.perform(get("/api/books/info")
+        .param("isbn", isbn))
+        .andDo(print())
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.title").value("자바의 정석"))
+        .andExpect(jsonPath("$.isbn").value(isbn));
+  }
+
+  @DisplayName("도서 정보 조회 시 필수 파라미터(isbn)가 누락되면 400 에러를 반환한다.")
+  @Test
+  void getBookInfoByIsbn_Fail_BadRequest() throws Exception {
+    // when & then
+    mockMvc.perform(get("/api/books/info")) // 파라미터 없이 호출하여 400 유도
+        .andDo(print())
+        .andExpect(status().isBadRequest());
+  }
+
+  @DisplayName("해당 ISBN으로 도서를 찾을 수 없으면 404 에러를 반환한다.")
+  @Test
+  void getBookInfoByIsbn_Fail_NotFound() throws Exception {
+    // given
+    String isbn = "9788965402602";
+    // 서비스에서 검색 결과가 없어 예외를 던지는 상황 mocking
+    given(bookService.getBookInfoByIsbn(isbn))
+        .willThrow(new BusinessException(BookErrorCode.BOOK_NOT_FOUND, "해당 ISBN의 도서 정보를 찾을 수 없습니다."));
+
+    // when & then
+    mockMvc.perform(get("/api/books/info")
+            .param("isbn", isbn))
+        .andDo(print())
+        .andExpect(status().isNotFound());
+  }
+
+  @DisplayName("네이버 API 연동 중 서버 내부 에러가 발생하면 500 에러를 반환한다.")
+  @Test
+  void getBookInfoByIsbn_Fail_InternalServerError() throws Exception {
+    // given
+    String isbn = "9788965402602";
+    // 서비스 계층에서 예기치 않은 에러가 터지는 상황 mocking
+    given(bookService.getBookInfoByIsbn(isbn))
+        .willThrow(new BusinessException(GlobalErrorCode.INTERNAL_SERVER_ERROR));
+
+    // when & then
+    mockMvc.perform(get("/api/books/info")
+            .param("isbn", isbn))
+        .andDo(print())
+        .andExpect(status().isInternalServerError());
   }
 
   /*

@@ -10,6 +10,9 @@ import com.codeit.project.sb08deokhugamteamgwanwoong.exception.enums.UserErrorCo
 import com.codeit.project.sb08deokhugamteamgwanwoong.mapper.UserMapper;
 import com.codeit.project.sb08deokhugamteamgwanwoong.repository.UserRepository;
 import com.codeit.project.sb08deokhugamteamgwanwoong.service.UserService;
+import java.time.Duration;
+import java.time.Instant;
+import java.util.List;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -148,6 +151,27 @@ public class UserServiceImpl implements UserService {
     userRepository.delete(user);
 
     log.info("[유저 물리 삭제 완료] userId: {}", userId);
+  }
+
+  /**
+   * 논리 삭제 후 일정 기간 지난 사용자 물리 삭제 (스케쥴러 전용)
+   */
+  @Override
+  @Transactional
+  public void hardDeleteOldUsers() {
+
+    Instant oneDayAgo = Instant.now().minus(Duration.ofDays(1));
+
+    List<User> deleteTargets = userRepository.findAllExpiredUsers(oneDayAgo);
+
+    if (!deleteTargets.isEmpty()) {
+
+      log.info("[물리 삭제 스케쥴러 시작] 삭제 대상 유저 수: {}", deleteTargets.size());
+
+      userRepository.deleteAll(deleteTargets);
+
+      log.info("[물리 삭제 스케쥴러 완료] 논리 삭제 후 1일이 지난 유저 삭제 완료");
+    }
   }
 
   /**
