@@ -1,7 +1,11 @@
 package com.codeit.project.sb08deokhugamteamgwanwoong.controller;
 
 import com.codeit.project.sb08deokhugamteamgwanwoong.controller.docs.ReviewApi;
+import com.codeit.project.sb08deokhugamteamgwanwoong.dto.dashboard.CursorPageResponsePopularBookDto;
+import com.codeit.project.sb08deokhugamteamgwanwoong.dto.dashboard.CursorPageResponsePopularReviewDto;
+import com.codeit.project.sb08deokhugamteamgwanwoong.dto.dashboard.DashboardPageRequest;
 import com.codeit.project.sb08deokhugamteamgwanwoong.dto.review.*;
+import com.codeit.project.sb08deokhugamteamgwanwoong.service.DashboardService;
 import com.codeit.project.sb08deokhugamteamgwanwoong.service.ReviewService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -19,6 +23,7 @@ import java.util.UUID;
 public class ReviewController implements ReviewApi {
 
     private final ReviewService reviewService;
+    private final DashboardService dashboardService;
 
     @Override
     public ResponseEntity<CursorPageResponseReviewDto> findAll(
@@ -109,5 +114,19 @@ public class ReviewController implements ReviewApi {
         return ResponseEntity
                 .status(HttpStatus.NO_CONTENT)
                 .build();
+    }
+
+    @GetMapping("/popular")
+    public ResponseEntity<CursorPageResponsePopularReviewDto> getPopularReviews(
+            @ModelAttribute DashboardPageRequest request
+    ) {
+        log.info("인기 리뷰 목록 조회 요청 - 기간: {}, cursor: {}, limit: {}",
+                request.period(), request.cursor(), request.limit());
+
+        CursorPageResponsePopularReviewDto responseDto = dashboardService.getPopularReviews(request);
+        log.info("인기 리뷰 목록 조회 완료 - 반환된 데이터 개수: {}, 다음 페이지 존재 여부: {}",
+                responseDto.content().size(), responseDto.hasNext());
+
+        return ResponseEntity.status(HttpStatus.OK).body(responseDto);
     }
 }
