@@ -5,6 +5,7 @@ import com.codeit.project.sb08deokhugamteamgwanwoong.dto.external.naver.NaverApi
 import com.codeit.project.sb08deokhugamteamgwanwoong.dto.external.naver.NaverBookItemResponse;
 import com.codeit.project.sb08deokhugamteamgwanwoong.exception.BusinessException;
 import com.codeit.project.sb08deokhugamteamgwanwoong.exception.enums.GlobalErrorCode;
+import java.io.IOException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -16,6 +17,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.retry.annotation.Backoff;
 import org.springframework.retry.annotation.Retryable;
 import org.springframework.stereotype.Component;
+import org.springframework.web.client.RestClientException;
 import org.springframework.web.client.RestTemplate;
 
 @Slf4j
@@ -33,7 +35,8 @@ public class NaverBookProvider implements BookMetadataProvider<NaverBookDto> {
 
     @Override
     @Retryable(
-        retryFor = { Exception.class },
+        // 통신 관련 에러만 재시도하도록 수정
+        retryFor = { RestClientException.class, IOException.class },
         maxAttempts = 3,
         backoff = @Backoff(delay = 1000)
     )
