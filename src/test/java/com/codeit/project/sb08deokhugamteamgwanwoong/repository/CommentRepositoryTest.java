@@ -138,7 +138,7 @@ public class CommentRepositoryTest extends RepositoryTestSupport {
 
   @Test
   @DisplayName("특정 리뷰의 댓글 목록을 페이징하여 조회한다")
-  void findAllByReviewIdPaginationTest() {
+  void findAllByReviewIdPaginationTest() throws Exception {
     //given
     for (int i = 1; i <= 10; i++) {
       commentRepository.save(Comment.builder()
@@ -146,11 +146,7 @@ public class CommentRepositoryTest extends RepositoryTestSupport {
           .review(review)
           .content("댓글 " + i)
           .build());
-      try {
-        Thread.sleep(10);
-      } catch (InterruptedException e) {
-        throw new RuntimeException(e);
-      }
+        Thread.sleep(100);
     }
     flushAndClear();
 
@@ -214,20 +210,16 @@ public class CommentRepositoryTest extends RepositoryTestSupport {
 
   @Test
   @DisplayName("커서 기반 페이징 조회 시 삭제된 댓글은 결과에서 제외되어야 한다")
-  void findAllByCursorExcludeDeletedTest() {
+  void findAllByCursorExcludeDeletedTest() throws Exception {
     //given
     Comment comment1 = commentRepository.save(
         Comment.builder().user(user).review(review).content("댓글 1").build());
-    try {
       Thread.sleep(100);
-    } catch (InterruptedException e) {
-    }
+
     Comment comment2 = commentRepository.save(
         Comment.builder().user(user).review(review).content("댓글 2").build());
-    try {
       Thread.sleep(100);
-    } catch (InterruptedException e) {
-    }
+
     Comment comment3 = commentRepository.save(
         Comment.builder().user(user).review(review).content("댓글 3").build());
     commentRepository.flush();
@@ -246,16 +238,12 @@ public class CommentRepositoryTest extends RepositoryTestSupport {
 
   @Test
   @DisplayName("커서 기반 페이징 조회 시 다음 페이지를 정상적으로 조회해야 한다")
-  void findAllByCursorNextPageTest() {
+  void findAllByCursorNextPageTest() throws Exception {
     //given
     for (int i = 1; i <= 10; i++) {
       commentRepository.save(
           Comment.builder().user(user).review(review).content("댓글 " + i).build());
-      try {
         Thread.sleep(100);
-      } catch (InterruptedException e) {
-        throw new RuntimeException(e);
-      }
     }
     flushAndClear();
 
