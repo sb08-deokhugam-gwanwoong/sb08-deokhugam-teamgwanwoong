@@ -42,9 +42,9 @@ import org.springframework.web.multipart.MultipartFile;
 @Transactional(readOnly = true)
 public class BookServiceImpl implements BookService {
 
-  private static final String NAVER_CLIENT_ID = "${naver.api.client-id}";
-  private static final String NAVER_CLIENT_SECRET = "${naver.api.client-secret}";
-  private static final String NAVER_SEARCH_URL = "${naver.url.search.book}";
+  private static final String NAVER_CLIENT_ID = "${naver.api.client-id:test-client-id}";
+  private static final String NAVER_CLIENT_SECRET = "${naver.api.client-secret:test-client-secret}";
+  private static final String NAVER_SEARCH_URL = "${naver.url.search.book:https://dummy.com}";
 
   private final BookRepository bookRepository;
   private final BookMapper bookMapper;
