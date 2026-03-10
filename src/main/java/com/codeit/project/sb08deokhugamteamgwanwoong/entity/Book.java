@@ -68,4 +68,39 @@ public class Book extends BaseRemovableEntity {
   public void updateThumbnailUrl(String thumbnailUrl) {
       if (thumbnailUrl != null) this.thumbnailUrl = thumbnailUrl;
   }
+
+  // 리뷰 개수 증가
+  public void increaseReviewCount() {
+    this.reviewCount++;
+  }
+
+  // 리뷰 개수 감소 (삭제 로직을 위해 미리 추가)
+  public void decreaseReviewCount() {
+    if (this.reviewCount > 0) {
+      this.reviewCount--;
+    }
+  }
+
+  // 새로운 리뷰가 추가될 때 평점과 개수 업데이트
+  public void addReviewRating(Integer newRating) {
+    // 기존 총점 = 기존 평균 * 기존 리뷰 수
+    double totalRating = this.rating * this.reviewCount;
+
+    this.reviewCount++; // 리뷰 수 증가
+
+    // 새로운 평균 = (기존 총점 + 새 리뷰 점수) / 새로운 리뷰 수
+    this.rating = Math.round(((totalRating + newRating) / this.reviewCount) * 10) / 10.0; // 소수점 첫째 자리까지
+  }
+
+  // 리뷰가 삭제될 때 평점과 개수 업데이트
+  public void removeReviewRating(Integer deletedRating) {
+    if (this.reviewCount <= 1) {
+      this.reviewCount = 0;
+      this.rating = 0.0;
+      return;
+    }
+    double totalRating = this.rating * this.reviewCount;
+    this.reviewCount--;
+    this.rating = Math.round(((totalRating - deletedRating) / this.reviewCount) * 10) / 10.0;
+  }
 }
