@@ -84,8 +84,8 @@ class DashboardServiceTest {
 		UUID book1Id = UUID.randomUUID();
 		UUID book2Id = UUID.randomUUID();
 
-		Dashboard dashboard1 = createDashboard(book1Id, "BOOK", DashboardPeriodEnums.ALL_TIME, 90.0, 1);
-		Dashboard dashboard2 = createDashboard(book2Id, "BOOK", DashboardPeriodEnums.ALL_TIME, 80.0, 2);
+		Dashboard dashboard1 = createDashboard(book1Id, DashboardTargetType.BOOK, DashboardPeriodEnums.ALL_TIME, 90.0, 1);
+		Dashboard dashboard2 = createDashboard(book2Id, DashboardTargetType.BOOK, DashboardPeriodEnums.ALL_TIME, 80.0, 2);
 
 		Book book1 = createMockBook(book1Id);
 		Book book2 = createMockBook(book2Id);
@@ -139,9 +139,9 @@ class DashboardServiceTest {
 		UUID book3Id = UUID.randomUUID();
 
 		Instant createdAt = Instant.parse("2026-03-09T05:00:00Z");
-		Dashboard dashboard1 = createDashboardWithCreatedAt(book1Id, "BOOK", DashboardPeriodEnums.ALL_TIME, 90.0, 1, createdAt);
-		Dashboard dashboard2 = createDashboardWithCreatedAt(book2Id, "BOOK", DashboardPeriodEnums.ALL_TIME, 80.0, 2, createdAt.plusSeconds(1));
-		Dashboard dashboard3 = createDashboardWithCreatedAt(book3Id, "BOOK", DashboardPeriodEnums.ALL_TIME, 70.0, 3, createdAt.plusSeconds(2));
+		Dashboard dashboard1 = createDashboardWithCreatedAt(book1Id, DashboardTargetType.BOOK, DashboardPeriodEnums.ALL_TIME, 90.0, 1, createdAt);
+		Dashboard dashboard2 = createDashboardWithCreatedAt(book2Id, DashboardTargetType.BOOK, DashboardPeriodEnums.ALL_TIME, 80.0, 2, createdAt.plusSeconds(1));
+		Dashboard dashboard3 = createDashboardWithCreatedAt(book3Id, DashboardTargetType.BOOK, DashboardPeriodEnums.ALL_TIME, 70.0, 3, createdAt.plusSeconds(2));
 
 		Book book1 = createMockBook(book1Id);
 		Book book2 = createMockBook(book2Id);
@@ -184,8 +184,8 @@ class DashboardServiceTest {
 		UUID book2Id = UUID.randomUUID();
 		Instant createdAt = Instant.parse("2026-03-09T05:00:00Z");
 
-		Dashboard dashboard1 = createDashboardWithCreatedAt(book1Id, "BOOK", DashboardPeriodEnums.DAILY, 90.0, 1, createdAt);
-		Dashboard dashboard2 = createDashboardWithCreatedAt(book2Id, "BOOK", DashboardPeriodEnums.DAILY, 80.0, 2, createdAt.plusSeconds(1));
+		Dashboard dashboard1 = createDashboardWithCreatedAt(book1Id, DashboardTargetType.BOOK, DashboardPeriodEnums.DAILY, 90.0, 1, createdAt);
+		Dashboard dashboard2 = createDashboardWithCreatedAt(book2Id, DashboardTargetType.BOOK, DashboardPeriodEnums.DAILY, 80.0, 2, createdAt.plusSeconds(1));
 
 		Book book1 = createMockBook(book1Id);
 		Book book2 = createMockBook(book2Id);
@@ -252,8 +252,8 @@ class DashboardServiceTest {
 		UUID review2Id = UUID.randomUUID();
 		Instant createdAt = Instant.parse("2026-03-09T05:00:00Z");
 
-		Dashboard dashboard1 = createDashboardWithCreatedAt(review1Id, "REVIEW", DashboardPeriodEnums.WEEKLY, 85.0, 1, createdAt);
-		Dashboard dashboard2 = createDashboardWithCreatedAt(review2Id, "REVIEW", DashboardPeriodEnums.WEEKLY, 70.0, 2, createdAt.plusSeconds(1));
+		Dashboard dashboard1 = createDashboardWithCreatedAt(review1Id, DashboardTargetType.REVIEW, DashboardPeriodEnums.WEEKLY, 85.0, 1, createdAt);
+		Dashboard dashboard2 = createDashboardWithCreatedAt(review2Id, DashboardTargetType.REVIEW, DashboardPeriodEnums.WEEKLY, 70.0, 2, createdAt.plusSeconds(1));
 
 		Review review1 = createMockReview(review1Id);
 		Review review2 = createMockReview(review2Id);
@@ -294,8 +294,8 @@ class DashboardServiceTest {
 		UUID user2Id = UUID.randomUUID();
 		Instant createdAt = Instant.parse("2026-03-09T05:00:00Z");
 
-		Dashboard dashboard1 = createDashboardWithCreatedAt(user1Id, "USER", DashboardPeriodEnums.MONTHLY, 95.0, 1, createdAt);
-		Dashboard dashboard2 = createDashboardWithCreatedAt(user2Id, "USER", DashboardPeriodEnums.MONTHLY, 80.0, 2, createdAt.plusSeconds(1));
+		Dashboard dashboard1 = createDashboardWithCreatedAt(user1Id, DashboardTargetType.USER, DashboardPeriodEnums.MONTHLY, 95.0, 1, createdAt);
+		Dashboard dashboard2 = createDashboardWithCreatedAt(user2Id, DashboardTargetType.USER, DashboardPeriodEnums.MONTHLY, 80.0, 2, createdAt.plusSeconds(1));
 
 		User user1 = createMockUser(user1Id, "파워유저1");
 		User user2 = createMockUser(user2Id, "파워유저2");
@@ -352,8 +352,8 @@ class DashboardServiceTest {
 		UUID review1Id = UUID.randomUUID();
 		UUID review2Id = UUID.randomUUID();
 
-		Dashboard dashboard1 = createDashboard(review1Id, "REVIEW", DashboardPeriodEnums.MONTHLY, 85.0, 1);
-		Dashboard dashboard2 = createDashboard(review2Id, "REVIEW", DashboardPeriodEnums.MONTHLY, 70.0, 2);
+		Dashboard dashboard1 = createDashboard(review1Id, DashboardTargetType.REVIEW, DashboardPeriodEnums.MONTHLY, 85.0, 1);
+		Dashboard dashboard2 = createDashboard(review2Id, DashboardTargetType.REVIEW, DashboardPeriodEnums.MONTHLY, 70.0, 2);
 
 		Review review1 = createMockReview(review1Id);
 		Review review2 = createMockReview(review2Id);
@@ -416,8 +416,8 @@ class DashboardServiceTest {
 		UUID user1Id = UUID.randomUUID();
 		UUID user2Id = UUID.randomUUID();
 
-		Dashboard dashboard1 = createDashboard(user1Id, "USER", DashboardPeriodEnums.MONTHLY, 95.0, 1);
-		Dashboard dashboard2 = createDashboard(user2Id, "USER", DashboardPeriodEnums.MONTHLY, 80.0, 2);
+		Dashboard dashboard1 = createDashboard(user1Id, DashboardTargetType.USER, DashboardPeriodEnums.MONTHLY, 95.0, 1);
+		Dashboard dashboard2 = createDashboard(user2Id, DashboardTargetType.USER, DashboardPeriodEnums.MONTHLY, 80.0, 2);
 
 		User user1 = createMockUser(user1Id, "파워유저1");
 		User user2 = createMockUser(user2Id, "파워유저2");
@@ -452,7 +452,7 @@ class DashboardServiceTest {
 		assertThat(response.get(1).score()).isEqualTo(80.0);
 	}
 
-	private Dashboard createDashboard(UUID targetId, String targetType, DashboardPeriodEnums periodType,
+	private Dashboard createDashboard(UUID targetId, DashboardTargetType targetType, DashboardPeriodEnums periodType,
 			double score, int rankingPos) {
 		return Dashboard.builder()
 				.targetId(targetId)
@@ -463,7 +463,7 @@ class DashboardServiceTest {
 				.build();
 	}
 
-	private Dashboard createDashboardWithCreatedAt(UUID targetId, String targetType, DashboardPeriodEnums periodType,
+	private Dashboard createDashboardWithCreatedAt(UUID targetId, DashboardTargetType targetType, DashboardPeriodEnums periodType,
 			double score, int rankingPos, Instant createdAt) {
 		Dashboard dashboard = createDashboard(targetId, targetType, periodType, score, rankingPos);
 		ReflectionTestUtils.setField(dashboard, "createdAt", createdAt);

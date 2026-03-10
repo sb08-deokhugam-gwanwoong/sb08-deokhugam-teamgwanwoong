@@ -2,6 +2,7 @@ package com.codeit.project.sb08deokhugamteamgwanwoong.entity;
 
 import com.codeit.project.sb08deokhugamteamgwanwoong.entity.base.BaseEntity;
 import com.codeit.project.sb08deokhugamteamgwanwoong.entity.enums.DashboardPeriodEnums;
+import com.codeit.project.sb08deokhugamteamgwanwoong.entity.enums.DashboardTargetType;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
@@ -22,8 +23,9 @@ public class Dashboard extends BaseEntity {
 		@Column(name = "target_id", nullable = false)
 		private UUID targetId;
 
+		@Enumerated(EnumType.STRING)
 		@Column(name = "target_type", nullable = false)
-		private String targetType;
+		private DashboardTargetType targetType;
 
 		@Enumerated(EnumType.STRING)
 		@Column(name = "period_type", nullable = false)
@@ -36,7 +38,7 @@ public class Dashboard extends BaseEntity {
 		private Integer rankingPos; // Window Function RANK() 결과
 
 		@Builder
-		public Dashboard(UUID targetId, String targetType, DashboardPeriodEnums periodType, Double score, Integer rankingPos) {
+		public Dashboard(UUID targetId, DashboardTargetType targetType, DashboardPeriodEnums periodType, Double score, Integer rankingPos) {
 				this.targetId = targetId;
 				this.targetType = targetType;
 				this.periodType = periodType;
