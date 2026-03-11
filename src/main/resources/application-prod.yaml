@@ -1,5 +1,12 @@
 server:
   port: ${PORT:8080}
+  tomcat:
+    accesslog:
+      enabled: true  # 상태 검사 응답 코드를 확인하기 위해 활성화
+      directory: /tmp # 컨테이너 내부 임시 경로
+      prefix: access_log
+      suffix: .log
+      pattern: "%h %l %u %t "%r" %s %b" # %s가 HTTP 상태 코드
 
 spring:
   datasource:
