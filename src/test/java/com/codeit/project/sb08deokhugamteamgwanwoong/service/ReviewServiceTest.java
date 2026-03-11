@@ -164,13 +164,13 @@ public class ReviewServiceTest {
     }
 
     @Test
-    @DisplayName("리뷰 생성 테스트 - 성공")
+    @DisplayName("리뷰 생성 테스트 - 성공 (처음 작성하는 경우)")
     void create_review_success() {
         //given
-        // 중복 리뷰인지 체크
-        given(reviewRepository.existsByBookIdAndUserId(any(), any())).willReturn(false);
         given(userRepository.findById(any())).willReturn(Optional.of(user));
         given(bookRepository.findById(any())).willReturn(Optional.of(book));
+        // 중복 리뷰인지 체크
+        given(reviewRepository.findByBookIdAndUserIdIncludeDeleted(any(), any())).willReturn(Optional.empty());
         given(reviewRepository.save(any(Review.class))).willReturn(review);
         given(reviewMapper.toDto(any(), anyBoolean(), any()))
                 .willAnswer(invocation -> createReviewDto(invocation.getArgument(0), invocation.getArgument(1)));
@@ -185,10 +185,39 @@ public class ReviewServiceTest {
     }
 
     @Test
+    @DisplayName("리뷰 생성 테스트 - 성공 (논리 삭제된 리뷰를 복구하는 경우)")
+    void create_review_success_restore_deleted() {
+        //given
+        Review deletedReview = Review.builder()
+                .rating(1)
+                .content("old review")
+                .user(user)
+                .book(book)
+                .build();
+        deletedReview.delete();
+
+        given(userRepository.findById(any())).willReturn(Optional.of(user));
+        given(bookRepository.findById(any())).willReturn(Optional.of(book));
+        // 조회 시 삭제된 리뷰가 나옴
+        given(reviewRepository.findByBookIdAndUserIdIncludeDeleted(any(), any())).willReturn(Optional.of(deletedReview));
+
+        given(reviewRepository.save(any(Review.class))).willReturn(review);
+        given(reviewMapper.toDto(any(), anyBoolean(), any()))
+                .willAnswer(invocation -> createReviewDto(invocation.getArgument(0), invocation.getArgument(1)));
+
+        //when
+        ReviewDto result = reviewService.createReview(createRequest);
+
+        //then
+        assertThat(deletedReview.getDeletedAt()).isNull();
+        assertThat(deletedReview.getContent()).isEqualTo(createRequest.content());
+        then(reviewRepository).should().save(any(Review.class));
+    }
+
+    @Test
     @DisplayName("리뷰 생성 테스트 - 실패(도서 정보 없음")
     void create_review_fail_not_foud_book() {
         //given
-        given(reviewRepository.existsByBookIdAndUserId(any(), any())).willReturn(false);
         given(userRepository.findById(any())).willReturn(Optional.of(user));
         given(bookRepository.findById(any())).willReturn(Optional.empty());
 
@@ -202,7 +231,16 @@ public class ReviewServiceTest {
     @DisplayName("리뷰 생성 테스트 - 실패(이미 리뷰를 작성한 경우)")
     void create_review_fail_already_create() {
         //given
-        given(reviewRepository.existsByBookIdAndUserId(createRequest.bookId(), createRequest.userId())).willReturn(true);
+        given(userRepository.findById(any())).willReturn(Optional.of(user));
+        given(bookRepository.findById(any())).willReturn(Optional.of(book));
+
+        Review existingReview = Review.builder()
+                .rating(5)
+                .content("exist")
+                .user(user)
+                .book(book)
+                .build();
+        given(reviewRepository.findByBookIdAndUserIdIncludeDeleted(createRequest.bookId(), createRequest.userId())).willReturn(Optional.of(existingReview));
 
         //when
         assertThatThrownBy(() -> reviewService.createReview(createRequest))
@@ -232,6 +270,8 @@ public class ReviewServiceTest {
         //then
         assertThat(result.liked()).isFalse();
         then(reviewLikeRepository).should().delete(exitingReviewLike);
+        then(reviewLikeRepository).should().flush();
+        then(reviewRepository).should().decreaseLikeCount(review.getId());
         then(notificationService).should(never()).createNotification(any(), any(), any());
     }
 
@@ -249,7 +289,8 @@ public class ReviewServiceTest {
 
         //then
         assertThat(result.liked()).isTrue();
-        then(reviewLikeRepository).should().save(any(ReviewLike.class));
+        then(reviewLikeRepository).should().saveAndFlush(any(ReviewLike.class));
+        then(reviewRepository).should().increaseLikeCount(review.getId());
         then(notificationService).should(never()).createNotification(any(), any(), any());
     }
 
@@ -267,7 +308,8 @@ public class ReviewServiceTest {
 
         //then
         assertThat(result.liked()).isTrue();
-        then(reviewLikeRepository).should().save(any(ReviewLike.class));
+        then(reviewLikeRepository).should().saveAndFlush(any(ReviewLike.class));
+        then(reviewRepository).should().increaseLikeCount(review.getId());
         then(notificationService).should().createNotification(any(), any(), anyString());
     }
 

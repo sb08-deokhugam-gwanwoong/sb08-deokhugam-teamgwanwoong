@@ -203,10 +203,11 @@ public class ReviewRepositoryTest extends RepositoryTestSupport {
         flushAndClear();
 
         //when
-        boolean isPresent = reviewRepository.existsByBookIdAndUserId(book.getId(), user.getId());
+        Optional<Review> foundReview = reviewRepository.findByBookIdAndUserIdIncludeDeleted(book.getId(), user.getId());
 
         //then
-        assertThat(isPresent).isTrue();
+        assertThat(foundReview).isPresent();
+        assertThat(foundReview.get().getContent()).isEqualTo("작성자 ID와 책 ID를 통해 조회하는 테스트");
     }
 
     @Test
@@ -222,10 +223,10 @@ public class ReviewRepositoryTest extends RepositoryTestSupport {
         flushAndClear();
 
         //when
-        boolean isPresent = reviewRepository.existsByBookIdAndUserId(book.getId(), otherUser.getId());
+        Optional<Review> foundReview = reviewRepository.findByBookIdAndUserIdIncludeDeleted(book.getId(), otherUser.getId());
 
         //then
-        assertThat(isPresent).isFalse();
+        assertThat(foundReview).isEmpty();
     }
 
     @Test

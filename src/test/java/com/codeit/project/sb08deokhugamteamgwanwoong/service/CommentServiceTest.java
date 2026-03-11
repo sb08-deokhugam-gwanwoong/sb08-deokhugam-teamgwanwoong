@@ -71,36 +71,37 @@ class CommentServiceTest {
     reviewId = UUID.randomUUID();
 
     user = User.builder()
-        .email("test@test.com")
-        .nickname("웅제")
-        .password("testPassword123!")
-        .build();
+            .email("test@test.com")
+            .nickname("웅제")
+            .password("testPassword123!")
+            .build();
     ReflectionTestUtils.setField(user, "id", userId);
 
     book = Book.builder()
-        .title("testBook")
-        .author("testAuthor")
-        .isbn("9788994492032")
-        .publisher("testPublisher")
-        .publishedDate(LocalDate.now())
-        .description("testDescription")
-        .thumbnailUrl("https://test-thumbnail.url/image.jpg")
-        .build();
+            .title("testBook")
+            .author("testAuthor")
+            .isbn("9788994492032")
+            .publisher("testPublisher")
+            .publishedDate(LocalDate.now())
+            .description("testDescription")
+            .thumbnailUrl("https://test-thumbnail.url/image.jpg")
+            .build();
     ReflectionTestUtils.setField(book, "id", bookId);
 
     review = Review.builder()
-        .rating(5)
-        .content("좋은 책 입니다")
-        .user(user)
-        .book(book)
-        .build();
+            .rating(5)
+            .content("좋은 책 입니다")
+            .user(user)
+            .book(book)
+            .build();
     ReflectionTestUtils.setField(review, "id", reviewId);
+    ReflectionTestUtils.setField(review, "commentCount", 0);
 
     comment = Comment.builder()
-        .content("기존 댓글 내용")
-        .user(user)
-        .review(review)
-        .build();
+            .content("기존 댓글 내용")
+            .user(user)
+            .review(review)
+            .build();
     ReflectionTestUtils.setField(comment, "id", UUID.randomUUID());
     ReflectionTestUtils.setField(comment, "createdAt", Instant.now());
   }
@@ -119,16 +120,16 @@ class CommentServiceTest {
       //stubbing
       given(userRepository.findById(userId)).willReturn(Optional.of(user));
       given(reviewRepository.findById(reviewId)).willReturn(Optional.of(review));
-      given(commentRepository.save(any(Comment.class))).willReturn(comment);
+      given(commentRepository.saveAndFlush(any(Comment.class))).willReturn(comment);
 
       CommentDto expectedDto = new CommentDto(
-          comment.getId(),
-          reviewId,
-          userId,
-          "웅제",
-          "테스트 댓글입니다",
-          Instant.now(),
-          Instant.now()
+              comment.getId(),
+              reviewId,
+              userId,
+              "웅제",
+              "테스트 댓글입니다",
+              Instant.now(),
+              Instant.now()
       );
       given(commentMapper.toDto(any(Comment.class))).willReturn(expectedDto);
 
@@ -139,7 +140,8 @@ class CommentServiceTest {
       assertThat(result.content()).isEqualTo("테스트 댓글입니다");
       assertThat(result.userNickname()).isEqualTo("웅제");
 
-      then(commentRepository).should(times(1)).save(any(Comment.class));
+      then(commentRepository).should(times(1)).saveAndFlush(any(Comment.class));
+      then(reviewRepository).should(times(1)).increaseCommentCount(reviewId);
     }
 
     @Test
@@ -147,9 +149,9 @@ class CommentServiceTest {
     void createComment_ShouldNotify_WhenOtherUserComments() {
       //given
       User reviewAuthor = User.builder()
-          .email("author@test.com")
-          .nickname("리뷰어")
-          .build();
+              .email("author@test.com")
+              .nickname("리뷰어")
+              .build();
       ReflectionTestUtils.setField(reviewAuthor, "id", UUID.randomUUID()); // 서로 다른 ID 보장
 
       ReflectionTestUtils.setField(review, "user", reviewAuthor);
@@ -158,7 +160,7 @@ class CommentServiceTest {
 
       given(userRepository.findById(userId)).willReturn(Optional.of(user));
       given(reviewRepository.findById(reviewId)).willReturn(Optional.of(review));
-      given(commentRepository.save(any(Comment.class))).willReturn(comment);
+      given(commentRepository.saveAndFlush(any(Comment.class))).willReturn(comment);
 
       CommentDto dto = new CommentDto(comment.getId(), reviewId, userId, "웅제", "알림!", Instant.now(), Instant.now());
       given(commentMapper.toDto(any(Comment.class))).willReturn(dto);
@@ -168,6 +170,7 @@ class CommentServiceTest {
 
       //then
       then(notificationService).should(times(1)).createNotification(any(), any(), any());
+      then(reviewRepository).should(times(1)).increaseCommentCount(reviewId);
     }
 
     @Test
@@ -182,9 +185,9 @@ class CommentServiceTest {
 
       //when & then
       assertThatThrownBy(() -> commentService.create(request))
-          .isInstanceOf(BusinessException.class)
-          .extracting("errorCode")
-          .isEqualTo(ReviewErrorCode.REVIEW_NOT_FOUND);
+              .isInstanceOf(BusinessException.class)
+              .extracting("errorCode")
+              .isEqualTo(ReviewErrorCode.REVIEW_NOT_FOUND);
     }
   }
 
@@ -203,13 +206,13 @@ class CommentServiceTest {
       given(commentRepository.findById(commentId)).willReturn(Optional.of(comment));
 
       CommentDto expectedDto = new CommentDto(
-          comment.getId(),
-          reviewId,
-          userId,
-          "웅제",
-          "수정된 댓글 내용입니다.",
-          Instant.now(),
-          Instant.now()
+              comment.getId(),
+              reviewId,
+              userId,
+              "웅제",
+              "수정된 댓글 내용입니다.",
+              Instant.now(),
+              Instant.now()
       );
       given(commentMapper.toDto(any(Comment.class))).willReturn(expectedDto);
 
@@ -236,10 +239,10 @@ class CommentServiceTest {
 
       // when & then
       assertThatThrownBy(() ->
-          commentService.update(commentId, anotherUserId, updateRequest))
-          .isInstanceOf(BusinessException.class)
-          .extracting("errorCode")
-          .isEqualTo(CommentErrorCode.COMMENT_UPDATE_DENIED);
+              commentService.update(commentId, anotherUserId, updateRequest))
+              .isInstanceOf(BusinessException.class)
+              .extracting("errorCode")
+              .isEqualTo(CommentErrorCode.COMMENT_UPDATE_DENIED);
     }
 
     @Test
@@ -253,10 +256,10 @@ class CommentServiceTest {
 
       //when & then
       assertThatThrownBy(() ->
-          commentService.update(notFoundId, userId, updateRequest))
-          .isInstanceOf(BusinessException.class)
-          .extracting("errorCode")
-          .isEqualTo(CommentErrorCode.COMMENT_NOT_FOUND);
+              commentService.update(notFoundId, userId, updateRequest))
+              .isInstanceOf(BusinessException.class)
+              .extracting("errorCode")
+              .isEqualTo(CommentErrorCode.COMMENT_NOT_FOUND);
     }
   }
 
@@ -274,13 +277,13 @@ class CommentServiceTest {
       given(commentRepository.findAllByCursor(any(CommentSearchCondition.class))).willReturn(comments);
 
       CommentDto commentDto = new CommentDto(
-          comment.getId(),
-          reviewId,
-          userId,
-          "웅제",
-          "기존 댓글 내용",
-          Instant.now(),
-          Instant.now()
+              comment.getId(),
+              reviewId,
+              userId,
+              "웅제",
+              "기존 댓글 내용",
+              Instant.now(),
+              Instant.now()
       );
       given(commentMapper.toDto(any(Comment.class))).willReturn(commentDto);
 
@@ -305,9 +308,9 @@ class CommentServiceTest {
 
       //when & then
       assertThatThrownBy(() -> commentService.findAllComments(notFoundReviewId, null, null, 10))
-          .isInstanceOf(BusinessException.class)
-          .extracting("errorCode")
-          .isEqualTo(ReviewErrorCode.REVIEW_NOT_FOUND);
+              .isInstanceOf(BusinessException.class)
+              .extracting("errorCode")
+              .isEqualTo(ReviewErrorCode.REVIEW_NOT_FOUND);
     }
 
     @Test
@@ -317,7 +320,7 @@ class CommentServiceTest {
       UUID targetId = comment.getId(); // commentId 대신 필드의 comment에서 ID 추출
 
       CommentDto expectedDto = new CommentDto(
-          targetId, reviewId, userId, "웅제", "기존 댓글 내용", Instant.now(), Instant.now()
+              targetId, reviewId, userId, "웅제", "기존 댓글 내용", Instant.now(), Instant.now()
       );
 
       given(commentRepository.findById(targetId)).willReturn(Optional.of(comment));
@@ -372,9 +375,9 @@ class CommentServiceTest {
 
       //when & then
       assertThatThrownBy(() -> commentService.findById(notFoundId))
-          .isInstanceOf(BusinessException.class)
-          .extracting("errorCode")
-          .isEqualTo(CommentErrorCode.COMMENT_NOT_FOUND);
+              .isInstanceOf(BusinessException.class)
+              .extracting("errorCode")
+              .isEqualTo(CommentErrorCode.COMMENT_NOT_FOUND);
     }
   }
 
@@ -405,9 +408,9 @@ class CommentServiceTest {
 
       //when & then
       assertThatThrownBy(() -> commentService.softDelete(commentId, anotherUserId))
-          .isInstanceOf(BusinessException.class)
-          .extracting("errorCode")
-          .isEqualTo(CommentErrorCode.COMMENT_DELETE_DENIED);
+              .isInstanceOf(BusinessException.class)
+              .extracting("errorCode")
+              .isEqualTo(CommentErrorCode.COMMENT_DELETE_DENIED);
     }
 
     @Test
@@ -419,9 +422,9 @@ class CommentServiceTest {
 
       //when & then
       assertThatThrownBy(() -> commentService.softDelete(notFoundId, userId))
-          .isInstanceOf(BusinessException.class)
-          .extracting("errorCode")
-          .isEqualTo(CommentErrorCode.COMMENT_NOT_FOUND);
+              .isInstanceOf(BusinessException.class)
+              .extracting("errorCode")
+              .isEqualTo(CommentErrorCode.COMMENT_NOT_FOUND);
     }
 
     @Test
@@ -448,9 +451,9 @@ class CommentServiceTest {
 
       //when & then
       assertThatThrownBy(() -> commentService.hardDelete(commentId, anotherUserId))
-          .isInstanceOf(BusinessException.class)
-          .extracting("errorCode")
-          .isEqualTo(CommentErrorCode.COMMENT_DELETE_DENIED);
+              .isInstanceOf(BusinessException.class)
+              .extracting("errorCode")
+              .isEqualTo(CommentErrorCode.COMMENT_DELETE_DENIED);
     }
   }
 

@@ -148,22 +148,33 @@ public class ReviewServiceImpl implements ReviewService {
         UUID userId = request.userId();
         log.info("Service: 리뷰 생성 로직 시작 - bookId: {}, userId: {}", bookId, userId);
 
-        // 이미 작성한 리뷰가 있는 경우
-        if (reviewRepository.existsByBookIdAndUserId(bookId, userId)) {
-            throw new BusinessException(ReviewErrorCode.REVIEW_ALREADY_EXISTS);
-        }
         User user = findUser(userId);
         Book book = findBook(bookId);
 
-        Review review = Review.builder()
-                .rating(request.rating())
-                .content(request.content())
-                .user(user)
-                .book(book)
-                .build();
+        Optional<Review> optionalReview = reviewRepository.findByBookIdAndUserIdIncludeDeleted(bookId, userId);
 
-        Review savedReview = reviewRepository.save(review);
+        Review savedReview;
 
+        if (optionalReview.isPresent()) {
+            Review exisstingReview = optionalReview.get();
+
+            if (exisstingReview.getDeletedAt() == null) {
+                throw new BusinessException(ReviewErrorCode.REVIEW_ALREADY_EXISTS);
+            } else {
+                exisstingReview.restore(request.rating(), request.content());
+                savedReview = reviewRepository.save(exisstingReview);
+            }
+        } else {
+            Review newReview = Review.builder()
+                    .rating(request.rating())
+                    .content(request.content())
+                    .user(user)
+                    .book(book)
+                    .build();
+            savedReview = reviewRepository.save(newReview);
+        }
+
+        // 도서의 평점/ 리뷰 수 증가 반영
         book.addReviewRating(request.rating());
 
         log.info("Service: 리뷰 생성 성공 - ID: {}", savedReview.getId());
@@ -183,15 +194,17 @@ public class ReviewServiceImpl implements ReviewService {
         boolean isLikedNow;
         if (existingReviewLike.isPresent()) {
             reviewLikeRepository.delete(existingReviewLike.get());
-            review.decreaseLikeCount();
+            reviewLikeRepository.flush();
+
+            reviewRepository.decreaseLikeCount(reviewId);
             isLikedNow = false;
         } else {
             ReviewLike newReviewLike = ReviewLike.builder()
                     .review(review)
                     .user(user)
                     .build();
-            reviewLikeRepository.save(newReviewLike);
-            review.increaseLikeCount();
+            reviewLikeRepository.saveAndFlush(newReviewLike);
+            reviewRepository.increaseLikeCount(reviewId);
             isLikedNow = true;
 
             User toUser = review.getUser(); // 리뷰 작성자
@@ -277,7 +290,7 @@ public class ReviewServiceImpl implements ReviewService {
 
         //가짜 프록시가 아닌 확실한 Book을 조회해서 가져옴
         Book book = bookRepository.findById(review.getBook().getId())
-                        .orElseThrow(() -> new BusinessException(BookErrorCode.BOOK_NOT_FOUND));
+                .orElseThrow(() -> new BusinessException(BookErrorCode.BOOK_NOT_FOUND));
 
         book.removeReviewRating(review.getRating());
 
