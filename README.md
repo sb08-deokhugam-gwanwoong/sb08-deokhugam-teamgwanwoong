@@ -1,6 +1,6 @@
 # 📚 덕후감 (Deokhugam) - Backend
 
-[![codecov](https://codecov.io/github/sb08-deokhugam-gwanwoong/sb08-deokhugam-teamgwanwoong/graph/badge.svg?token=FV04OHEYFK)](https://codecov.io/github/sb08-deokhugam-gwanwoong/sb08-deokhugam-teamgwanwoong)
+[![codecov](https://codecov.io/github/sb08-deokhugam-gwanwoong/sb08-deokhugam-teamgwanwoong/branch/dev/graph/badge.svg?token=FV04OHEYFK)](https://codecov.io/github/sb08-deokhugam-gwanwoong/sb08-deokhugam-teamgwanwoong)
 ![Java](https://img.shields.io/badge/Java-17-blue?logo=openjdk)
 ![Spring Boot](https://img.shields.io/badge/Spring_Boot-3.4.0-6DB33F?logo=springboot)
 ![PostgreSQL](https://img.shields.io/badge/PostgreSQL-4169E1?logo=postgresql)

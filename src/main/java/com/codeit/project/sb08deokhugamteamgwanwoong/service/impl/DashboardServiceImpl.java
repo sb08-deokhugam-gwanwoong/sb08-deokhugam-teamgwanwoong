@@ -197,6 +197,16 @@ public class DashboardServiceImpl implements DashboardService {
 		Instant after = parseAfter(request.after());
 		Integer cursorRankingPos = parseCursorRankingPos(request.cursor());
 		int limit = request.limit();
+
+		// PostgreSQL: :after IS NULL 시 파라미터 타입 추론 불가(could not determine data type of parameter $3)
+		// → 첫 페이지일 때 sentinel 값 사용 (null 대신)
+		if (after == null) {
+			after = "DESC".equalsIgnoreCase(request.direction())
+					? Instant.parse("2100-01-01T00:00:00Z")  // DESC: created_at < after 가 항상 true
+					: Instant.EPOCH;                           // ASC: created_at > after 가 항상 true
+			cursorRankingPos = -1;
+		}
+
 		// direction에 따라 정렬 방식 분기, limit+1개 조회로 다음 페이지 존재 여부 확인
 		List<Dashboard> rankings = "DESC".equalsIgnoreCase(request.direction())
 				? dashboardRepository.findRecentRankingsByCursorDesc(targetType, request.period(), after, cursorRankingPos,
