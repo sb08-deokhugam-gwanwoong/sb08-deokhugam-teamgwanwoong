@@ -155,3 +155,5 @@ CREATE INDEX "IDX_DASHBOARD_RANKING" ON "dashboard" ("target_type", "period_type
 -- [Soft Delete 공통 인덱스]
 -- 삭제되지 않은 데이터만 조회하는 쿼리가 많을 경우 유용합니다.
 CREATE INDEX "IDX_USERS_ACTIVE" ON "users" ("id") WHERE "deleted_at" IS NULL;
+
+CREATE UNIQUE INDEX "UQ_ACTIVE_REVIEW" ON "reviews" ("book_id", "user_id") WHERE "deleted_at" IS NULL;
