@@ -25,9 +25,6 @@ public interface ReviewRepository extends JpaRepository<Review, UUID>, ReviewRep
     @Query("SELECT r FROM Review r WHERE r.id = :reviewId")
     Optional<Review> findByIdWithPessimisticLock(@Param("reviewId") UUID reviewId);
 
-    @Query(value = "SELECT * FROM reviews WHERE book_id = :bookId AND user_id = :userId", nativeQuery = true)
-    Optional<Review> findByBookIdAndUserIdIncludeDeleted(@Param("bookId") UUID bookId, @Param("userId") UUID userId);
-
     // @SQLRestriction("deleted_at IS NULL"), JPQL에서 조회할 경우 deleteAt != null 인 경우 조회되지 않기 때문에 네이티브 쿼리 사용
     @Query(value = "SELECT * FROM reviews WHERE id = :id", nativeQuery = true)
     Optional<Review> findByIdIncludeDeleted(@Param("id") UUID id);
@@ -54,4 +51,6 @@ public interface ReviewRepository extends JpaRepository<Review, UUID>, ReviewRep
     @Modifying(clearAutomatically = true)
     @Query("UPDATE Review r SET r.likeCount = r.likeCount - 1 WHERE r.id = :reviewId AND r.likeCount > 0")
     void decreaseLikeCount(@Param("reviewId") UUID reviewId);
+
+    boolean existsByBookIdAndUserId(UUID bookId, UUID userId);
 }

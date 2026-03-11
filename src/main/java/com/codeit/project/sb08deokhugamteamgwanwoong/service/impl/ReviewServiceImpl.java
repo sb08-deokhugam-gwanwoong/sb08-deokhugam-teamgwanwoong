@@ -151,28 +151,20 @@ public class ReviewServiceImpl implements ReviewService {
         User user = findUser(userId);
         Book book = findBook(bookId);
 
-        Optional<Review> optionalReview = reviewRepository.findByBookIdAndUserIdIncludeDeleted(bookId, userId);
+        boolean exists = reviewRepository.existsByBookIdAndUserId(bookId, userId);
 
-        Review savedReview;
-
-        if (optionalReview.isPresent()) {
-            Review exisstingReview = optionalReview.get();
-
-            if (exisstingReview.getDeletedAt() == null) {
-                throw new BusinessException(ReviewErrorCode.REVIEW_ALREADY_EXISTS);
-            } else {
-                exisstingReview.restore(request.rating(), request.content());
-                savedReview = reviewRepository.save(exisstingReview);
-            }
-        } else {
-            Review newReview = Review.builder()
-                    .rating(request.rating())
-                    .content(request.content())
-                    .user(user)
-                    .book(book)
-                    .build();
-            savedReview = reviewRepository.save(newReview);
+        if (exists) {
+            throw new BusinessException(ReviewErrorCode.REVIEW_ALREADY_EXISTS);
         }
+
+        Review newReview = Review.builder()
+                .rating(request.rating())
+                .content(request.content())
+                .user(user)
+                .book(book)
+                .build();
+
+        Review savedReview = reviewRepository.save(newReview);
 
         // 도서의 평점/ 리뷰 수 증가 반영
         book.addReviewRating(request.rating());
@@ -248,6 +240,8 @@ public class ReviewServiceImpl implements ReviewService {
 
         // 리뷰와 연관된 댓글 한번에 논리 삭제(벌크 연산)
         commentRepository.softDeleteAllByReviewId(reviewId, Instant.now());
+
+        reviewLikeRepository.hardDeleteAllByReviewId(reviewId);
 
         log.info("Service: 리뷰 논리 삭제 로직 성공 - reviewId: {}, requestUserId: {}", reviewId, requestUserId);
     }

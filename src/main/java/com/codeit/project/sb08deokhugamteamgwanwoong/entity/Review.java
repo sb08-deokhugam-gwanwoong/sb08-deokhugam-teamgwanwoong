@@ -11,15 +11,7 @@ import org.hibernate.annotations.SQLRestriction;
 @Entity
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @Getter
-@Table(
-        name = "reviews",
-        uniqueConstraints = {
-                @UniqueConstraint(
-                        name = "uk_review_user_book",
-                        columnNames = {"user_id", "book_id"}
-                )
-        }
-)
+@Table(name = "reviews")
 @SQLRestriction("deleted_at IS NULL")
 public class Review extends BaseRemovableEntity {
 
@@ -77,12 +69,5 @@ public class Review extends BaseRemovableEntity {
         if (newContent != null && !newContent.isBlank()) {
             this.content = newContent;
         }
-    }
-
-    public void restore(Integer rating, String content) {
-        this.rating = rating;
-        this.content = content;
-
-        super.undelete();
     }
 }

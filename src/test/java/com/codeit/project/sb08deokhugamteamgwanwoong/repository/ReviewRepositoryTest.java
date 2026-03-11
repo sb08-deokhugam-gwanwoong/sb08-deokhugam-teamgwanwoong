@@ -135,24 +135,6 @@ public class ReviewRepositoryTest extends RepositoryTestSupport {
     }
 
     @Test
-    @DisplayName("각 도서에 대해 사용자별로 단 하나의 리뷰만 작성할 수 있다.")
-    void cannotWriteMultipleReviewsForSameBook() {
-        //given
-        Review review1 = createReview(3, "평범한 책이에요.", user, book);
-        reviewRepository.save(review1);
-        entityManager.flush();
-
-        //when
-        Review review2 = createReview(1, "한달 후기: 정말 별로네요...", user, book);
-
-        //then
-        assertThatThrownBy(() -> {
-            reviewRepository.save(review2);
-            entityManager.flush();
-        }).isInstanceOf(ConstraintViolationException.class);
-    }
-
-    @Test
     @DisplayName("비관적 락이 적용된 상태로 리뷰를 정상적으로 조회한다.")
     void findByIdWithPessimisticLockTest() {
         //given
@@ -203,11 +185,10 @@ public class ReviewRepositoryTest extends RepositoryTestSupport {
         flushAndClear();
 
         //when
-        Optional<Review> foundReview = reviewRepository.findByBookIdAndUserIdIncludeDeleted(book.getId(), user.getId());
+        boolean exists = reviewRepository.existsByBookIdAndUserId(book.getId(), user.getId());
 
         //then
-        assertThat(foundReview).isPresent();
-        assertThat(foundReview.get().getContent()).isEqualTo("작성자 ID와 책 ID를 통해 조회하는 테스트");
+        assertThat(exists).isTrue();
     }
 
     @Test
@@ -223,10 +204,10 @@ public class ReviewRepositoryTest extends RepositoryTestSupport {
         flushAndClear();
 
         //when
-        Optional<Review> foundReview = reviewRepository.findByBookIdAndUserIdIncludeDeleted(book.getId(), otherUser.getId());
+        boolean exists = reviewRepository.existsByBookIdAndUserId(book.getId(), otherUser.getId());
 
         //then
-        assertThat(foundReview).isEmpty();
+        assertThat(exists).isFalse();
     }
 
     @Test
