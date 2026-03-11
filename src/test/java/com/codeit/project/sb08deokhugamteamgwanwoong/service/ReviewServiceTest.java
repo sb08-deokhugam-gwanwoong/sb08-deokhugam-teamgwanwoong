@@ -170,7 +170,7 @@ public class ReviewServiceTest {
         given(userRepository.findById(any())).willReturn(Optional.of(user));
         given(bookRepository.findById(any())).willReturn(Optional.of(book));
         // 중복 리뷰인지 체크
-        given(reviewRepository.findByBookIdAndUserIdIncludeDeleted(any(), any())).willReturn(Optional.empty());
+        given(reviewRepository.existsByBookIdAndUserId(any(), any())).willReturn(false);
         given(reviewRepository.save(any(Review.class))).willReturn(review);
         given(reviewMapper.toDto(any(), anyBoolean(), any()))
                 .willAnswer(invocation -> createReviewDto(invocation.getArgument(0), invocation.getArgument(1)));
@@ -181,36 +181,6 @@ public class ReviewServiceTest {
         //then
         assertThat(result.content()).isEqualTo("test review");
         assertThat(result.bookThumbnailUrl()).isEqualTo("https://test-thumbnail.url/image.jpg");
-        then(reviewRepository).should().save(any(Review.class));
-    }
-
-    @Test
-    @DisplayName("리뷰 생성 테스트 - 성공 (논리 삭제된 리뷰를 복구하는 경우)")
-    void create_review_success_restore_deleted() {
-        //given
-        Review deletedReview = Review.builder()
-                .rating(1)
-                .content("old review")
-                .user(user)
-                .book(book)
-                .build();
-        deletedReview.delete();
-
-        given(userRepository.findById(any())).willReturn(Optional.of(user));
-        given(bookRepository.findById(any())).willReturn(Optional.of(book));
-        // 조회 시 삭제된 리뷰가 나옴
-        given(reviewRepository.findByBookIdAndUserIdIncludeDeleted(any(), any())).willReturn(Optional.of(deletedReview));
-
-        given(reviewRepository.save(any(Review.class))).willReturn(review);
-        given(reviewMapper.toDto(any(), anyBoolean(), any()))
-                .willAnswer(invocation -> createReviewDto(invocation.getArgument(0), invocation.getArgument(1)));
-
-        //when
-        ReviewDto result = reviewService.createReview(createRequest);
-
-        //then
-        assertThat(deletedReview.getDeletedAt()).isNull();
-        assertThat(deletedReview.getContent()).isEqualTo(createRequest.content());
         then(reviewRepository).should().save(any(Review.class));
     }
 
@@ -233,14 +203,7 @@ public class ReviewServiceTest {
         //given
         given(userRepository.findById(any())).willReturn(Optional.of(user));
         given(bookRepository.findById(any())).willReturn(Optional.of(book));
-
-        Review existingReview = Review.builder()
-                .rating(5)
-                .content("exist")
-                .user(user)
-                .book(book)
-                .build();
-        given(reviewRepository.findByBookIdAndUserIdIncludeDeleted(createRequest.bookId(), createRequest.userId())).willReturn(Optional.of(existingReview));
+        given(reviewRepository.existsByBookIdAndUserId(book.getId(), user.getId())).willReturn(true);
 
         //when
         assertThatThrownBy(() -> reviewService.createReview(createRequest))

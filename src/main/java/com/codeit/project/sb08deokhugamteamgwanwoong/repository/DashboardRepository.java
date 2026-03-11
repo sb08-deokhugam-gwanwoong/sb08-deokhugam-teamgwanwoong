@@ -105,7 +105,7 @@ public interface DashboardRepository extends JpaRepository<Dashboard, UUID> {
 	    SELECT d FROM Dashboard d
 	    WHERE d.targetType = :targetType
 	      AND d.periodType = :periodType
-	      AND (:after IS NULL OR d.createdAt < :after OR (d.createdAt = :after AND d.rankingPos > :cursorRankingPos))
+	      AND (CAST(:after AS timestamp) IS NULL OR d.createdAt < :after OR (d.createdAt = :after AND d.rankingPos > :cursorRankingPos))
 	    ORDER BY d.createdAt DESC, d.rankingPos ASC
 	    """)
 	List<Dashboard> findRecentRankingsByCursorDesc(
@@ -121,7 +121,7 @@ public interface DashboardRepository extends JpaRepository<Dashboard, UUID> {
 	    SELECT d FROM Dashboard d
 	    WHERE d.targetType = :targetType
 	      AND d.periodType = :periodType
-	      AND (:after IS NULL OR d.createdAt > :after OR (d.createdAt = :after AND d.rankingPos > :cursorRankingPos))
+	      AND (CAST(:after AS timestamp) IS NULL OR d.createdAt > :after OR (d.createdAt = :after AND d.rankingPos > :cursorRankingPos))
 	    ORDER BY d.createdAt ASC, d.rankingPos ASC
 	    """)
 	List<Dashboard> findRecentRankingsByCursorAsc(
