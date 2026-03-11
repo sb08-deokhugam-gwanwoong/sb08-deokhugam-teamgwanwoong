@@ -45,20 +45,19 @@ public class CommentServiceImpl implements CommentService {
     log.info("[댓글 등록] 시작 - userId: {}, reviewId: {}", request.userId(), request.reviewId());
 
     User user = userRepository.findById(request.userId())
-        .orElseThrow(() -> new BusinessException(UserErrorCode.USER_NOT_FOUND));
+            .orElseThrow(() -> new BusinessException(UserErrorCode.USER_NOT_FOUND));
 
     Review review = reviewRepository.findById(request.reviewId())
-        .orElseThrow(() -> new BusinessException(ReviewErrorCode.REVIEW_NOT_FOUND));
+            .orElseThrow(() -> new BusinessException(ReviewErrorCode.REVIEW_NOT_FOUND));
 
     Comment comment = Comment.builder()
-        .content(request.content())
-        .user(user)
-        .review(review)
-        .build();
+            .content(request.content())
+            .user(user)
+            .review(review)
+            .build();
 
-    Comment savedComment = commentRepository.save(comment);
-
-    review.increaseCommentCount();
+    Comment savedComment = commentRepository.saveAndFlush(comment);
+    reviewRepository.increaseCommentCount(review.getId());
 
     User reviewAuthor = review.getUser();
     if (!reviewAuthor.getId().equals(user.getId())) {
@@ -76,14 +75,14 @@ public class CommentServiceImpl implements CommentService {
     log.info("[댓글 목록 조회] 시작 - 리뷰ID: {}, 커서: {}, 사이즈: {}", reviewId, cursor, size);
 
     Review review = reviewRepository.findById(reviewId)
-        .orElseThrow(() -> new BusinessException(ReviewErrorCode.REVIEW_NOT_FOUND));
+            .orElseThrow(() -> new BusinessException(ReviewErrorCode.REVIEW_NOT_FOUND));
 
     CommentSearchCondition condition = CommentSearchCondition.builder()
-        .reviewId(reviewId)
-        .cursor(cursor)  // String 타입
-        .after(after)    // Instant 타입
-        .limit(size)
-        .build();
+            .reviewId(reviewId)
+            .cursor(cursor)  // String 타입
+            .after(after)    // Instant 타입
+            .limit(size)
+            .build();
 
     List<Comment> comments = commentRepository.findAllByCursor(condition);
 
@@ -91,8 +90,8 @@ public class CommentServiceImpl implements CommentService {
     List<Comment> resultComments = hasNext ? comments.subList(0, size) : comments;
 
     List<CommentDto> content = resultComments.stream()
-        .map(commentMapper::toDto)
-        .toList();
+            .map(commentMapper::toDto)
+            .toList();
 
     String nextCursor = resultComments.isEmpty() ? null : resultComments.get(resultComments.size() - 1).getCreatedAt().toString();
     Instant nextAfter = resultComments.isEmpty() ? null : resultComments.get(resultComments.size() - 1).getCreatedAt();
@@ -100,12 +99,12 @@ public class CommentServiceImpl implements CommentService {
     log.info("[댓글 목록 조회] 완료 - 조회된 개수: {}, 다음 페이지 존재: {}", content.size(), hasNext);
 
     return new CursorPageResponseCommentDto(
-        content,
-        nextCursor,
-        nextAfter,
-        size,
-        review.getCommentCount().longValue(),
-        hasNext
+            content,
+            nextCursor,
+            nextAfter,
+            size,
+            review.getCommentCount().longValue(),
+            hasNext
     );
   }
 
@@ -141,7 +140,8 @@ public class CommentServiceImpl implements CommentService {
     validateCommentOwner(comment, userId, CommentErrorCode.COMMENT_DELETE_DENIED);
 
     comment.delete();
-    comment.getReview().decreaseCommentCount();
+    commentRepository.flush();
+    reviewRepository.decreaseCommentCount(comment.getReview().getId());
 
     log.info("[댓글 논리 삭제] 완료 - 댓글ID: {}", commentId);
   }
@@ -154,12 +154,13 @@ public class CommentServiceImpl implements CommentService {
     Comment comment = findComment(commentId);
     validateCommentOwner(comment, userId, CommentErrorCode.COMMENT_DELETE_DENIED);
 
+    commentRepository.delete(comment);
+    commentRepository.flush();
+
     //논리 삭제된 상태가 아닐 때만 감소시키려면 체크 로직 필요(중요)
     if (comment.getDeletedAt() == null) {
-      comment.getReview().decreaseCommentCount();
+      reviewRepository.decreaseCommentCount(comment.getReview().getId());
     }
-
-    commentRepository.delete(comment);
 
     log.info("[댓글 물리 삭제] 완료 - 댓글ID: {}", commentId);
   }
@@ -167,17 +168,17 @@ public class CommentServiceImpl implements CommentService {
   // 댓글 존재 여부 확인 공통 메서드
   private Comment findComment(UUID commentId) {
     return commentRepository.findById(commentId)
-        .orElseThrow(() -> {
-          log.warn("[조회 실패] 존재하지 않는 댓글 - 댓글ID: {}", commentId);
-          return new BusinessException(CommentErrorCode.COMMENT_NOT_FOUND);
-        });
+            .orElseThrow(() -> {
+              log.warn("[조회 실패] 존재하지 않는 댓글 - 댓글ID: {}", commentId);
+              return new BusinessException(CommentErrorCode.COMMENT_NOT_FOUND);
+            });
   }
 
   // 작성자 본인 확인 공통 메서드
   private void validateCommentOwner(Comment comment, UUID userId, CommentErrorCode errorCode) {
     if (!comment.getUser().getId().equals(userId)) {
       log.warn("[권한 거부] 작성자 불일치 - 댓글ID: {}, 요청유저: {}, 실제작성자: {}",
-          comment.getId(), userId, comment.getUser().getId());
+              comment.getId(), userId, comment.getUser().getId());
       throw new BusinessException(errorCode);
     }
   }

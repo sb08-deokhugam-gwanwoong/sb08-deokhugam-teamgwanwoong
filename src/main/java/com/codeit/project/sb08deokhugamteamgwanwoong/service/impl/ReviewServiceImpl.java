@@ -160,9 +160,7 @@ public class ReviewServiceImpl implements ReviewService {
 
             if (exisstingReview.getDeletedAt() == null) {
                 throw new BusinessException(ReviewErrorCode.REVIEW_ALREADY_EXISTS);
-            }
-
-            else {
+            } else {
                 exisstingReview.restore(request.rating(), request.content());
                 savedReview = reviewRepository.save(exisstingReview);
             }
@@ -196,15 +194,17 @@ public class ReviewServiceImpl implements ReviewService {
         boolean isLikedNow;
         if (existingReviewLike.isPresent()) {
             reviewLikeRepository.delete(existingReviewLike.get());
-            review.decreaseLikeCount();
+            reviewLikeRepository.flush();
+
+            reviewRepository.decreaseLikeCount(reviewId);
             isLikedNow = false;
         } else {
             ReviewLike newReviewLike = ReviewLike.builder()
                     .review(review)
                     .user(user)
                     .build();
-            reviewLikeRepository.save(newReviewLike);
-            review.increaseLikeCount();
+            reviewLikeRepository.saveAndFlush(newReviewLike);
+            reviewRepository.increaseLikeCount(reviewId);
             isLikedNow = true;
 
             User toUser = review.getUser(); // 리뷰 작성자
@@ -290,7 +290,7 @@ public class ReviewServiceImpl implements ReviewService {
 
         //가짜 프록시가 아닌 확실한 Book을 조회해서 가져옴
         Book book = bookRepository.findById(review.getBook().getId())
-                        .orElseThrow(() -> new BusinessException(BookErrorCode.BOOK_NOT_FOUND));
+                .orElseThrow(() -> new BusinessException(BookErrorCode.BOOK_NOT_FOUND));
 
         book.removeReviewRating(review.getRating());
 

@@ -270,6 +270,8 @@ public class ReviewServiceTest {
         //then
         assertThat(result.liked()).isFalse();
         then(reviewLikeRepository).should().delete(exitingReviewLike);
+        then(reviewLikeRepository).should().flush();
+        then(reviewRepository).should().decreaseLikeCount(review.getId());
         then(notificationService).should(never()).createNotification(any(), any(), any());
     }
 
@@ -287,7 +289,8 @@ public class ReviewServiceTest {
 
         //then
         assertThat(result.liked()).isTrue();
-        then(reviewLikeRepository).should().save(any(ReviewLike.class));
+        then(reviewLikeRepository).should().saveAndFlush(any(ReviewLike.class));
+        then(reviewRepository).should().increaseLikeCount(review.getId());
         then(notificationService).should(never()).createNotification(any(), any(), any());
     }
 
@@ -305,7 +308,8 @@ public class ReviewServiceTest {
 
         //then
         assertThat(result.liked()).isTrue();
-        then(reviewLikeRepository).should().save(any(ReviewLike.class));
+        then(reviewLikeRepository).should().saveAndFlush(any(ReviewLike.class));
+        then(reviewRepository).should().increaseLikeCount(review.getId());
         then(notificationService).should().createNotification(any(), any(), anyString());
     }
 
