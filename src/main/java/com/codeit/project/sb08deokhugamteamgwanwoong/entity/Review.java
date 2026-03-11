@@ -70,26 +70,6 @@ public class Review extends BaseRemovableEntity {
         this.book = book;
     }
 
-    public void increaseLikeCount() {
-        this.likeCount++;
-    }
-
-    public void decreaseLikeCount() {
-        if (this.likeCount > 0) {
-            this.likeCount--;
-        }
-    }
-
-    public void increaseCommentCount() {
-        this.commentCount++;
-    }
-
-    public void decreaseCommentCount() {
-        if (this.commentCount > 0) {
-            this.commentCount--;
-        }
-    }
-
     public void update(Integer newRating, String newContent) {
         if (newRating != null) {
             this.rating = newRating;
