@@ -130,4 +130,15 @@ public class BookController implements BookApi {
 
     return ResponseEntity.status(HttpStatus.OK).body(responseDto);
   }
+
+  @PostMapping("/isbn/ocr")
+  public ResponseEntity<String> getBookInfoByImage(
+      @RequestParam("image") MultipartFile image
+  ) {
+    log.info("도서 이미지의 바코드/텍스트로 ISBN을 추출 요청");
+    String isbn = bookService.getBookInfoByImage(image);
+
+    // 200 ok와 함께 ISBN 문자열 반환
+    return ResponseEntity.ok(isbn);
+  }
 }
