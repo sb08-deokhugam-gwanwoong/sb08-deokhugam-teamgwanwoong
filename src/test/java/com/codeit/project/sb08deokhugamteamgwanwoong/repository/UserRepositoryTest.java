@@ -115,7 +115,7 @@ public class UserRepositoryTest extends RepositoryTestSupport {
     em.clear();
 
     // When
-    Optional<User> result = userRepository.findByEmailAndPasswordAndDeletedAtIsNull(email, password);
+    Optional<User> result = userRepository.findByEmailAndDeletedAtIsNull(email);
 
     // Then
     assertThat(result).isPresent(); // 결과가 존재하는가
@@ -135,7 +135,7 @@ public class UserRepositoryTest extends RepositoryTestSupport {
     String password = "nonPassword1234!";
 
     // When
-    Optional<User> result = userRepository.findByEmailAndPasswordAndDeletedAtIsNull(nonExistentEmail, password);
+    Optional<User> result = userRepository.findByEmailAndDeletedAtIsNull(nonExistentEmail);
 
     // Then
     assertThat(result).isEmpty();

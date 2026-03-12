@@ -16,6 +16,7 @@ import java.util.List;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -27,6 +28,7 @@ public class UserServiceImpl implements UserService {
 
   private final UserRepository userRepository;
   private final UserMapper userMapper;
+  private final PasswordEncoder passwordEncoder;
 
   /**
    * 회원가입
@@ -45,7 +47,8 @@ public class UserServiceImpl implements UserService {
     User user = User.builder()
         .email(request.email())
         .nickname(request.nickname())
-        .password(request.password())
+        // 비밀번호 암호화
+        .password(passwordEncoder.encode(request.password()))
         .build();
 
     User savedUser = userRepository.save(user);
@@ -65,11 +68,17 @@ public class UserServiceImpl implements UserService {
 
     log.info("[로그인 시작] email: {}", request.email());
 
-    User user = userRepository.findByEmailAndPasswordAndDeletedAtIsNull(request.email(), request.password())
+    User user = userRepository.findByEmailAndDeletedAtIsNull(request.email())
         .orElseThrow(() -> {
-          log.warn("[로그인 실패] 이메일 또는 비밀번호가 일치하지 않습니다. email: {}", request.email());
+          log.warn("[로그인 실패] 이메일이 일치하지 않습니다. email: {}", request.email());
           return new BusinessException(UserErrorCode.LOGIN_FAILED);
         });
+
+    // matches()로 비밀번호 일치 여부 확인
+    if(!passwordEncoder.matches(request.password(), user.getPassword())) {
+      log.warn("[로그인 실패] 비밀번호가 일치하지 않습니다. email: {}", request.password());
+      throw new BusinessException(UserErrorCode.LOGIN_FAILED);
+    }
 
     log.info("[로그인 성공] userId: {}, email: {}", user.getId(), user.getEmail());
 
