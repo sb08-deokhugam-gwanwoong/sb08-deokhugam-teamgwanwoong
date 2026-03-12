@@ -25,6 +25,7 @@ import com.codeit.project.sb08deokhugamteamgwanwoong.exception.enums.BookErrorCo
 import com.codeit.project.sb08deokhugamteamgwanwoong.exception.enums.GlobalErrorCode;
 import com.codeit.project.sb08deokhugamteamgwanwoong.mapper.BookMapper;
 import com.codeit.project.sb08deokhugamteamgwanwoong.repository.BookRepository;
+import com.codeit.project.sb08deokhugamteamgwanwoong.service.external.OcrSpaceBookProvider;
 import com.codeit.project.sb08deokhugamteamgwanwoong.service.external.S3Uploader;
 import com.codeit.project.sb08deokhugamteamgwanwoong.service.impl.BookServiceImpl;
 import java.time.Instant;
@@ -65,6 +66,9 @@ public class BookServiceTest {
 
   @Mock
   private S3Uploader s3Uploader;
+
+  @Mock
+  private OcrSpaceBookProvider ocrSpaceBookProvider;
 
   @Spy
   private BookMapper bookMapper = Mappers.getMapper(BookMapper.class);
@@ -830,5 +834,65 @@ public class BookServiceTest {
 
     book.updateReviewRating(4, 5); // 4 -> 5로 수정 (총점 9)
     assertThat(book.getRating()).isEqualTo(4.5);
+  }
+
+  /*
+  * 도서 이미지 기반 ISBN 조회 테스트
+  * */
+  @DisplayName("이미지 파일을 받으면 Base64로 변환하여 OCR Provider를 호출하고 ISBN을 반환한다.")
+  @Test
+  void getBookInfoByImage_Success() throws Exception {
+    // given
+    byte[] imageBytes = "dummy image content".getBytes();
+    MockMultipartFile image = new MockMultipartFile(
+        "image", "barcode.png", "image/png", imageBytes
+    );
+
+    String expectedIsbn = "9788994492032";
+
+    // Service에서는 순수하게 Provider 호출만 mocking
+    given(ocrSpaceBookProvider.getBookMetadata(anyString())).willReturn(expectedIsbn);
+
+    // when
+    String isbn = bookService.getBookInfoByImage(image);
+
+    // then
+    assertThat(isbn).isEqualTo(expectedIsbn);
+    verify(ocrSpaceBookProvider).getBookMetadata(anyString());
+  }
+
+  @DisplayName("입력된 이미지 파일이 null이거나 비어있으면 INVALID_INPUT 에러를 던진다.")
+  @Test
+  void getBookInfoByImage_Fail_EmptyImage() {
+    // given
+    MockMultipartFile emptyImage = new MockMultipartFile(
+        "image", "empty.png", "image/png", new byte[0]
+    );
+
+    // when & then
+    assertThatThrownBy(() -> bookService.getBookInfoByImage(emptyImage))
+        .isInstanceOf(BusinessException.class)
+        .hasMessageContaining("이미지 파일이 비어있습니다.")
+        .extracting("errorCode").isEqualTo(GlobalErrorCode.INVALID_INPUT);
+
+    // Provider가 절대 호출되지 않아야 함 검증
+    verify(ocrSpaceBookProvider, never()).getBookMetadata(anyString());
+  }
+
+  @DisplayName("이미지 처리 중 Provider에서 에러가 발생하면 그대로 예외를 던지거나 감싸서 던진다.")
+  @Test
+  void getBookInfoByImage_Fail_InternalError() {
+    // given
+    MockMultipartFile image = new MockMultipartFile(
+        "image", "barcode.png", "image/png", "dummy".getBytes()
+    );
+
+    // Provider에서 에러 발생 가정
+    given(ocrSpaceBookProvider.getBookMetadata(anyString()))
+        .willThrow(new BusinessException(GlobalErrorCode.INTERNAL_SERVER_ERROR));
+
+    // when & then
+    assertThatThrownBy(() -> bookService.getBookInfoByImage(image))
+        .isInstanceOf(BusinessException.class);
   }
 }

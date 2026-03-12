@@ -14,6 +14,7 @@ import com.codeit.project.sb08deokhugamteamgwanwoong.exception.enums.GlobalError
 import com.codeit.project.sb08deokhugamteamgwanwoong.mapper.BookMapper;
 import com.codeit.project.sb08deokhugamteamgwanwoong.repository.BookRepository;
 import com.codeit.project.sb08deokhugamteamgwanwoong.service.BookService;
+import com.codeit.project.sb08deokhugamteamgwanwoong.service.external.BookMetadataProvider;
 import com.codeit.project.sb08deokhugamteamgwanwoong.service.external.S3Uploader;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -49,6 +50,7 @@ public class BookServiceImpl implements BookService {
   private final BookRepository bookRepository;
   private final BookMapper bookMapper;
   private final S3Uploader s3Uploader;
+  private final BookMetadataProvider<String> ocrSpaceBookProvider;
 
   @Value(NAVER_CLIENT_ID)
   private String naverClientId;
@@ -277,6 +279,26 @@ public class BookServiceImpl implements BookService {
       throw new BusinessException(GlobalErrorCode.INTERNAL_SERVER_ERROR, "네이버 도서 정보를 가져오는 중 서버 오류가 발생했습니다.");
     }
 
+  }
+
+  @Override
+  public String getBookInfoByImage(MultipartFile image) {
+    if (image == null || image.isEmpty()) {
+      throw new BusinessException(GlobalErrorCode.INVALID_INPUT, "이미지 파일이 비어있습니다.");
+    }
+
+    try {
+      // 1. 이미지를 Base64 문자열로 변환
+      String base64Content = Base64.getEncoder().encodeToString(image.getBytes());
+      String mimeType = image.getContentType();
+      String base64Image = "data:" + mimeType + ";base64,"+ base64Content;
+
+      // 2. 외부 API 호출 담당 Provider에 위임
+      return ocrSpaceBookProvider.getBookMetadata(base64Image);
+
+    } catch (Exception e) {
+      throw new BusinessException(GlobalErrorCode.INTERNAL_SERVER_ERROR, "이미지 처리 중 서버 오류가 발생했습니다.");
+    }
   }
 
   private Book createBookEntity(BookCreateRequest request, String thumbnailUrl) {
