@@ -18,4 +18,5 @@ public interface BookService {
   void hardDeleteBook(UUID bookId);
   CursorPageResponseBookDto searchBooks(BookPageRequest request);
   NaverBookDto getBookInfoByIsbn(String isbn);
+  String getBookInfoByImage(MultipartFile image);
 }
