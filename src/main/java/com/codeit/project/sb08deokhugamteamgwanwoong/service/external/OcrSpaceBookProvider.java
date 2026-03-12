@@ -65,7 +65,8 @@ public class OcrSpaceBookProvider implements BookMetadataProvider<String> {
         HttpEntity<MultiValueMap<String, String>> entity = new HttpEntity<>(body, headers);
 
         try {
-            ResponseEntity<String> response = restTemplate.postForEntity(apiUrl, entity, String.class);
+            ResponseEntity<String> response = restTemplate.postForEntity(apiUrl, entity,
+                String.class);
 
             JsonNode root = objectMapper.readTree(response.getBody());
             JsonNode parseResults = root.path("ParsedResults");
@@ -75,7 +76,13 @@ public class OcrSpaceBookProvider implements BookMetadataProvider<String> {
                 return extractIsbn(parsedText);
             }
             throw new BusinessException(BookErrorCode.OCR_TEXT_NOT_FOUND);
+        } catch (BusinessException e) {
+            throw e;
+        } catch (RestClientException | IOException e) {
+            // OCR 전용 에러
+            throw new BusinessException(BookErrorCode.OCR_SERVER_ERROR);
         } catch (Exception e) {
+            // 그 외 정말 모르는 에러만 500 에러처리
             throw new BusinessException(GlobalErrorCode.INTERNAL_SERVER_ERROR, "이미지에서 바코드를 인식하는 중 서버 오류가 발생했습니다.");
         }
     }
