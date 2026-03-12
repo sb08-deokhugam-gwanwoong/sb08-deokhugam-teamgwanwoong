@@ -112,4 +112,14 @@ public interface BookApi {
   ResponseEntity<NaverBookDto> getBookInfoByIsbn(
       @Parameter(description = "ISBN 번호", required = true, example = "9788965402602") @RequestParam("isbn") String isbn
   );
+
+  @Operation(summary = "OCR 기반 ISBN 인식", description = "OCR을 통해 도서 뒷면의 바코드 이미지에서 ISBN을 인식하여 추출합니다.")
+  @ApiResponses(value = {
+      @ApiResponse(responseCode = "200", description = "ISBN 인식 성공", content = @Content(schema = @Schema(implementation = String.class))),
+      @ApiResponse(responseCode = "400", description = "잘못된 이미지 형식, 파일 누락 또는 OCR 인식 실패", content = @Content(schema = @Schema(implementation = String.class))),
+      @ApiResponse(responseCode = "500", description = "서버 내부 오류", content = @Content(schema = @Schema(implementation = String.class)))
+  })
+  ResponseEntity<String> getBookInfoByImage(
+      @Parameter(description = "도서 바코드 이미지 파일", required = true) @RequestParam("image") MultipartFile image
+  );
 }
