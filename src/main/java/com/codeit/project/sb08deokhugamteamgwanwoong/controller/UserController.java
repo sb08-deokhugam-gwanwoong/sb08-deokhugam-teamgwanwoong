@@ -5,6 +5,7 @@ import com.codeit.project.sb08deokhugamteamgwanwoong.dto.dashboard.CursorPageRes
 import com.codeit.project.sb08deokhugamteamgwanwoong.dto.dashboard.DashboardPageRequest;
 import com.codeit.project.sb08deokhugamteamgwanwoong.dto.user.UserDto;
 import com.codeit.project.sb08deokhugamteamgwanwoong.dto.user.UserLoginRequest;
+import com.codeit.project.sb08deokhugamteamgwanwoong.dto.user.UserPasswordUpdateRequest;
 import com.codeit.project.sb08deokhugamteamgwanwoong.dto.user.UserRegisterRequest;
 import com.codeit.project.sb08deokhugamteamgwanwoong.dto.user.UserUpdateRequest;
 import com.codeit.project.sb08deokhugamteamgwanwoong.service.DashboardService;
@@ -15,6 +16,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.ModelAttribute;
+import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -59,6 +61,14 @@ public class UserController implements UserApi {
     UserDto response = userService.update(userId, request);
 
     return ResponseEntity.ok(response);
+  }
+
+  @Override
+  public ResponseEntity<Void> updatePassword(@PathVariable UUID userId, @RequestBody @Valid UserPasswordUpdateRequest request) {
+
+    userService.updatePassword(userId, request);
+
+    return ResponseEntity.noContent().build();
   }
 
   @Override

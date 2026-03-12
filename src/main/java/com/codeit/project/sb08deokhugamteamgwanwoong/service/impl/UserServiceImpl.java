@@ -2,6 +2,7 @@ package com.codeit.project.sb08deokhugamteamgwanwoong.service.impl;
 
 import com.codeit.project.sb08deokhugamteamgwanwoong.dto.user.UserDto;
 import com.codeit.project.sb08deokhugamteamgwanwoong.dto.user.UserLoginRequest;
+import com.codeit.project.sb08deokhugamteamgwanwoong.dto.user.UserPasswordUpdateRequest;
 import com.codeit.project.sb08deokhugamteamgwanwoong.dto.user.UserRegisterRequest;
 import com.codeit.project.sb08deokhugamteamgwanwoong.dto.user.UserUpdateRequest;
 import com.codeit.project.sb08deokhugamteamgwanwoong.entity.User;
@@ -126,6 +127,28 @@ public class UserServiceImpl implements UserService {
     log.info("[유저 닉네임 수정 완료] userId: {}, nickname: {}", userId, user.getNickname());
 
     return userMapper.toDto(user);
+  }
+
+  /**
+   * 유저 비밀번호 수정
+   * @param userId  유저 Id
+   * @param request 유저 비밀번호 수정 요청 request
+   */
+  @Override
+  @Transactional
+  public void updatePassword(UUID userId, UserPasswordUpdateRequest request) {
+
+    log.info("[유저 비밀번호 수정 시작] userId: {}", userId);
+
+    User user = findUserById(userId, null);
+
+    if(!passwordEncoder.matches(request.currentPassword(), user.getPassword())) {
+      throw new BusinessException(UserErrorCode.WRONG_PASSWORD);
+    }
+
+    user.updatePassword(passwordEncoder.encode(request.newPassword()));
+
+    log.info("[유저 비밀번호 수정 완료] userId: {}, nickname: {}", userId, user.getNickname());
   }
 
   /**

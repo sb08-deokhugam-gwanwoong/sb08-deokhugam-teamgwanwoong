@@ -12,7 +12,8 @@ public enum UserErrorCode implements ErrorCode {
   EMAIL_ALREADY_EXISTS(1001, "EMAIL_ALREADY_EXISTS", HttpStatus.CONFLICT, "이미 존재하는 이메일입니다."),
   LOGIN_FAILED(1002, "LOGIN_FAILED", HttpStatus.UNAUTHORIZED, "이메일 또는 비밀번호가 일치하지 않습니다."),
   USER_NOT_FOUND(1003, "NOT_FOUND", HttpStatus.NOT_FOUND, "해당 유저가 존재하지 않습니다."),
-  NICKNAME_ALREADY_EXISTS(1004, "NICKNAME_ALREADY_EXISTS", HttpStatus.CONFLICT, "이미 존재하는 닉네임입니다.");
+  NICKNAME_ALREADY_EXISTS(1004, "NICKNAME_ALREADY_EXISTS", HttpStatus.CONFLICT, "이미 존재하는 닉네임입니다."),
+  WRONG_PASSWORD(1005, "WRONG_PASSWORD", HttpStatus.BAD_REQUEST, "현재 비밀번호가 일치하지 않습니다.");
 
   private final int numeric;
   private final String errorKey;
