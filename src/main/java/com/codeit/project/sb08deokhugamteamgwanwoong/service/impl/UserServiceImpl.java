@@ -9,6 +9,7 @@ import com.codeit.project.sb08deokhugamteamgwanwoong.entity.User;
 import com.codeit.project.sb08deokhugamteamgwanwoong.exception.BusinessException;
 import com.codeit.project.sb08deokhugamteamgwanwoong.exception.enums.UserErrorCode;
 import com.codeit.project.sb08deokhugamteamgwanwoong.mapper.UserMapper;
+import com.codeit.project.sb08deokhugamteamgwanwoong.repository.ReviewRepository;
 import com.codeit.project.sb08deokhugamteamgwanwoong.repository.UserRepository;
 import com.codeit.project.sb08deokhugamteamgwanwoong.service.UserService;
 import java.time.Duration;
@@ -28,6 +29,7 @@ import org.springframework.transaction.annotation.Transactional;
 public class UserServiceImpl implements UserService {
 
   private final UserRepository userRepository;
+  private final ReviewRepository reviewRepository;
   private final UserMapper userMapper;
   private final PasswordEncoder passwordEncoder;
 
@@ -181,6 +183,8 @@ public class UserServiceImpl implements UserService {
     User user = findUserById(userId, "hard");
 
     userRepository.delete(user);
+
+    reviewRepository.syncAllReviewCommentCounts();
 
     log.info("[유저 물리 삭제 완료] userId: {}", userId);
   }
