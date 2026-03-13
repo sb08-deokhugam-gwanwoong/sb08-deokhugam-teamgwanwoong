@@ -1,4 +1,6 @@
 spring:
+  mail:
+    host: smtp.gmail.com
   application:
     name: SB08-Deokhugam-teamGwanwoong
   profiles:

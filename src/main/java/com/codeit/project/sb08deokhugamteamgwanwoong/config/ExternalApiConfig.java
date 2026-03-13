@@ -23,10 +23,10 @@ public class ExternalApiConfig {
 
     @Bean
     public CacheManager cacheManager() {
-        CaffeineCacheManager cacheManager = new CaffeineCacheManager("bookMetadata", "ocrIsbn");
+        CaffeineCacheManager cacheManager = new CaffeineCacheManager("bookMetadata", "ocrIsbn", "verificationCodes");
         cacheManager.setCaffeine(Caffeine.newBuilder()
             .expireAfterWrite(10, TimeUnit.MINUTES) // 10분 후 만료
-            .maximumSize(100) // 최대 100개 항목 저장
+            .maximumSize(300) // 최대 300개 항목 저장
             .recordStats());
         return cacheManager;
     }
