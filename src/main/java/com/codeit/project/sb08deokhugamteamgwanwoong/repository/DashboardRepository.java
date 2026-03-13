@@ -51,7 +51,7 @@ public interface DashboardRepository extends JpaRepository<Dashboard, UUID> {
 		""", nativeQuery = true)
 	int insertPopularReviews(@Param("since") Instant since, @Param("periodType") String periodType);
 
-	/** 파워 유저 배치: SQL에서 점수 계산 + RANK() OVER로 ranking_pos 산출 후 INSERT */
+	/** 파워 유저 배치: 탈퇴 유저 제외, 점수 계산 + RANK() OVER로 ranking_pos 산출 후 INSERT */
 	@Modifying
 	@Query(value = """
 		WITH review_scores AS (
@@ -70,10 +70,14 @@ public interface DashboardRepository extends JpaRepository<Dashboard, UUID> {
 		  UNION SELECT user_id FROM like_counts
 		  UNION SELECT user_id FROM comment_counts
 		),
+		active_users AS (
+		  SELECT au.user_id FROM all_users au
+		  JOIN users u ON u.id = au.user_id AND u.deleted_at IS NULL
+		),
 		user_scores AS (
 		  SELECT u.user_id,
 		    COALESCE(r.review_score_sum, 0) * 0.5 + COALESCE(l.cnt, 0) * 0.2 + COALESCE(c.cnt, 0) * 0.3 AS score
-		  FROM all_users u
+		  FROM active_users u
 		  LEFT JOIN review_scores r ON u.user_id = r.user_id
 		  LEFT JOIN like_counts l ON u.user_id = l.user_id
 		  LEFT JOIN comment_counts c ON u.user_id = c.user_id
@@ -137,5 +141,11 @@ public interface DashboardRepository extends JpaRepository<Dashboard, UUID> {
 	void deleteByTargetTypeAndPeriodType(
 			@Param("targetType") DashboardTargetType targetType,
 			@Param("periodType") DashboardPeriodEnums periodType
+	);
+
+	/** 인기 리뷰 10위 내 알림용 조회 */
+	List<Dashboard> findTop10ByTargetTypeAndPeriodTypeOrderByRankingPosAsc(
+			DashboardTargetType targetType,
+			DashboardPeriodEnums periodType
 	);
 }
