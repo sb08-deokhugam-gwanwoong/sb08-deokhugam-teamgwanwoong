@@ -53,4 +53,8 @@ public interface ReviewRepository extends JpaRepository<Review, UUID>, ReviewRep
     void decreaseLikeCount(@Param("reviewId") UUID reviewId);
 
     boolean existsByBookIdAndUserId(UUID bookId, UUID userId);
+
+    @Modifying(clearAutomatically = true)
+    @Query("UPDATE Review r SET r.commentCount = (SELECT COUNT(c) FROM Comment c WHERE c.review.id = r.id AND c.deletedAt is NUll)")
+    void syncAllReviewCommentCounts();
 }
