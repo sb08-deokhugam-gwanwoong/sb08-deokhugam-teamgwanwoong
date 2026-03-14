@@ -1,6 +1,9 @@
 package com.codeit.project.sb08deokhugamteamgwanwoong.service.impl;
 
 import com.codeit.project.sb08deokhugamteamgwanwoong.dto.review.*;
+import com.codeit.project.sb08deokhugamteamgwanwoong.dto.review.event.ReviewCreatedEvent;
+import com.codeit.project.sb08deokhugamteamgwanwoong.dto.review.event.ReviewDeletedEvent;
+import com.codeit.project.sb08deokhugamteamgwanwoong.dto.review.event.ReviewUpdatedEvent;
 import com.codeit.project.sb08deokhugamteamgwanwoong.entity.Book;
 import com.codeit.project.sb08deokhugamteamgwanwoong.entity.Review;
 import com.codeit.project.sb08deokhugamteamgwanwoong.entity.ReviewLike;
@@ -16,17 +19,18 @@ import com.codeit.project.sb08deokhugamteamgwanwoong.service.NotificationService
 import com.codeit.project.sb08deokhugamteamgwanwoong.service.ReviewService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
+import org.springframework.data.elasticsearch.core.SearchHit;
+import org.springframework.data.elasticsearch.core.SearchHits;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
-import java.util.List;
-import java.util.Optional;
-import java.util.Set;
-import java.util.UUID;
+import java.util.*;
+import java.util.stream.Collectors;
 
 @Slf4j
 @RequiredArgsConstructor
@@ -46,10 +50,13 @@ public class ReviewServiceImpl implements ReviewService {
 
     private final NotificationService notificationService;
 
+    // 이벤트 발행을 위한 객체 추가
+    private final ApplicationEventPublisher eventPublisher;
+
+    private final ReviewSearchRepository reviewSearchRepository;
+
     @Override
     public CursorPageResponseReviewDto findAllReview(ReviewPageRequest request, UUID requestUserId) {
-        log.info("Service: 리뷰 목록 커서 페이징 조회 시작");
-
         // 기본 정렬 방향 및 기준 세팅
         /* 정렬 기준
             orderBy: createAt(기본) || rating
@@ -81,23 +88,30 @@ public class ReviewServiceImpl implements ReviewService {
                 .direction(direction)
                 .build();
 
-        List<Review> reviewList = reviewRepository.findAllByCursor(
-                condition,
-                pageable
-        );
+        log.info("Service: [ES] 리뷰 목록 커서 페이징 조회 시작");
+        SearchHits<ReviewDocument> searchHits = reviewSearchRepository.searchByCursor(condition, pageable);
 
-        // Slice
-        boolean hasNext = false;
-        if (reviewList.size() > limit) {
-            hasNext = true;
-            reviewList.remove(reviewList.size() - 1);
-        }
-
-        List<UUID> reviewIds = reviewList.stream()
-                .map(Review::getId)
+        List<ReviewDocument> reviewDocumentList = searchHits.getSearchHits().stream()
+                .map(hit -> hit.getContent())
                 .toList();
 
-        // 요청자가 좋아요를 누른 것을 확인할 수 있는 로직
+        // Slice 처리 로직
+        boolean hasNext = false;
+        if (reviewDocumentList.size() > limit) {
+            hasNext = true;
+            reviewDocumentList = reviewDocumentList.subList(0, limit);
+        }
+
+        // SearchHit 안에서 ID 추출
+        List<UUID> reviewIds = reviewDocumentList.stream()
+                .map(doc -> UUID.fromString(doc.getId()))
+                .toList();
+
+        List<Review> actualReviews = reviewRepository.findAllById(reviewIds);
+
+        Map<UUID, Review> reviewMap = actualReviews.stream()
+                .collect(Collectors.toMap(Review::getId, r -> r));
+
         Set<UUID> likedReviewIds;
         if (reviewIds.isEmpty()) {
             likedReviewIds = Set.of();
@@ -105,12 +119,23 @@ public class ReviewServiceImpl implements ReviewService {
             likedReviewIds = reviewLikeRepository.findLikedReviewIds(requestUserId, reviewIds);
         }
 
-        // 전체 리뷰 목록을 가져와서 맵핑
-        List<ReviewDto> reviewDtoList = reviewList.stream()
-                .map(review -> {
-                    boolean isLiked = likedReviewIds.contains(review.getId());
-                    return reviewMapper.toDto(review, isLiked, review.getBook().getThumbnailUrl());
+        // 최종 DTO 변환 (ES 데이터를 프론트 응답 DTO로 매핑)
+        List<ReviewDto> reviewDtoList = reviewDocumentList.stream()
+                .map(doc -> {
+                    UUID id = UUID.fromString(doc.getId());
+                    Review actualReview = reviewMap.get(id);
+
+                    if (actualReview == null) return null;
+
+                    boolean isLiked = likedReviewIds.contains(id);
+
+                    return reviewMapper.toDto(
+                            actualReview,
+                            isLiked,
+                            actualReview.getBook().getThumbnailUrl()
+                    );
                 })
+                .filter(Objects::nonNull)
                 .toList();
 
         String nextCursor = null;
@@ -129,8 +154,6 @@ public class ReviewServiceImpl implements ReviewService {
             }
         }
 
-        log.info("Service: 리뷰 목록 커서 페이징 조회 완료 - 반환 개수: {}, hasNext: {}", reviewDtoList.size(), hasNext);
-
         return new CursorPageResponseReviewDto(
                 reviewDtoList,
                 nextCursor,
@@ -140,6 +163,100 @@ public class ReviewServiceImpl implements ReviewService {
                 hasNext
         );
     }
+//    @Override
+//    public CursorPageResponseReviewDto findAllReview(ReviewPageRequest request, UUID requestUserId) {
+//        log.info("Service: 리뷰 목록 커서 페이징 조회 시작");
+//
+//        // 기본 정렬 방향 및 기준 세팅
+//        /* 정렬 기준
+//            orderBy: createAt(기본) || rating
+//            direction: DESC(기본) || ASC
+//         */
+//        String orderBy = request.orderBy() == null || request.orderBy().isEmpty() ? "createdAt" : request.orderBy();
+//        String directionStr = request.direction() == null || request.direction().isBlank() ? "DESC" : request.direction();
+//        // 대소문자 상관 없이 Sort.Direction.DESC, Sort.Direction.ASC 만들어 줌
+//        Sort.Direction direction = Sort.Direction.fromString(directionStr);
+//
+//        // limit + 1 개수 만큼 조회하기 위한 Pageable
+//        int limit = request.limit();
+//        Pageable pageable = PageRequest.of(0, limit + 1);
+//
+//        // String to Instant
+//        Instant afterInstant = null;
+//        if (request.after() != null && !request.after().isBlank()) {
+//            afterInstant = Instant.parse(request.after());
+//        }
+//
+//        // 정렬 조건(Dto)
+//        ReviewSearchCondition condition = ReviewSearchCondition.builder()
+//                .userId(request.userId())
+//                .bookId(request.bookId())
+//                .keyword(request.keyword())
+//                .cursor(request.cursor())
+//                .after(afterInstant)
+//                .orderBy(orderBy)
+//                .direction(direction)
+//                .build();
+//
+//        List<Review> reviewList = reviewRepository.findAllByCursor(
+//                condition,
+//                pageable
+//        );
+//
+//        // Slice
+//        boolean hasNext = false;
+//        if (reviewList.size() > limit) {
+//            hasNext = true;
+//            reviewList.remove(reviewList.size() - 1);
+//        }
+//
+//        List<UUID> reviewIds = reviewList.stream()
+//                .map(Review::getId)
+//                .toList();
+//
+//        // 요청자가 좋아요를 누른 것을 확인할 수 있는 로직
+//        Set<UUID> likedReviewIds;
+//        if (reviewIds.isEmpty()) {
+//            likedReviewIds = Set.of();
+//        } else {
+//            likedReviewIds = reviewLikeRepository.findLikedReviewIds(requestUserId, reviewIds);
+//        }
+//
+//        // 전체 리뷰 목록을 가져와서 맵핑
+//        List<ReviewDto> reviewDtoList = reviewList.stream()
+//                .map(review -> {
+//                    boolean isLiked = likedReviewIds.contains(review.getId());
+//                    return reviewMapper.toDto(review, isLiked, review.getBook().getThumbnailUrl());
+//                })
+//                .toList();
+//
+//        String nextCursor = null;
+//        String nextAfter = null;
+//
+//        if (!reviewDtoList.isEmpty()) {
+//            // 기존 limit + 1로 가져와서 -1 해줘야 함
+//            ReviewDto lastReviewDto = reviewDtoList.get(reviewDtoList.size() - 1);
+//            nextAfter = lastReviewDto.createdAt().toString();
+//
+//            // 커서 기준: rating || createdAt
+//            if ("rating".equals(orderBy)) {
+//                nextCursor = String.valueOf(lastReviewDto.rating());
+//            } else {
+//                nextCursor = lastReviewDto.createdAt().toString();
+//            }
+//        }
+//
+//        log.info("Service: 리뷰 목록 커서 페이징 조회 완료 - 반환 개수: {}, hasNext: {}", reviewDtoList.size(), hasNext);
+//
+//        return new CursorPageResponseReviewDto(
+//                reviewDtoList,
+//                nextCursor,
+//                nextAfter,
+//                limit,
+//                null,
+//                hasNext
+//        );
+//    }
 
     @Override
     @Transactional
@@ -170,6 +287,8 @@ public class ReviewServiceImpl implements ReviewService {
         book.addReviewRating(request.rating());
 
         log.info("Service: 리뷰 생성 성공 - ID: {}", savedReview.getId());
+
+        eventPublisher.publishEvent(new ReviewCreatedEvent(savedReview));
 
         return reviewMapper.toDto(savedReview, false, book.getThumbnailUrl());
     }
@@ -243,6 +362,8 @@ public class ReviewServiceImpl implements ReviewService {
 
         reviewLikeRepository.hardDeleteAllByReviewId(reviewId);
 
+        eventPublisher.publishEvent(new ReviewDeletedEvent(reviewId));
+
         log.info("Service: 리뷰 논리 삭제 로직 성공 - reviewId: {}, requestUserId: {}", reviewId, requestUserId);
     }
 
@@ -263,6 +384,8 @@ public class ReviewServiceImpl implements ReviewService {
         }
 
         log.info("Service: 리뷰 수정 완료 - ID: {}", reviewId);
+
+        eventPublisher.publishEvent(new ReviewUpdatedEvent(review));
 
         return reviewMapper.toDto(review, findIsLiked(reviewId, requestUserId), review.getBook().getThumbnailUrl());
     }
@@ -290,6 +413,8 @@ public class ReviewServiceImpl implements ReviewService {
 
         // @SQLRestriction을 통해서 deleted_at이 null이 아닌 경우 삭제 시 해당 Review를 찾을 수 없음
         reviewRepository.hardDeleteById(reviewId);
+
+        eventPublisher.publishEvent(new ReviewDeletedEvent(reviewId));
 
         log.info("Service: 리뷰 물리 삭제 로직 성공 - reviewId: {}, requestUserId: {}", reviewId, requestUserId);
     }

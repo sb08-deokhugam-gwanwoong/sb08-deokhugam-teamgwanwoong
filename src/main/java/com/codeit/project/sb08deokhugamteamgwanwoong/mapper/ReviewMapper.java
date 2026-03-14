@@ -8,6 +8,7 @@ import org.mapstruct.Mapping;
 @Mapper(componentModel = "spring")
 public interface ReviewMapper {
 
+    // 기본 조회용
     @Mapping(source = "review.book.id", target = "bookId")
     @Mapping(source = "review.book.title", target = "bookTitle")
     @Mapping(source = "thumbnail", target = "bookThumbnailUrl")
