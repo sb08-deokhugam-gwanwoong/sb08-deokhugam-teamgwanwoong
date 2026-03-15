@@ -19,7 +19,7 @@ public class LogBackupScheduler {
   // logback-spring.xml에 설정한 디렉토리 및 파일 네이밍 규칙
   private static final String LOG_DIR = "./logs";
   private static final String LOG_FILE_PREFIX = "app-";
-  private static final String LOG_FILE_EXTNENSION = ".log";
+  private static final String LOG_FILE_EXTENSION = ".log";
 
   @Scheduled(cron = "0 5 0 * * *")
   public void backupYesterdayLog() {
@@ -30,7 +30,7 @@ public class LogBackupScheduler {
     String formattedDate = yesterday.format(DateTimeFormatter.ofPattern("yyyy-MM-dd"));
 
     // 타겟 파일 객체 생성 ( ./logs/app-2026-03-13.log)
-    String fileName = LOG_FILE_PREFIX + formattedDate + LOG_FILE_EXTNENSION;
+    String fileName = LOG_FILE_PREFIX + formattedDate + LOG_FILE_EXTENSION;
     File logFile = new File(LOG_DIR, fileName);
 
     // 파일 존재 여부
