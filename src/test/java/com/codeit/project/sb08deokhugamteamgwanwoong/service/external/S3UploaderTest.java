@@ -11,6 +11,8 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 
 import com.codeit.project.sb08deokhugamteamgwanwoong.exception.BusinessException;
+import com.codeit.project.sb08deokhugamteamgwanwoong.exception.enums.GlobalErrorCode;
+import java.io.File;
 import java.io.IOException;
 import java.net.URL;
 import org.junit.jupiter.api.BeforeEach;
@@ -185,5 +187,64 @@ public class S3UploaderTest {
     });
 
     verify(s3Client).deleteObject(any(DeleteObjectRequest.class));
+  }
+
+  /*
+  * S3 로그 파일 업로드 테스트
+  * */
+  @DisplayName("서버 로컬의 로그 파일을 S3에 성공적으로 업로드하고 URL을 반환한다.")
+  @Test
+  void uploadLogFile_Success() throws Exception {
+    // given
+    // 테스트용 임시 파일 생성
+    File templogFile = File.createTempFile("app-2026-03-15", ".log");
+    templogFile.deleteOnExit(); // 테스트 종료 시 자동 삭제
+
+    S3Utilities s3Utilities = mock(S3Utilities.class);
+    URL mockUrl = new URL("https://mock-bucket.s3.amazonaws.com/logs/" + templogFile.getName());
+
+    // AWS S3Client mocking
+    given(s3Client.utilities()).willReturn(s3Utilities);
+    given(s3Utilities.getUrl(any(GetUrlRequest.class))).willReturn(mockUrl);
+
+    // when
+    String uploadUrl = s3Uploader.uploadLogFile(templogFile);
+
+    // then
+    assertThat(uploadUrl).isEqualTo(mockUrl.toExternalForm());
+
+    // putObject가 1번 호출됐는지 검증
+    verify(s3Client).putObject(any(PutObjectRequest.class), any(RequestBody.class));
+  }
+
+  @DisplayName("업로드할 로그 파일이 null이거나 존재하지 않으면 null을 반환한다")
+  @Test
+  void uploadLogFile_Fail_FileNotExists() {
+    // given
+    File notExistingFile = new File("not-existing-file.log");
+
+    // when
+    String result = s3Uploader.uploadLogFile(notExistingFile);
+
+    // then
+    assertThat(result).isNull();
+    verify(s3Client, never()).putObject(any(PutObjectRequest.class), any(RequestBody.class));
+  }
+
+  @DisplayName("로그 파일 업로드 중 S3 서버 에러가 발생하면 예외를 발생시킨다")
+  @Test
+  void uploadLogFile_Fail_InternalServerError() throws Exception {
+    // given
+    File tempLogFile = File.createTempFile("app-2026-03-12", ".log");
+    tempLogFile.deleteOnExit();
+
+    // S3Client가 업로드 중 에러를 던지도록 설정
+    given(s3Client.putObject(any(PutObjectRequest.class), any(RequestBody.class)))
+        .willThrow(new RuntimeException("S3 연결 시간 초과"));
+
+    // when & then
+    assertThatThrownBy(() -> s3Uploader.uploadLogFile(tempLogFile))
+        .isInstanceOf(BusinessException.class)
+        .hasMessageContaining(GlobalErrorCode.FILE_UPLOAD_FAILED.getMessage());
   }
 }
