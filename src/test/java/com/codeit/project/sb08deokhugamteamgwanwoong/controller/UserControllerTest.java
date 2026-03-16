@@ -1,6 +1,7 @@
 package com.codeit.project.sb08deokhugamteamgwanwoong.controller;
 
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.BDDMockito.willThrow;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
@@ -13,8 +14,12 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import com.codeit.project.sb08deokhugamteamgwanwoong.controller.support.ControllerTestSupport;
 import com.codeit.project.sb08deokhugamteamgwanwoong.dto.user.UserDto;
 import com.codeit.project.sb08deokhugamteamgwanwoong.dto.user.UserLoginRequest;
+import com.codeit.project.sb08deokhugamteamgwanwoong.dto.user.UserPasswordUpdateRequest;
 import com.codeit.project.sb08deokhugamteamgwanwoong.dto.user.UserRegisterRequest;
+import com.codeit.project.sb08deokhugamteamgwanwoong.dto.user.UserResetPasswordRequest;
 import com.codeit.project.sb08deokhugamteamgwanwoong.dto.user.UserUpdateRequest;
+import com.codeit.project.sb08deokhugamteamgwanwoong.dto.user.UserVerificationRequest;
+import com.codeit.project.sb08deokhugamteamgwanwoong.dto.user.UserVerifyCodeRequest;
 import com.codeit.project.sb08deokhugamteamgwanwoong.exception.BusinessException;
 import com.codeit.project.sb08deokhugamteamgwanwoong.exception.enums.UserErrorCode;
 import java.time.Instant;
@@ -182,5 +187,91 @@ public class UserControllerTest extends ControllerTestSupport {
     // When & Then
     mockMvc.perform(delete("/api/users/{userId}/hard", userId))
         .andExpect(status().isNotFound());
+  }
+
+  @Test
+  @DisplayName("비밀번호 수정: 현재 비밀번호가 일치하면 204 No Content를 반환한다.")
+  void updatePassword_Test() throws Exception {
+    // Given
+    UUID userId = UUID.randomUUID();
+    UserPasswordUpdateRequest request = new UserPasswordUpdateRequest("password1234!", "newPass1234!");
+
+    // When & Then
+    mockMvc.perform(patch("/api/users/{userId}/password", userId)
+        .contentType(MediaType.APPLICATION_JSON)
+        .content(objectMapper.writeValueAsString(request)))
+        .andExpect(status().isNoContent());
+  }
+
+  @Test
+  @DisplayName("비밀번호 수정 실패: 현재 비밀번호가 틀리면 400 Bad Request를 반환한다.")
+  void updatePassword_Fail_Test() throws Exception {
+    // Given
+    UUID userId = UUID.randomUUID();
+    UserPasswordUpdateRequest request = new UserPasswordUpdateRequest("password1234!", "newPass1234!");
+
+    willThrow(new BusinessException(UserErrorCode.WRONG_PASSWORD))
+        .given(userService).updatePassword(any(UUID.class), any(UserPasswordUpdateRequest.class));
+
+    // When & Then
+    mockMvc.perform(patch("/api/users/{userId}/password", userId)
+            .contentType(MediaType.APPLICATION_JSON)
+            .content(objectMapper.writeValueAsString(request)))
+        .andExpect(status().isBadRequest());
+  }
+
+  @Test
+  @DisplayName("비밀번호 최종 재설정: 인증 완료 후 비밀번호를 변경하면 204 No Content를 반환한다.")
+  void resetPassword_Test() throws Exception {
+    // Given
+    UserResetPasswordRequest request = new UserResetPasswordRequest("test@test.com", "newPass1234!");
+
+    // When & Then
+    mockMvc.perform(patch("/api/users/password/reset")
+            .contentType(MediaType.APPLICATION_JSON)
+            .content(objectMapper.writeValueAsString(request)))
+        .andExpect(status().isNoContent());
+  }
+
+  @Test
+  @DisplayName("인증번호 발송: 존재하는 이메일로 요청하면 200 OK를 반환한다.")
+  void sendVerificationCode_Test() throws Exception {
+    // Given
+    UserVerificationRequest request = new UserVerificationRequest("test@test.com");
+
+    // When & Then
+    mockMvc.perform(post("/api/users/password/verification-code")
+            .contentType(MediaType.APPLICATION_JSON)
+            .content(objectMapper.writeValueAsString(request)))
+        .andExpect(status().isOk());
+  }
+
+  @Test
+  @DisplayName("인증번호 검증: 올바른 번호를 입력하면 200 OK를 반환한다.")
+  void verifyCode_Test() throws Exception {
+    // Given
+    UserVerifyCodeRequest request = new UserVerifyCodeRequest("test@test.com", "123456");
+
+    // When & Then
+    mockMvc.perform(post("/api/users/password/verify")
+            .contentType(MediaType.APPLICATION_JSON)
+            .content(objectMapper.writeValueAsString(request)))
+        .andExpect(status().isOk());
+  }
+
+  @Test
+  @DisplayName("인증번호 검증 실패: 번호가 틀리거나 만료되면 400 Bad Request를 반환한다.")
+  void verifyCode_Fail_Test() throws Exception {
+    // Given
+    UserVerifyCodeRequest request = new UserVerifyCodeRequest("test@test.com", "999999");
+
+    willThrow(new BusinessException(UserErrorCode.VERIFICATION_CODE_MISMATCH))
+        .given(userService).verifyCode(anyString(), anyString());
+
+    // When & Then
+    mockMvc.perform(post("/api/users/password/verify")
+            .contentType(MediaType.APPLICATION_JSON)
+            .content(objectMapper.writeValueAsString(request)))
+        .andExpect(status().isBadRequest());
   }
 }
