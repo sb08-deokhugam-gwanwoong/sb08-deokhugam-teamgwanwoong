@@ -21,7 +21,7 @@ spring:
   data:
     redis:
       host: localhost
-      prot: 6379
+      port: 6379
 
   # Spring Boot의 SQL 초기화 기능 끄기 (Hibernate 기능 사용)
   sql:
