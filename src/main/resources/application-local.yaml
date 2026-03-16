@@ -18,6 +18,10 @@ spring:
       credentials:
         access-key: ${AWS_ACCESS_KEY}
         secret-key: ${AWS_SECRET_KEY}
+  data:
+    redis:
+      host: localhost
+      port: 6379
 
   # Spring Boot의 SQL 초기화 기능 끄기 (Hibernate 기능 사용)
   sql:
