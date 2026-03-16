@@ -125,6 +125,9 @@ dependencies {
     // Server Monitoring
     implementation 'io.micrometer:micrometer-registry-prometheus'
     implementation 'org.springframework.boot:spring-boot-starter-actuator'
+
+    // Redis
+    implementation 'org.springframework.boot:spring-boot-starter-data-redis'
 }
 
 // QClass 생성 위치 설정
