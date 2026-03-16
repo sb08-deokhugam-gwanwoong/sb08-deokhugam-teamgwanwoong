@@ -765,4 +765,53 @@ public class BookControllerTest extends ControllerTestSupport {
         .andDo(print())
         .andExpect(status().isInternalServerError());
   }
+
+  /*
+  * OCR 기반 ISBN 추출 API 테스트
+  * */
+  @DisplayName("도서 이미지로 ISBN 인식 API 호출 시 200 응답과 ISBN 문자열을 반환한다.")
+  @Test
+  void getBookInfoByImage_Success() throws Exception {
+    // given
+    MockMultipartFile image = new MockMultipartFile(
+        "image",
+        "barcode.png",
+        MediaType.IMAGE_PNG_VALUE,
+        "dummy content".getBytes()
+    );
+
+    String expectedIsbn = "9788994492032";
+    given(bookService.getBookInfoByImage(any())).willReturn(expectedIsbn);
+
+    // when & then
+    mockMvc.perform(
+            multipart("/api/books/isbn/ocr")
+                .file(image)
+                .contentType(MediaType.MULTIPART_FORM_DATA_VALUE)
+        )
+        .andDo(print())
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$").value(expectedIsbn)); // 단순 String 반환이므로 JSON 객체 필드가 아닌 루트($) 검증
+  }
+
+  @DisplayName("도서 이미지로 ISBN 인식 중 서버 내부 에러가 발생하면 500 에러를 반환한다.")
+  @Test
+  void getBookInfoByImage_Fail_InternalServerError() throws Exception {
+    // given
+    MockMultipartFile image = new MockMultipartFile(
+        "image", "barcode.png", MediaType.IMAGE_PNG_VALUE, "dummy content".getBytes()
+    );
+
+    given(bookService.getBookInfoByImage(any()))
+        .willThrow(new BusinessException(GlobalErrorCode.INTERNAL_SERVER_ERROR));
+
+    // when & then
+    mockMvc.perform(
+            multipart("/api/books/isbn/ocr")
+                .file(image)
+                .contentType(MediaType.MULTIPART_FORM_DATA_VALUE)
+        )
+        .andDo(print())
+        .andExpect(status().isInternalServerError());
+  }
 }

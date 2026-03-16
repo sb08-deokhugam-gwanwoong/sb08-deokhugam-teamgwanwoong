@@ -52,9 +52,6 @@ logging:
     org.hibernate.SQL: debug
     # 바인딩되는 파라미터 출력
     org.hibernate.orm.jdbc.bind: trace
-  # 로그 패턴 추가
-  pattern:
-    console: "%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{36} - [%X{request_id}] [%X{client_ip}] %msg%n"
 
 # Naver API
 naver:
@@ -64,3 +61,9 @@ naver:
   url:
     search:
       book: "https://openapi.naver.com/v1/search/book.json"
+
+ocr:
+  space:
+    api:
+      key: ${OCR_SPACE_API_KEY}
+      url: "https://api.ocr.space/parse/image"

@@ -51,4 +51,12 @@ public class User extends BaseRemovableEntity {
   public void updateNickname(String nickname) {
     this.nickname = nickname;
   }
+
+  /**
+   * 비밀번호 수정
+   * @param password 비밀번호
+   */
+  public void updatePassword(String password) {
+    this.password = password;
+  }
 }

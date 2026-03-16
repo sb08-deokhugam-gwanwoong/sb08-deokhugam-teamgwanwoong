@@ -2,20 +2,28 @@ package com.codeit.project.sb08deokhugamteamgwanwoong.service.impl;
 
 import com.codeit.project.sb08deokhugamteamgwanwoong.dto.user.UserDto;
 import com.codeit.project.sb08deokhugamteamgwanwoong.dto.user.UserLoginRequest;
+import com.codeit.project.sb08deokhugamteamgwanwoong.dto.user.UserPasswordUpdateRequest;
 import com.codeit.project.sb08deokhugamteamgwanwoong.dto.user.UserRegisterRequest;
+import com.codeit.project.sb08deokhugamteamgwanwoong.dto.user.UserResetPasswordRequest;
 import com.codeit.project.sb08deokhugamteamgwanwoong.dto.user.UserUpdateRequest;
 import com.codeit.project.sb08deokhugamteamgwanwoong.entity.User;
 import com.codeit.project.sb08deokhugamteamgwanwoong.exception.BusinessException;
 import com.codeit.project.sb08deokhugamteamgwanwoong.exception.enums.UserErrorCode;
 import com.codeit.project.sb08deokhugamteamgwanwoong.mapper.UserMapper;
+import com.codeit.project.sb08deokhugamteamgwanwoong.repository.ReviewRepository;
 import com.codeit.project.sb08deokhugamteamgwanwoong.repository.UserRepository;
+import com.codeit.project.sb08deokhugamteamgwanwoong.service.EmailService;
 import com.codeit.project.sb08deokhugamteamgwanwoong.service.UserService;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
+import java.util.concurrent.ThreadLocalRandom;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.cache.Cache;
+import org.springframework.cache.CacheManager;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -26,7 +34,11 @@ import org.springframework.transaction.annotation.Transactional;
 public class UserServiceImpl implements UserService {
 
   private final UserRepository userRepository;
+  private final ReviewRepository reviewRepository;
   private final UserMapper userMapper;
+  private final PasswordEncoder passwordEncoder;
+  private final CacheManager cacheManager;
+  private final EmailService emailService;
 
   /**
    * 회원가입
@@ -45,7 +57,8 @@ public class UserServiceImpl implements UserService {
     User user = User.builder()
         .email(request.email())
         .nickname(request.nickname())
-        .password(request.password())
+        // 비밀번호 암호화
+        .password(passwordEncoder.encode(request.password()))
         .build();
 
     User savedUser = userRepository.save(user);
@@ -65,11 +78,17 @@ public class UserServiceImpl implements UserService {
 
     log.info("[로그인 시작] email: {}", request.email());
 
-    User user = userRepository.findByEmailAndPasswordAndDeletedAtIsNull(request.email(), request.password())
+    User user = userRepository.findByEmailAndDeletedAtIsNull(request.email())
         .orElseThrow(() -> {
-          log.warn("[로그인 실패] 이메일 또는 비밀번호가 일치하지 않습니다. email: {}", request.email());
+          log.warn("[로그인 실패] 이메일이 일치하지 않습니다. email: {}", request.email());
           return new BusinessException(UserErrorCode.LOGIN_FAILED);
         });
+
+    // matches()로 비밀번호 일치 여부 확인
+    if(!passwordEncoder.matches(request.password(), user.getPassword())) {
+      log.warn("[로그인 실패] 비밀번호가 일치하지 않습니다. email: {}", request.password());
+      throw new BusinessException(UserErrorCode.LOGIN_FAILED);
+    }
 
     log.info("[로그인 성공] userId: {}, email: {}", user.getId(), user.getEmail());
 
@@ -120,6 +139,113 @@ public class UserServiceImpl implements UserService {
   }
 
   /**
+   * 유저 비밀번호 수정
+   * @param userId  유저 Id
+   * @param request 유저 비밀번호 수정 요청 request
+   */
+  @Override
+  @Transactional
+  public void updatePassword(UUID userId, UserPasswordUpdateRequest request) {
+
+    log.info("[유저 비밀번호 수정 시작] userId: {}", userId);
+
+    User user = findUserById(userId, null);
+
+    if(!passwordEncoder.matches(request.currentPassword(), user.getPassword())) {
+      throw new BusinessException(UserErrorCode.WRONG_PASSWORD);
+    }
+
+    user.updatePassword(passwordEncoder.encode(request.newPassword()));
+
+    log.info("[유저 비밀번호 수정 완료] userId: {}, nickname: {}", userId, user.getNickname());
+  }
+
+  /**
+   * 인증번호 생성 및 저장
+   * @param email 유저 Email
+   */
+  @Override
+  public void sendVerificationCode(String email) {
+
+    log.info("[인증번호 요청 시작] email: {}", email);
+
+    if (!userRepository.existsByEmailAndDeletedAtIsNull(email)) {
+      log.warn("[인증번호 요청 실패] 존재하지 않는 이메일입니다. email: {}", email);
+      throw new BusinessException(UserErrorCode.USER_NOT_FOUND);
+    }
+
+    // 랜덤한 숫자 생성 (6자리 고정)
+    String verificationCode = String.format("%06d", ThreadLocalRandom.current().nextInt(100000, 1000000));
+
+    Cache cache = cacheManager.getCache("verificationCodes");
+
+    // Caffeine 캐시에 인증번호 임시 저장
+    if (cache != null) {
+      cache.put(email, verificationCode);
+    }
+
+    // 실제 이메일 요청
+    emailService.sendVerificationCode(email, verificationCode);
+
+    log.info("[인증번호 저장 완료] email: {}, code: {}", email, verificationCode);
+  }
+
+  /**
+   * 인증번호 검증
+   * @param email       유저 Email
+   * @param inputCode   사용자가 입력한 번호
+   */
+  @Override
+  public void verifyCode(String email, String inputCode) {
+    log.info("[인증번호 검증 시작] email: {}", email);
+
+    // Caffeine 캐시에서 인증번호 조회
+    Cache cache = cacheManager.getCache("verificationCodes");
+    String savedCode = (cache != null) ? cache.get(email, String.class) : null;
+
+    if (savedCode == null) {
+      log.warn("[인증번호 검증 실패] 인증번호가 만료되었거나 요청 이력이 없습니다. email: {}", email);
+      throw new BusinessException(UserErrorCode.VERIFICATION_CODE_EXPIRED);
+    }
+
+    if (!savedCode.equals(inputCode)) {
+      log.warn("[인증번호 검증 실패] 인증번호가 일치하지 않습니다. email: {}", email);
+      throw new BusinessException(UserErrorCode.VERIFICATION_CODE_MISMATCH);
+    }
+
+    log.info("[인증번호 검증 성공] email: {}", email);
+
+    // 1회용 인증 -> 캐시 초기화
+    cache.evict(email);
+  }
+
+  /**
+   * 비밀번호 찾기: 최종 비밀번호 재설정
+   * @param request   유저 비밀번호 리셋 요청 request
+   */
+  @Override
+  @Transactional
+  public void resetPassword(UserResetPasswordRequest request) {
+
+    String email = request.email();
+    String newPassword = request.newPassword();
+
+    log.info("[비밀번호 재설정 시작] email: {}", email);
+
+    User user = userRepository.findByEmailAndDeletedAtIsNull(request.email())
+        .orElseThrow(() -> {
+          log.warn("[비밀번호 재설정 실패] 존재하지 않는 유저입니다. email: {}", email);
+          return new BusinessException(UserErrorCode.USER_NOT_FOUND);
+        });
+
+    String encodedPassword = passwordEncoder.encode(newPassword);
+
+    user.updatePassword(encodedPassword);
+
+    log.info("[비밀번호 재설정 완료] email: {}", email);
+  }
+
+  /**
    * 유저 논리 삭제
    * @param userId 유저 Id
    */
@@ -150,6 +276,8 @@ public class UserServiceImpl implements UserService {
 
     userRepository.delete(user);
 
+    reviewRepository.syncAllReviewCommentCounts();
+
     log.info("[유저 물리 삭제 완료] userId: {}", userId);
   }
 
@@ -169,6 +297,8 @@ public class UserServiceImpl implements UserService {
       log.info("[물리 삭제 스케쥴러 시작] 삭제 대상 유저 수: {}", deleteTargets.size());
 
       userRepository.deleteAll(deleteTargets);
+
+      reviewRepository.syncAllReviewCommentCounts();
 
       log.info("[물리 삭제 스케쥴러 완료] 논리 삭제 후 1일이 지난 유저 삭제 완료");
     }
@@ -218,6 +348,5 @@ public class UserServiceImpl implements UserService {
             return new BusinessException(UserErrorCode.USER_NOT_FOUND);
           });
     }
-
   }
 }
