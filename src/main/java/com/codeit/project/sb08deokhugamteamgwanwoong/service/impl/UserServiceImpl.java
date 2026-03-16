@@ -288,7 +288,7 @@ public class UserServiceImpl implements UserService {
   @Transactional
   public void hardDeleteOldUsers() {
 
-    Instant oneDayAgo = Instant.now().minus(Duration.ofMinutes(1));
+    Instant oneDayAgo = Instant.now().minus(Duration.ofDays(1));
 
     List<User> deleteTargets = userRepository.findAllExpiredUsers(oneDayAgo);
 
