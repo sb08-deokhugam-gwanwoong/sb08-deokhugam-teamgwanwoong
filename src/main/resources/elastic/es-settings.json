@@ -1,0 +1,31 @@
+{
+  "max_ngram_diff": 2,
+  "analysis": {
+    "tokenizer": {
+      "custom_ngram_tokenizer": {
+        "type": "ngram",
+        "min_gram": 1,
+        "max_gram": 3,
+        "token_chars": ["letter", "digit"]
+      }
+    },
+    "filter": {
+      "nori_posfilter": {
+        "type": "nori_part_of_speech",
+        "stoptags": ["E", "J", "VCP", "VCN", "SP", "SF", "SY"]
+      }
+    },
+    "analyzer": {
+      "custom_ngram_analyzer": {
+        "type": "custom",
+        "tokenizer": "custom_ngram_tokenizer",
+        "filter": ["lowercase"]
+      },
+      "custom_nori_analyzer": {
+        "type": "custom",
+        "tokenizer": "nori_tokenizer",
+        "filter": ["lowercase", "nori_posfilter"]
+      }
+    }
+  }
+}
