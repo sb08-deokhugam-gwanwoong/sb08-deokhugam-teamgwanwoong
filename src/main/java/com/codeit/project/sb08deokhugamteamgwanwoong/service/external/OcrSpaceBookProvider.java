@@ -49,7 +49,7 @@ public class OcrSpaceBookProvider implements BookMetadataProvider<String> {
         backoff = @Backoff(delay = 1000)
     )
     // 이미지가 Base64 기반이라 길기 때문에 해시값을 캐시로 사용함
-    @Cacheable(value = "ocrIsbn", key = "#base64Image.hashCode()", unless = "#result == null")
+    @Cacheable(value = "ocrIsbn", key = "#base64Image.hashCode()", unless = "#result == null", cacheManager = "caffeineCacheManager")
     public String getBookMetadata(String base64Image) {
         log.info("OCR Space API를 호출하여 ISBN을 추출합니다.");
 
