@@ -70,6 +70,9 @@ public class BookServiceTest {
   @Mock
   private OcrSpaceBookProvider ocrSpaceBookProvider;
 
+  @Mock
+  private RestTemplate restTemplate;
+
   @Spy
   private BookMapper bookMapper = Mappers.getMapper(BookMapper.class);
 
@@ -224,29 +227,24 @@ public class BookServiceTest {
     byte[] mockImageBytes = "dummy image content".getBytes();
 
     // RestTemplate 생성자 가로채기
-    try (MockedConstruction<RestTemplate> mocked = mockConstruction(RestTemplate.class,
-        (mock, context) -> {
-          // 1. 도서 정보 조회 (exchange) 호출 시 가짜 JSON 반환
-          when(mock.exchange(anyString(), eq(HttpMethod.GET), any(HttpEntity.class), eq(String.class)))
-              .thenReturn(new ResponseEntity<>(mockJsonResponse, HttpStatus.OK));
+    given(restTemplate.exchange(anyString(), eq(HttpMethod.GET), any(HttpEntity.class), eq(String.class)))
+        .willReturn(new ResponseEntity<>(mockJsonResponse, HttpStatus.OK));
 
-          // 2. 이미지 다운로드 (getForObject) 호출 시 가짜 바이트 배열 반환
-          when(mock.getForObject(anyString(), eq(byte[].class)))
-              .thenReturn(mockImageBytes);
-        })) {
+    given(restTemplate.getForObject(anyString(), eq(byte[].class)))
+        .willReturn(mockImageBytes);
 
-      // when
-      NaverBookDto result = bookService.getBookInfoByIsbn(isbn);
+    // when
+    NaverBookDto result = bookService.getBookInfoByIsbn(isbn);
 
-      // then
-      assertThat(result.title()).isEqualTo("자바의 정석");
-      assertThat(result.author()).isEqualTo("남궁성");
-      assertThat(result.publishedDate()).isEqualTo("2016-01-27"); // 날짜 포맷팅 검증
+    // then
+    assertThat(result.title()).isEqualTo("자바의 정석");
+    assertThat(result.author()).isEqualTo("남궁성");
+    assertThat(result.publishedDate()).isEqualTo("2016-01-27"); // 날짜 포맷팅 검증
 
-      // 이미지가 Base64로 잘 인코딩되었는지 검증
-      String expectedBase64 = Base64.getEncoder().encodeToString(mockImageBytes);
-      assertThat(result.thumbnailImage()).isEqualTo(expectedBase64);
-    }
+    // 이미지가 Base64로 잘 인코딩되었는지 검증
+    String expectedBase64 = Base64.getEncoder().encodeToString(mockImageBytes);
+    assertThat(result.thumbnailImage()).isEqualTo(expectedBase64);
+
   }
 
   @DisplayName("네이버 API 검색 결과가 비어있으면 BOOK_NOT_FOUND 예외를 던진다.")
@@ -259,18 +257,15 @@ public class BookServiceTest {
     // items 배열이 비어있는 가짜 JSON 응답
     String mockEmptyResponse = "{ \"items\": [] }";
 
-    try (MockedConstruction<RestTemplate> mocked = mockConstruction(RestTemplate.class,
-        (mock, context) -> {
-          when(mock.exchange(anyString(), eq(HttpMethod.GET), any(HttpEntity.class), eq(String.class)))
-              .thenReturn(new ResponseEntity<>(mockEmptyResponse, HttpStatus.OK));
-        })) {
+    given(restTemplate.exchange(anyString(), eq(HttpMethod.GET), any(HttpEntity.class), eq(String.class)))
+        .willReturn(new ResponseEntity<>(mockEmptyResponse, HttpStatus.OK));
 
-      // when & then
-      BusinessException exception = assertThrows(BusinessException.class, () -> {
-        bookService.getBookInfoByIsbn(isbn);
-      });
-      assertThat(exception.getErrorCode()).isEqualTo(BookErrorCode.BOOK_NOT_FOUND);
-    }
+    // when & then
+    BusinessException exception = assertThrows(BusinessException.class, () -> {
+      bookService.getBookInfoByIsbn(isbn);
+    });
+    assertThat(exception.getErrorCode()).isEqualTo(BookErrorCode.BOOK_NOT_FOUND);
+
   }
 
   @DisplayName("네이버 API 연동 중 예기치 않은 통신 에러가 발생하면 INTERNAL_SERVER_ERROR 예외를 던진다.")
@@ -315,20 +310,16 @@ public class BookServiceTest {
         }
         """;
 
-    try (MockedConstruction<RestTemplate> mocked = mockConstruction(RestTemplate.class,
-        (mock, context) -> {
-          when(mock.exchange(anyString(), eq(HttpMethod.GET), any(HttpEntity.class), eq(String.class)))
-              .thenReturn(new ResponseEntity<>(mockJsonResponse, HttpStatus.OK));
-        })) {
+    given(restTemplate.exchange(anyString(), eq(HttpMethod.GET), any(HttpEntity.class), eq(String.class)))
+        .willReturn(new ResponseEntity<>(mockJsonResponse, HttpStatus.OK));
 
-      // when
-      NaverBookDto result = bookService.getBookInfoByIsbn(isbn);
+    // when
+    NaverBookDto result = bookService.getBookInfoByIsbn(isbn);
 
-      // then
-      // imageUrl.isBlank() 분기를 타서 null이 반환되어야 함
-      assertThat(result.title()).isEqualTo("자바의 정석");
-      assertThat(result.thumbnailImage()).isNull();
-    }
+    // then
+    // imageUrl.isBlank() 분기를 타서 null이 반환되어야 함
+    assertThat(result.title()).isEqualTo("자바의 정석");
+    assertThat(result.thumbnailImage()).isNull();
   }
 
   @DisplayName("이미지 다운로드 결과(byte 배열)가 null이면 썸네일은 null을 반환한다.")
@@ -341,23 +332,16 @@ public class BookServiceTest {
     // 정상적인 이미지 URL이 포함된 JSON 응답
     String mockJsonResponse = "{ \"items\": [ { \"title\": \"자바의 정석\", \"isbn\": \"9788994492032\", \"image\": \"https://example.com/image.jpg\" } ] }";
 
-    try (MockedConstruction<RestTemplate> mocked = mockConstruction(RestTemplate.class,
-        (mock, context) -> {
-          when(mock.exchange(anyString(), eq(HttpMethod.GET), any(HttpEntity.class), eq(String.class)))
-              .thenReturn(new ResponseEntity<>(mockJsonResponse, HttpStatus.OK));
+    given(restTemplate.exchange(anyString(), eq(HttpMethod.GET), any(HttpEntity.class), eq(String.class)))
+        .willReturn(new ResponseEntity<>(mockJsonResponse, HttpStatus.OK));
 
-          // RestTemplate이 이미지를 다운받지 못하고 null을 반환하는 상황 mocking
-          when(mock.getForObject(anyString(), eq(byte[].class)))
-              .thenReturn(null);
-        })) {
+    // when
+    NaverBookDto result = bookService.getBookInfoByIsbn(isbn);
 
-      // when
-      NaverBookDto result = bookService.getBookInfoByIsbn(isbn);
+    // then
+    // imageBytes != null 분기의 false를 타서 맨 아래 return null이 실행되어야 함
+    assertThat(result.thumbnailImage()).isNull();
 
-      // then
-      // imageBytes != null 분기의 false를 타서 맨 아래 return null이 실행되어야 함
-      assertThat(result.thumbnailImage()).isNull();
-    }
   }
 
   @DisplayName("이미지 다운로드 중 예외가 발생하면(catch), 에러를 반환하고 썸네일은 null을 반환한다.")
@@ -369,25 +353,18 @@ public class BookServiceTest {
 
     String mockJsonResponse = "{ \"items\": [ { \"title\": \"자바의 정석\", \"isbn\": \"9788994492032\", \"image\": \"https://example.com/image.jpg\" } ] }";
 
-    try (MockedConstruction<RestTemplate> mocked = mockConstruction(RestTemplate.class,
-        (mock, context) -> {
-          when(mock.exchange(anyString(), eq(HttpMethod.GET), any(HttpEntity.class), eq(String.class)))
-              .thenReturn(new ResponseEntity<>(mockJsonResponse, HttpStatus.OK));
+    given(restTemplate.exchange(anyString(), eq(HttpMethod.GET), any(HttpEntity.class), eq(String.class)))
+        .willReturn(new ResponseEntity<>(mockJsonResponse, HttpStatus.OK));
 
-          // RestTemplate이 이미지를 받다가 타임아웃/404 등 런타임 예외를 터뜨리는 상황 mocking
-          when(mock.getForObject(anyString(), eq(byte[].class)))
-              .thenThrow(new RuntimeException("이미지 서버 연결 실패"));
-        })) {
+    // when
+    NaverBookDto result = bookService.getBookInfoByIsbn(isbn);
 
-      // when
-      NaverBookDto result = bookService.getBookInfoByIsbn(isbn);
+    // then
+    // catch (Exception e) 블록을 타서 로그를 찍고 맨 아래 return null이 실행되어야 함
+    // 전체 API 로직은 실패하지 않고 도서 정보는 정상 반환되어야 함
+    assertThat(result.title()).isEqualTo("자바의 정석");
+    assertThat(result.thumbnailImage()).isNull();
 
-      // then
-      // catch (Exception e) 블록을 타서 로그를 찍고 맨 아래 return null이 실행되어야 함
-      // 전체 API 로직은 실패하지 않고 도서 정보는 정상 반환되어야 함
-      assertThat(result.title()).isEqualTo("자바의 정석");
-      assertThat(result.thumbnailImage()).isNull();
-    }
   }
   /*
    * 도서 상세 조회 관련 테스트

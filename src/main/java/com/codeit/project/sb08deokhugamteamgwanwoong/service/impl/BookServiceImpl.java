@@ -25,6 +25,7 @@ import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
@@ -51,6 +52,7 @@ public class BookServiceImpl implements BookService {
   private final BookMapper bookMapper;
   private final S3Uploader s3Uploader;
   private final BookMetadataProvider<String> ocrSpaceBookProvider;
+  private final RestTemplate restTemplate;
 
   @Value(NAVER_CLIENT_ID)
   private String naverClientId;
@@ -222,13 +224,13 @@ public class BookServiceImpl implements BookService {
   }
 
   @Override
+  @Cacheable(value = "naverBook", key = "#isbn", cacheManager = "redisCacheManager", unless = "#result == null")
   public NaverBookDto getBookInfoByIsbn(String isbn) {
     // 1. 네이버 API 요청 URL 구성
     // yaml에 설정된 기본 book.json을 ISBN 상세 검색용인 book_adv.json으로 변환하고 d_isbn 파라미터 적용
     String apiURL  = naverBookSearchUrl.replace("book.json", "book_adv.json") + "?d_isbn=" + isbn;
 
     // 2. HTTP 헤더에 인증 정보 세팅
-    RestTemplate restTemplate = new RestTemplate();
     HttpHeaders headers = new HttpHeaders();
     headers.set("X-Naver-Client-Id", naverClientId);
     headers.set("X-Naver-Client-Secret", naverClientSecret);
@@ -319,7 +321,6 @@ public class BookServiceImpl implements BookService {
       return null;
     }
     try {
-      RestTemplate restTemplate = new RestTemplate();
       byte[] imageBytes = restTemplate.getForObject(imageUrl, byte[].class);
       if (imageBytes != null) {
         return Base64.getEncoder().encodeToString(imageBytes);
