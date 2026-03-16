@@ -27,6 +27,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.util.ReflectionTestUtils;
 
 @ExtendWith(MockitoExtension.class)
@@ -38,6 +39,9 @@ public class UserServiceTest {
   @Mock
   private UserMapper userMapper;
 
+  @Mock
+  private PasswordEncoder passwordEncoder;
+
   @InjectMocks
   private UserServiceImpl userService;
 
@@ -45,12 +49,15 @@ public class UserServiceTest {
   @DisplayName("회원가입: 새로운 이메일로 가입하면 성공하고, UserDto를 반환해야 한다.")
   void createUserTest() {
     // Given
-    UserRegisterRequest request = new UserRegisterRequest("Test@test.com", "Tester",
-        "password123!");
+    UserRegisterRequest request = new UserRegisterRequest("Test@test.com", "Tester", "password123!");
+
+    // 평문을 받으면 암호화 된 비밀번호를 반환
+    given(passwordEncoder.encode(request.password())).willReturn("encodedPassword");
+
     User user = User.builder()
         .email(request.email())
         .nickname(request.nickname())
-        .password(request.password())
+        .password("encodedPassword")
         .build();
 
     // ReflectionTestUtils로 가짜 ID, createdAt 주입
@@ -62,6 +69,7 @@ public class UserServiceTest {
 
     // Mocking
     given(userRepository.existsByEmailAndDeletedAtIsNull(request.email())).willReturn(false);
+    given(userRepository.existsByNicknameAndDeletedAtIsNull(request.nickname())).willReturn(false);
     given(userRepository.save(any(User.class))).willReturn(user);
     given(userMapper.toDto(user)).willReturn(expectedDto);
 
@@ -72,6 +80,7 @@ public class UserServiceTest {
     assertThat(result.id()).isEqualTo(uuid);
     assertThat(result.email()).isEqualTo(request.email());
     assertThat(result.nickname()).isEqualTo(request.nickname());
+    verify(passwordEncoder).encode(request.password());
   }
 
   @Test
@@ -97,13 +106,14 @@ public class UserServiceTest {
   void login_Success_Test() {
     // Given
     String email = "test@test.com";
-    String password = "password123!";
-    UserLoginRequest request = new UserLoginRequest(email, password);
+    String rawPassword = "rawPassword123!";
+    String encodedPassword = "encodedPassword123!";
+    UserLoginRequest request = new UserLoginRequest(email, rawPassword);
 
     User user = User.builder()
         .email(email)
         .nickname("Tester")
-        .password(password)
+        .password(encodedPassword) // DB에는 암호화되어 저장된다.
         .build();
 
     UUID uuid = UUID.randomUUID();
@@ -115,7 +125,9 @@ public class UserServiceTest {
 
     // Mocking
     // 리포지토리 -> 유저 반환
-    given(userRepository.findByEmailAndPasswordAndDeletedAtIsNull(email, password)).willReturn(Optional.of(user));
+    given(userRepository.findByEmailAndDeletedAtIsNull(email)).willReturn(Optional.of(user));
+    // 비밀번호 매칭 성공
+    given(passwordEncoder.matches(rawPassword, encodedPassword)).willReturn(true);
     // 매퍼 -> DTO 반환
     given(userMapper.toDto(user)).willReturn(expectedDto);
 
@@ -126,6 +138,7 @@ public class UserServiceTest {
     assertThat(result.id()).isEqualTo(uuid);
     assertThat(result.email()).isEqualTo(email);
     assertThat(result.nickname()).isEqualTo("Tester");
+    verify(passwordEncoder).matches(rawPassword, encodedPassword);
   }
 
   @Test
@@ -135,12 +148,38 @@ public class UserServiceTest {
     UserLoginRequest request = new UserLoginRequest("nonUser@test.com", "nonPassword123!");
 
     // Mocking
-    given(userRepository.findByEmailAndPasswordAndDeletedAtIsNull(anyString(), anyString())).willReturn(Optional.empty());
+    given(userRepository.findByEmailAndDeletedAtIsNull(anyString())).willReturn(Optional.empty());
 
     // When & Then
     assertThatThrownBy(() -> userService.login(request))
         .isInstanceOf(BusinessException.class)
         .hasFieldOrPropertyWithValue("errorCode", UserErrorCode.LOGIN_FAILED);
+  }
+
+  @Test
+  @DisplayName("로그인 실패: 비밀번호가 일치하지 않으면 예외가 발생해야 한다.")
+  void login_Fail_WrongPassword_Test() {
+    // Given
+    String email = "test@test.com";
+    String rawPassword = "rawPassword123!";
+    String encodedPassword = "encodedPassword123!";
+    UserLoginRequest request = new UserLoginRequest(email, rawPassword);
+    User user = User.builder()
+        .email(email)
+        .nickname("Tester")
+        .password(encodedPassword)
+        .build();
+
+    // Mocking
+    given(userRepository.findByEmailAndDeletedAtIsNull(email)).willReturn(Optional.of(user));
+    given(passwordEncoder.matches(rawPassword, encodedPassword)).willReturn(false);
+
+    // When & Then
+    assertThatThrownBy(() ->userService.login(request))
+        .isInstanceOf(BusinessException.class)
+        .hasFieldOrPropertyWithValue("errorCode", UserErrorCode.LOGIN_FAILED);
+
+    verify(passwordEncoder).matches(rawPassword, encodedPassword);
   }
 
   @Test

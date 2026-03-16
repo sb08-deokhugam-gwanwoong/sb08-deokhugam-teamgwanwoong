@@ -2,7 +2,9 @@ package com.codeit.project.sb08deokhugamteamgwanwoong.service;
 
 import com.codeit.project.sb08deokhugamteamgwanwoong.dto.user.UserDto;
 import com.codeit.project.sb08deokhugamteamgwanwoong.dto.user.UserLoginRequest;
+import com.codeit.project.sb08deokhugamteamgwanwoong.dto.user.UserPasswordUpdateRequest;
 import com.codeit.project.sb08deokhugamteamgwanwoong.dto.user.UserRegisterRequest;
+import com.codeit.project.sb08deokhugamteamgwanwoong.dto.user.UserResetPasswordRequest;
 import com.codeit.project.sb08deokhugamteamgwanwoong.dto.user.UserUpdateRequest;
 import java.util.UUID;
 
@@ -14,6 +16,14 @@ public interface UserService {
   UserDto getUserById(UUID userId);
 
   UserDto update(UUID userId, UserUpdateRequest request);
+
+  void updatePassword(UUID userId, UserPasswordUpdateRequest request);
+
+  void sendVerificationCode(String email);
+
+  void verifyCode(String email, String inputCode);
+
+  void resetPassword(UserResetPasswordRequest request);
 
   void delete(UUID userId);
 
