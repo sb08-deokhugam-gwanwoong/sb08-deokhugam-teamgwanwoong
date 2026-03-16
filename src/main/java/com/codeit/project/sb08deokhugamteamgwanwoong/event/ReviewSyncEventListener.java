@@ -1,9 +1,9 @@
 package com.codeit.project.sb08deokhugamteamgwanwoong.event;
 
 import com.codeit.project.sb08deokhugamteamgwanwoong.dto.review.ReviewDocument;
-import com.codeit.project.sb08deokhugamteamgwanwoong.dto.review.event.ReviewCreatedEvent;
-import com.codeit.project.sb08deokhugamteamgwanwoong.dto.review.event.ReviewDeletedEvent;
-import com.codeit.project.sb08deokhugamteamgwanwoong.dto.review.event.ReviewUpdatedEvent;
+import com.codeit.project.sb08deokhugamteamgwanwoong.dto.review.event.ReviewCreatedEventDto;
+import com.codeit.project.sb08deokhugamteamgwanwoong.dto.review.event.ReviewDeletedEventDto;
+import com.codeit.project.sb08deokhugamteamgwanwoong.dto.review.event.ReviewUpdatedEventDto;
 import com.codeit.project.sb08deokhugamteamgwanwoong.entity.Review;
 import com.codeit.project.sb08deokhugamteamgwanwoong.repository.ReviewSearchRepository;
 import lombok.RequiredArgsConstructor;
@@ -24,7 +24,7 @@ public class ReviewSyncEventListener {
 
     @Async
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
-    public void handleReviewCreated(ReviewCreatedEvent event) {
+    public void handleReviewCreated(ReviewCreatedEventDto event) {
         log.info("ES Sync: 리뷰 생성 이벤트 수신 - ReviewId: {}", event.review().getId());
         ReviewDocument document = convertToDocument(event.review());
         reviewSearchRepository.save(document);
@@ -32,7 +32,7 @@ public class ReviewSyncEventListener {
 
     @Async
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
-    public void handleReviewUpdated(ReviewUpdatedEvent event) {
+    public void handleReviewUpdated(ReviewUpdatedEventDto event) {
         log.info("ES Sync: 리뷰 수정 이벤트 수신 - ReviewId: {}", event.review().getId());
         ReviewDocument document = convertToDocument(event.review());
         reviewSearchRepository.save(document);
@@ -40,7 +40,7 @@ public class ReviewSyncEventListener {
 
     @Async
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
-    public void handleReviewDeleted(ReviewDeletedEvent event) {
+    public void handleReviewDeleted(ReviewDeletedEventDto event) {
         UUID reviewId = event.reviewId();
         log.info("ES Sync: 리뷰 삭제 이벤트 수신 - ReviewId: {}", reviewId);
         reviewSearchRepository.deleteById(reviewId.toString());
