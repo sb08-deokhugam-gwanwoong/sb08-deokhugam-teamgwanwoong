@@ -5,20 +5,28 @@ import static org.assertj.core.api.AssertionsForClassTypes.assertThatThrownBy;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.BDDMockito.given;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 
 import com.codeit.project.sb08deokhugamteamgwanwoong.dto.user.UserDto;
 import com.codeit.project.sb08deokhugamteamgwanwoong.dto.user.UserLoginRequest;
+import com.codeit.project.sb08deokhugamteamgwanwoong.dto.user.UserPasswordUpdateRequest;
 import com.codeit.project.sb08deokhugamteamgwanwoong.dto.user.UserRegisterRequest;
+import com.codeit.project.sb08deokhugamteamgwanwoong.dto.user.UserResetPasswordRequest;
 import com.codeit.project.sb08deokhugamteamgwanwoong.dto.user.UserUpdateRequest;
 import com.codeit.project.sb08deokhugamteamgwanwoong.entity.User;
 import com.codeit.project.sb08deokhugamteamgwanwoong.exception.BusinessException;
 import com.codeit.project.sb08deokhugamteamgwanwoong.exception.enums.UserErrorCode;
 import com.codeit.project.sb08deokhugamteamgwanwoong.mapper.UserMapper;
+import com.codeit.project.sb08deokhugamteamgwanwoong.repository.CommentRepository;
+import com.codeit.project.sb08deokhugamteamgwanwoong.repository.ReviewLikeRepository;
+import com.codeit.project.sb08deokhugamteamgwanwoong.repository.ReviewRepository;
 import com.codeit.project.sb08deokhugamteamgwanwoong.repository.UserRepository;
 import com.codeit.project.sb08deokhugamteamgwanwoong.service.impl.UserServiceImpl;
 import java.time.Instant;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 import org.junit.jupiter.api.DisplayName;
@@ -27,6 +35,9 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.cache.Cache;
+import org.springframework.cache.CacheManager;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.util.ReflectionTestUtils;
 
 @ExtendWith(MockitoExtension.class)
@@ -36,7 +47,28 @@ public class UserServiceTest {
   private UserRepository userRepository;
 
   @Mock
+  private ReviewRepository reviewRepository;
+
+  @Mock
+  private CommentRepository commentRepository;
+
+  @Mock
+  private ReviewLikeRepository reviewLikeRepository;
+
+  @Mock
   private UserMapper userMapper;
+
+  @Mock
+  private PasswordEncoder passwordEncoder;
+
+  @Mock
+  private CacheManager cacheManager;
+
+  @Mock
+  private Cache cache;
+
+  @Mock
+  private EmailService emailService;
 
   @InjectMocks
   private UserServiceImpl userService;
@@ -45,12 +77,15 @@ public class UserServiceTest {
   @DisplayName("회원가입: 새로운 이메일로 가입하면 성공하고, UserDto를 반환해야 한다.")
   void createUserTest() {
     // Given
-    UserRegisterRequest request = new UserRegisterRequest("Test@test.com", "Tester",
-        "password123!");
+    UserRegisterRequest request = new UserRegisterRequest("Test@test.com", "Tester", "password123!");
+
+    // 평문을 받으면 암호화 된 비밀번호를 반환
+    given(passwordEncoder.encode(request.password())).willReturn("encodedPassword");
+
     User user = User.builder()
         .email(request.email())
         .nickname(request.nickname())
-        .password(request.password())
+        .password("encodedPassword")
         .build();
 
     // ReflectionTestUtils로 가짜 ID, createdAt 주입
@@ -62,6 +97,7 @@ public class UserServiceTest {
 
     // Mocking
     given(userRepository.existsByEmailAndDeletedAtIsNull(request.email())).willReturn(false);
+    given(userRepository.existsByNicknameAndDeletedAtIsNull(request.nickname())).willReturn(false);
     given(userRepository.save(any(User.class))).willReturn(user);
     given(userMapper.toDto(user)).willReturn(expectedDto);
 
@@ -72,6 +108,7 @@ public class UserServiceTest {
     assertThat(result.id()).isEqualTo(uuid);
     assertThat(result.email()).isEqualTo(request.email());
     assertThat(result.nickname()).isEqualTo(request.nickname());
+    verify(passwordEncoder).encode(request.password());
   }
 
   @Test
@@ -97,13 +134,14 @@ public class UserServiceTest {
   void login_Success_Test() {
     // Given
     String email = "test@test.com";
-    String password = "password123!";
-    UserLoginRequest request = new UserLoginRequest(email, password);
+    String rawPassword = "rawPassword123!";
+    String encodedPassword = "encodedPassword123!";
+    UserLoginRequest request = new UserLoginRequest(email, rawPassword);
 
     User user = User.builder()
         .email(email)
         .nickname("Tester")
-        .password(password)
+        .password(encodedPassword) // DB에는 암호화되어 저장된다.
         .build();
 
     UUID uuid = UUID.randomUUID();
@@ -115,7 +153,9 @@ public class UserServiceTest {
 
     // Mocking
     // 리포지토리 -> 유저 반환
-    given(userRepository.findByEmailAndPasswordAndDeletedAtIsNull(email, password)).willReturn(Optional.of(user));
+    given(userRepository.findByEmailAndDeletedAtIsNull(email)).willReturn(Optional.of(user));
+    // 비밀번호 매칭 성공
+    given(passwordEncoder.matches(rawPassword, encodedPassword)).willReturn(true);
     // 매퍼 -> DTO 반환
     given(userMapper.toDto(user)).willReturn(expectedDto);
 
@@ -126,6 +166,7 @@ public class UserServiceTest {
     assertThat(result.id()).isEqualTo(uuid);
     assertThat(result.email()).isEqualTo(email);
     assertThat(result.nickname()).isEqualTo("Tester");
+    verify(passwordEncoder).matches(rawPassword, encodedPassword);
   }
 
   @Test
@@ -135,12 +176,38 @@ public class UserServiceTest {
     UserLoginRequest request = new UserLoginRequest("nonUser@test.com", "nonPassword123!");
 
     // Mocking
-    given(userRepository.findByEmailAndPasswordAndDeletedAtIsNull(anyString(), anyString())).willReturn(Optional.empty());
+    given(userRepository.findByEmailAndDeletedAtIsNull(anyString())).willReturn(Optional.empty());
 
     // When & Then
     assertThatThrownBy(() -> userService.login(request))
         .isInstanceOf(BusinessException.class)
         .hasFieldOrPropertyWithValue("errorCode", UserErrorCode.LOGIN_FAILED);
+  }
+
+  @Test
+  @DisplayName("로그인 실패: 비밀번호가 일치하지 않으면 예외가 발생해야 한다.")
+  void login_Fail_WrongPassword_Test() {
+    // Given
+    String email = "test@test.com";
+    String rawPassword = "rawPassword123!";
+    String encodedPassword = "encodedPassword123!";
+    UserLoginRequest request = new UserLoginRequest(email, rawPassword);
+    User user = User.builder()
+        .email(email)
+        .nickname("Tester")
+        .password(encodedPassword)
+        .build();
+
+    // Mocking
+    given(userRepository.findByEmailAndDeletedAtIsNull(email)).willReturn(Optional.of(user));
+    given(passwordEncoder.matches(rawPassword, encodedPassword)).willReturn(false);
+
+    // When & Then
+    assertThatThrownBy(() ->userService.login(request))
+        .isInstanceOf(BusinessException.class)
+        .hasFieldOrPropertyWithValue("errorCode", UserErrorCode.LOGIN_FAILED);
+
+    verify(passwordEncoder).matches(rawPassword, encodedPassword);
   }
 
   @Test
@@ -222,6 +289,27 @@ public class UserServiceTest {
   }
 
   @Test
+  @DisplayName("유저 수정: 기존 닉네임과 동일한 경우 중복 검사 없이 완료되어야 한다.")
+  void updateUserNicknameSame_Test() {
+    // Given
+    UUID userId = UUID.randomUUID();
+    User user = User.builder()
+        .email("test@test.com")
+        .nickname("SameTester")
+        .password("password1234!")
+        .build();
+    UserUpdateRequest request = new UserUpdateRequest("SameTester");
+
+    given(userRepository.findById(userId)).willReturn(Optional.of(user));
+
+    // When
+    userService.update(userId, request);
+
+    // Then - 중복 검사 메서드가 호출되지 않았음을 검증
+    verify(userRepository, never()).existsByNicknameAndDeletedAtIsNull("SameTester");
+  }
+
+  @Test
   @DisplayName("유저 수정 실패: 이미 사용 중인 닉네임으로 수정하면 예외가 발생해야 한다.")
   void updateUserNickname_Fail_Test() {
     // Given
@@ -282,5 +370,167 @@ public class UserServiceTest {
 
     // Then
     verify(userRepository).delete(user);
+  }
+
+  @Test
+  @DisplayName("비밀번호 재설정: 유저가 존재하면 새로운 비밀번호로 변경된다.")
+  void resetPassword_Test() {
+    UserResetPasswordRequest request = new UserResetPasswordRequest("test@test.com", "newPass123!");
+    User user = User.builder().email("test@test.com").password("password1234!").build();
+
+    given(userRepository.findByEmailAndDeletedAtIsNull(request.email())).willReturn(Optional.of(user));
+    given(passwordEncoder.encode(request.newPassword())).willReturn("encodedNew1234!");
+
+    userService.resetPassword(request);
+
+    assertThat(user.getPassword()).isEqualTo("encodedNew1234!");
+  }
+
+  @Test
+  @DisplayName("비밀번호 재설정 실패: 유저가 존재하지 않으면 예외가 발생한다.")
+  void resetPassword_UserNotFound_Test() {
+    UserResetPasswordRequest request = new UserResetPasswordRequest("none@test.com", "newPass123!");
+    given(userRepository.findByEmailAndDeletedAtIsNull(anyString())).willReturn(Optional.empty());
+
+    assertThatThrownBy(() -> userService.resetPassword(request))
+        .isInstanceOf(BusinessException.class)
+        .hasFieldOrPropertyWithValue("errorCode", UserErrorCode.USER_NOT_FOUND);
+  }
+
+  @Test
+  @DisplayName("비밀번호 수정: 현재 비밀번호가 일치하면 새로운 비밀번호로 암호화하여 저장해야 한다.")
+  void updatePassword_Test() {
+    // Given
+    UUID userId = UUID.randomUUID();
+    User user = User.builder()
+        .email("test@test.com")
+        .nickname("Tester")
+        .password("password1234!")
+        .build();
+    UserPasswordUpdateRequest request = new UserPasswordUpdateRequest("password1234!", "newPassword1234!");
+
+    given(userRepository.findById(userId)).willReturn(Optional.of(user));
+    given(passwordEncoder.matches(request.currentPassword(), user.getPassword())).willReturn(true);
+    given(passwordEncoder.encode(request.newPassword())).willReturn("encodedNew1234!");
+
+    // When
+    userService.updatePassword(userId, request);
+
+    // Then
+    assertThat(user.getPassword()).isEqualTo("encodedNew1234!");
+    verify(passwordEncoder).encode(request.newPassword());
+  }
+
+  @Test
+  @DisplayName("비밀번호 수정 실패: 현재 비밀번호가 일치하지 않으면 예외가 발생해야 한다.")
+  void updatePassword_Fail_Test() {
+    // Given
+    UUID userId = UUID.randomUUID();
+    User user = User.builder()
+        .email("test@test.com")
+        .nickname("Tester")
+        .password("password1234!")
+        .build();
+    UserPasswordUpdateRequest request = new UserPasswordUpdateRequest("password1234!", "newPassword1234!");
+
+    given(userRepository.findById(userId)).willReturn(Optional.of(user));
+    given(passwordEncoder.matches(request.currentPassword(), user.getPassword())).willReturn(false);
+
+    // When && Then
+    assertThatThrownBy(() -> userService.updatePassword(userId, request))
+        .isInstanceOf(BusinessException.class)
+        .hasFieldOrPropertyWithValue("errorCode", UserErrorCode.WRONG_PASSWORD);
+  }
+
+  @Test
+  @DisplayName("인증번호 발송: 이메일이 존재하면 인증번호를 생성하여 캐시에 저장하고, 메일을 발송해야 한다.")
+  void sendVerificationCode_Test() {
+    // Given
+    String email = "test@test.com";
+
+    given(userRepository.existsByEmailAndDeletedAtIsNull(email)).willReturn(true);
+    given(cacheManager.getCache("verificationCodes")).willReturn(cache);
+
+    // When
+    userService.sendVerificationCode(email);
+
+    // Then - 캐시에 저장되었는지 확인
+    verify(cache).put(eq(email), anyString());
+    // 메일 발송 호출 확인
+    verify(emailService).sendVerificationCode(eq(email), anyString());
+  }
+
+  @Test
+  @DisplayName("인증번호 발송 실패: 가입되지 않은 이메일로 요청하면 예외가 발생해야 한다.")
+  void sendVerificationCode_Fail_Test() {
+    // Given
+    String email = "test@test.com";
+    given(userRepository.existsByEmailAndDeletedAtIsNull(email)).willReturn(false);
+
+    // When & Then
+    assertThatThrownBy(() -> userService.sendVerificationCode(email))
+        .isInstanceOf(BusinessException.class)
+        .hasFieldOrPropertyWithValue("errorCode", UserErrorCode.USER_NOT_FOUND);
+  }
+
+  @Test
+  @DisplayName("인증번호 검증: 캐시의 인증번호와 입력 인증번호가 일치하면 성공 후 캐시가 삭제 되어야 한다.")
+  void verifyCode_Test() {
+    // Given
+    String email = "test@test.com";
+    String code = "123456";
+    given(cacheManager.getCache("verificationCodes")).willReturn(cache);
+    given(cache.get(email, String.class)).willReturn(code);
+
+    // When
+    userService.verifyCode(email, code);
+
+    // Then - 사용 후 캐시 삭제 확인
+    verify(cache).evict(eq(email));
+  }
+
+  @Test
+  @DisplayName("인증번호 검증 실패: 입력한 인증번호가 캐시의 인증번호와 다르면 예외가 발생해야 한다.")
+  void verifyCode_Fail_Test() {
+    // Given
+    String email = "test@test.com";
+    String correctCode = "123456";
+    String inputCode = "999999";
+
+    given(cacheManager.getCache("verificationCodes")).willReturn(cache);
+    given(cache.get(email, String.class)).willReturn(correctCode);
+
+    // When & Then
+    assertThatThrownBy(() -> userService.verifyCode(email, inputCode))
+        .isInstanceOf(BusinessException.class)
+        .hasFieldOrPropertyWithValue("errorCode", UserErrorCode.VERIFICATION_CODE_MISMATCH);
+  }
+
+  @Test
+  @DisplayName("인증번호 검증 실패: 캐시에 번호가 없는(만료) 경우 예외가 발생한다.")
+  void verifyCode_Expired_Test() {
+    String email = "test@test.com";
+    given(cacheManager.getCache("verificationCodes")).willReturn(cache);
+    // 캐시 만료 상황
+    given(cache.get(email, String.class)).willReturn(null);
+
+    assertThatThrownBy(() -> userService.verifyCode(email, "123456"))
+        .isInstanceOf(BusinessException.class)
+        .hasFieldOrPropertyWithValue("errorCode", UserErrorCode.VERIFICATION_CODE_EXPIRED);
+  }
+
+  @Test
+  @DisplayName("스케줄러: 삭제 대상 유저가 있으면 삭제 및 리뷰 통계 동기화를 수행한다.")
+  void hardDeleteOldUsers_WithTargets_Test() {
+    // Given
+    List<User> targets = List.of(User.builder().build());
+    given(userRepository.findAllExpiredUsers(any(Instant.class))).willReturn(targets);
+
+    // When
+    userService.hardDeleteOldUsers();
+
+    // Then
+    verify(userRepository).deleteAll(targets);
+    verify(reviewRepository).syncAllReviewCommentCounts();
   }
 }

@@ -18,6 +18,10 @@ spring:
       credentials:
         access-key: ${AWS_ACCESS_KEY}
         secret-key: ${AWS_SECRET_KEY}
+  data:
+    redis:
+      host: localhost
+      port: 6379
 
   # Spring Boot의 SQL 초기화 기능 끄기 (Hibernate 기능 사용)
   sql:
@@ -52,9 +56,6 @@ logging:
     org.hibernate.SQL: debug
     # 바인딩되는 파라미터 출력
     org.hibernate.orm.jdbc.bind: trace
-  # 로그 패턴 추가
-  pattern:
-    console: "%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{36} - [%X{request_id}] [%X{client_ip}] %msg%n"
 
 # Naver API
 naver:

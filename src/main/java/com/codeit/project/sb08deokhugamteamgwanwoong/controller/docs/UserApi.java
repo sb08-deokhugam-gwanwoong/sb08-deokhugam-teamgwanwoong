@@ -4,8 +4,12 @@ import com.codeit.project.sb08deokhugamteamgwanwoong.dto.dashboard.CursorPageRes
 import com.codeit.project.sb08deokhugamteamgwanwoong.dto.dashboard.DashboardPageRequest;
 import com.codeit.project.sb08deokhugamteamgwanwoong.dto.user.UserDto;
 import com.codeit.project.sb08deokhugamteamgwanwoong.dto.user.UserLoginRequest;
+import com.codeit.project.sb08deokhugamteamgwanwoong.dto.user.UserPasswordUpdateRequest;
 import com.codeit.project.sb08deokhugamteamgwanwoong.dto.user.UserRegisterRequest;
+import com.codeit.project.sb08deokhugamteamgwanwoong.dto.user.UserResetPasswordRequest;
 import com.codeit.project.sb08deokhugamteamgwanwoong.dto.user.UserUpdateRequest;
+import com.codeit.project.sb08deokhugamteamgwanwoong.dto.user.UserVerificationRequest;
+import com.codeit.project.sb08deokhugamteamgwanwoong.dto.user.UserVerifyCodeRequest;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.media.Content;
@@ -145,6 +149,100 @@ public interface UserApi {
   )
   @PatchMapping("/{userId}")
   ResponseEntity<UserDto> updateUser(@PathVariable @Parameter(description = "사용자 ID", required = true) UUID userId, @RequestBody @Valid UserUpdateRequest request);
+
+  @Operation(
+      summary = "사용자 비밀번호 수정",
+      description = "사용자의 비밀번호를 수정합니다.",
+      operationId = "updateUserPassword",
+      responses = {
+          @ApiResponse(
+              responseCode = "204",
+              description = "사용자 비밀번호 수정 성공"
+          ),
+          @ApiResponse(
+              responseCode = "400",
+              description = "잘못된 요청 (입력값 검증 실패)"
+          ),
+          @ApiResponse(
+              responseCode = "404",
+              description = "사용자 정보 없음"
+          ),
+          @ApiResponse(
+              responseCode = "500",
+              description = "서버 내부 오류"
+          )
+      }
+  )
+  @PatchMapping("/{userId}/password")
+  ResponseEntity<Void> updatePassword(@PathVariable @Parameter(description = "사용자 ID", required = true) UUID userId, @RequestBody @Valid UserPasswordUpdateRequest request);
+
+  @Operation(
+      summary = "인증번호 발송",
+      description = "비밀번호 찾기를 위한 인증번호를 이메일로 발송합니다.",
+      operationId = "sendVerificationCode",
+      responses = {
+          @ApiResponse(
+              responseCode = "200",
+              description = "인증번호 발송 성공"
+          ),
+          @ApiResponse(
+              responseCode = "404",
+              description = "존재하지 않는 이메일"
+          ),
+          @ApiResponse(
+              responseCode = "500",
+              description = "서버 내부 오류 (메일 발송 실패 등)"
+          )
+      }
+  )
+  @PostMapping("/password/verification-code")
+  ResponseEntity<Void> sendVerificationCode(@RequestBody @Valid UserVerificationRequest request);
+
+  @Operation(
+      summary = "인증번호 검증",
+      description = "사용자가 입력한 인증번호가 유효한지 검증합니다.",
+      responses = {
+          @ApiResponse(
+              responseCode = "200",
+              description = "인증번호 검증 성공"
+          ),
+          @ApiResponse(
+              responseCode = "400",
+              description = "인증번호 불일치 또는 만료"
+          ),
+          @ApiResponse(
+              responseCode = "500",
+              description = "서버 내부 오류"
+          )
+      }
+  )
+  @PostMapping("/password/verify")
+  ResponseEntity<Void> verifyCode(@RequestBody @Valid UserVerifyCodeRequest request);
+
+  @Operation(
+      summary = "비밀번호 재설정",
+      description = "인증을 완료한 사용자의 비밀번호를 새로운 비밀번호로 재설정합니다.",
+      responses = {
+          @ApiResponse(
+              responseCode = "204",
+              description = "비밀번호 재설정 성공"
+          ),
+          @ApiResponse(
+              responseCode = "400",
+              description = "잘못된 비밀번호 형식"
+          ),
+          @ApiResponse(
+              responseCode = "404",
+              description = "사용자 정보 없음"
+          ),
+          @ApiResponse(
+              responseCode = "500",
+              description = "서버 내부 오류"
+          )
+      }
+  )
+  @PatchMapping("/password/reset")
+  ResponseEntity<Void> resetPassword(@RequestBody @Valid UserResetPasswordRequest request);
 
   @Operation(
       summary = "사용자 논리 삭제",

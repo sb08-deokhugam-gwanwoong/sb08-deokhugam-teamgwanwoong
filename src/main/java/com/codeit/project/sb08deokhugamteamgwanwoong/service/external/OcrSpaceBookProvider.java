@@ -49,7 +49,7 @@ public class OcrSpaceBookProvider implements BookMetadataProvider<String> {
         backoff = @Backoff(delay = 1000)
     )
     // 이미지가 Base64 기반이라 길기 때문에 해시값을 캐시로 사용함
-    @Cacheable(value = "ocrIsbn", key = "#base64Image.hashCode()", unless = "#result == null")
+    @Cacheable(value = "ocrIsbn", key = "#base64Image.hashCode()", unless = "#result == null", cacheManager = "caffeineCacheManager")
     public String getBookMetadata(String base64Image) {
         log.info("OCR Space API를 호출하여 ISBN을 추출합니다.");
 
@@ -89,7 +89,7 @@ public class OcrSpaceBookProvider implements BookMetadataProvider<String> {
 
     // 정규표현식으로 13자리 ISBN만 추출하는 헬퍼 메서드
     private String extractIsbn(String text) {
-        String cleanText = text.replaceAll("[\\-\\s]","");
+        String cleanText = text.replaceAll("[^0-9]","");
         Pattern pattern = Pattern.compile("(978|979)\\d{10}");
         Matcher matcher = pattern.matcher(cleanText);
 
