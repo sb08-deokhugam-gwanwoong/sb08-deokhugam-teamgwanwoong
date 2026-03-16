@@ -17,4 +17,16 @@ public interface ReviewMapper {
     @Mapping(source = "review.createdAt", target="createdAt")
     @Mapping(source = "review.updatedAt", target="updatedAt")
     ReviewDto toDto(Review review, boolean likedByMe, String thumbnail);
+
+    // 하이라이트 전용 매핑
+    @Mapping(source = "review.book.id", target = "bookId")
+    @Mapping(source = "thumbnail", target = "bookThumbnailUrl")
+    @Mapping(source = "review.user.id", target = "userId")
+    @Mapping(source = "review.createdAt", target="createdAt")
+    @Mapping(source = "review.updatedAt", target="updatedAt")
+    @Mapping(source = "highlightedTitle", target = "bookTitle")
+    @Mapping(source = "highlightedNickname", target = "userNickname")
+    @Mapping(source = "highlightedContent", target = "content")
+    ReviewDto toDtoWithHighlights(Review review, boolean likedByMe, String thumbnail,
+                                  String highlightedTitle, String highlightedNickname, String highlightedContent);
 }

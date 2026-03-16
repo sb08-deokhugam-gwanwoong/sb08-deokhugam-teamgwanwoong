@@ -3,6 +3,7 @@ package com.codeit.project.sb08deokhugamteamgwanwoong.repository.impl;
 import co.elastic.clients.elasticsearch._types.query_dsl.BoolQuery;
 import co.elastic.clients.elasticsearch._types.query_dsl.Operator;
 import co.elastic.clients.elasticsearch._types.query_dsl.Query;
+import co.elastic.clients.elasticsearch._types.query_dsl.TextQueryType;
 import com.codeit.project.sb08deokhugamteamgwanwoong.dto.review.ReviewDocument;
 import com.codeit.project.sb08deokhugamteamgwanwoong.dto.review.ReviewSearchCondition;
 import com.codeit.project.sb08deokhugamteamgwanwoong.repository.ReviewSearchRepositoryCustom;
@@ -12,10 +13,15 @@ import org.springframework.data.domain.Sort;
 import org.springframework.data.elasticsearch.client.elc.NativeQueryBuilder;
 import org.springframework.data.elasticsearch.core.ElasticsearchOperations;
 import org.springframework.data.elasticsearch.core.SearchHits;
+import org.springframework.data.elasticsearch.core.query.HighlightQuery;
+import org.springframework.data.elasticsearch.core.query.highlight.Highlight;
+import org.springframework.data.elasticsearch.core.query.highlight.HighlightField;
+import org.springframework.data.elasticsearch.core.query.highlight.HighlightParameters;
 import org.springframework.stereotype.Repository;
 import org.springframework.util.StringUtils;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 
 @Repository
@@ -49,7 +55,9 @@ public class ReviewSearchRepositoryImpl implements ReviewSearchRepositoryCustom 
                                 "book.title", "book.title.ngram",
                                 "user.nickname", "user.nickname.ngram"
                         )
-                        .operator(Operator.And)
+                        .type(TextQueryType.Phrase)
+                        // 단어 사이의 거리 허용치(slop)을 1~2 정도로 설정
+                        .slop(2)
                 ));
             }
         }
@@ -86,11 +94,28 @@ public class ReviewSearchRepositoryImpl implements ReviewSearchRepositoryCustom 
             }
         }
 
+        Highlight highlight = new Highlight(
+                HighlightParameters.builder()
+                        .withPreTags("<mark style=\"background-color: #ffe58f; font-weight: bold;\">") // 시작 태그
+                        .withPostTags("</mark>") // 종료 태그
+                        .build(),
+                Arrays.asList(
+                        new HighlightField("content"),
+                        new HighlightField("content.ngram"),
+                        new HighlightField("book.title"),
+                        new HighlightField("book.title.ngram"),
+                        new HighlightField("user.nickname"),
+                        new HighlightField("user.nickname.ngram")
+                )
+        );
+        HighlightQuery highlightQuery = new HighlightQuery(highlight, null);
+
         // 4. NativeQuery 조립 (JPA의 QueryDsl 역할)
         NativeQueryBuilder nativeQueryBuilder = new NativeQueryBuilder()
                 .withQuery(query)
                 .withSort(sort)
-                .withPageable(pageable);
+                .withPageable(pageable)
+                .withHighlightQuery(highlightQuery);
 
         // 커서 값이 존재하면 search_after 넣음
         if (!searchAfter.isEmpty()) {
