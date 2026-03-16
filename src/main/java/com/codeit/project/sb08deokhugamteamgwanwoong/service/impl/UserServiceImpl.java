@@ -224,6 +224,7 @@ public class UserServiceImpl implements UserService {
    * @param request   유저 비밀번호 리셋 요청 request
    */
   @Override
+  @Transactional
   public void resetPassword(UserResetPasswordRequest request) {
 
     String email = request.email();
