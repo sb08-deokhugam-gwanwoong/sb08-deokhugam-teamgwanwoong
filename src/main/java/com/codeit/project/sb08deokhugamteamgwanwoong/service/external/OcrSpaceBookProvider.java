@@ -89,7 +89,7 @@ public class OcrSpaceBookProvider implements BookMetadataProvider<String> {
 
     // 정규표현식으로 13자리 ISBN만 추출하는 헬퍼 메서드
     private String extractIsbn(String text) {
-        String cleanText = text.replaceAll("[\\-\\s]","");
+        String cleanText = text.replaceAll("[^0-9]","");
         Pattern pattern = Pattern.compile("(978|979)\\d{10}");
         Matcher matcher = pattern.matcher(cleanText);
 

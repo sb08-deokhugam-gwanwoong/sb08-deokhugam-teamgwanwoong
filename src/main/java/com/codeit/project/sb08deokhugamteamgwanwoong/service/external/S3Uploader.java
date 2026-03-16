@@ -2,6 +2,7 @@ package com.codeit.project.sb08deokhugamteamgwanwoong.service.external;
 
 import com.codeit.project.sb08deokhugamteamgwanwoong.exception.BusinessException;
 import com.codeit.project.sb08deokhugamteamgwanwoong.exception.enums.GlobalErrorCode;
+import java.io.File;
 import java.io.IOException;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
@@ -106,6 +107,44 @@ public class S3Uploader {
       log.info("S3 파일 삭제 완료 : {} ", s3FileName);
     } catch (Exception e) {
       log.error("S3 파일 삭제 실패 (URL: {}): {}", fileUrl, e.getMessage());
+    }
+  }
+
+  /**
+   * 서버 로컬의 파일(java.io.File)을 S3의 특정 디렉토리(logs/)에 업로드한다.
+   *
+   * @param file 업로드할 로컬 파일 객체
+   * @return 업로드된 파일의 S3 URL (실패 시 예외 발생, 파일 없으면 null 반환)
+   */
+  public String uploadLogFile(File file) {
+    if (file == null || !file.exists()) {
+      return null;
+    }
+
+    // S3 내부의 logs/ 폴더 하위에 날짜별 파일 이름으로 저장
+    String s3FileName = "logs/" + file.getName();
+
+    try {
+      PutObjectRequest putObjectRequest = PutObjectRequest.builder()
+          .bucket(bucket)
+          .key(s3FileName)
+          .contentType("text/plain")
+          .build();
+
+      // AWS SDK v2의 Request.fromFile()을 사용해서 로컬 파일을 바로 스트리밍 업로드
+      s3Client.putObject(putObjectRequest, RequestBody.fromFile(file));
+
+      String uploadUrl = s3Client.utilities().getUrl(GetUrlRequest.builder()
+          .bucket(bucket)
+          .key(s3FileName)
+          .build())
+          .toExternalForm();
+
+      log.info("S3 로그 파일 업로드 완료: {}", uploadUrl);
+      return uploadUrl;
+    } catch (Exception e) {
+      log.error("S3 로그 파일 업로드 실패(파일명: {}): {}", file.getName(), e.getMessage());
+      throw new BusinessException(GlobalErrorCode.FILE_UPLOAD_FAILED);
     }
   }
 }
