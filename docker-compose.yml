@@ -27,7 +27,7 @@ services:
       - ./.deokhugam:/app/.deokhugam # 로컬 파일 저장소
       - ./.deokhugam-files:/app/.deokhugam-files # 파일 저장소
     healthcheck:
-      test: [ "CMD-SHELL", "pg_isready -U ${DB_USER} -d ${DB_NAME}" ]
+      test: ["CMD-SHELL", "curl -f http://localhost:8080/actuator/health || exit 1"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -102,7 +102,6 @@ services:
       - "9200:9200"
     networks:
       - deokhugam-network
-
 networks:
   deokhugam-network:
     driver: bridge
