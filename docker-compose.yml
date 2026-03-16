@@ -18,8 +18,11 @@ services:
       - AWS_S3_SECRET_KEY=${AWS_S3_SECRET_KEY}
       - AWS_S3_REGION=${AWS_S3_REGION}
       - AWS_S3_BUCKET=${AWS_S3_BUCKET}
+      - REDIS_HOST=deokhugam-redis
+      - REDIS_PORT=6379
     depends_on:
       - deokhugam-db # DB 가장 먼저 실행
+      - deokhugam-redis # Redis 다음 실행
     volumes:
       - ./.deokhugam:/app/.deokhugam # 로컬 파일 저장소
       - ./.deokhugam-files:/app/.deokhugam-files # 파일 저장소
@@ -75,19 +78,15 @@ services:
       - deokhugam-network
     restart: always
 
-  elasticsearch:
-    container_name: deokhugam-es
-    image: docker.elastic.co/elasticsearch/elasticsearch:8.12.0
-    environment:
-      - discovery.type=single-node
-      - xpack.security.enabled=false
-      - "ES_JAVA_OPTS=-Xms512m -Xmx512m" # 메모리 제한 필수
-    volumes:
-      - ./.es-data:/usr/share/elasticsearch/data # 검색 데이터 영구 저장 (EC2 재부팅 방어)
+  # Redis
+  deokhugam-redis:
+    container_name: deokhugam-redis
+    image: redis:latest
     ports:
-      - "9200:9200"
+      - "6379:6379"
     networks:
       - deokhugam-network
+    restart: always
 
 networks:
   deokhugam-network:

@@ -21,7 +21,7 @@ public class ExternalApiConfig {
         return new RestTemplate();
     }
 
-    @Bean
+    @Bean(name = "caffeineCacheManager")
     public CacheManager cacheManager() {
         CaffeineCacheManager cacheManager = new CaffeineCacheManager();
 
