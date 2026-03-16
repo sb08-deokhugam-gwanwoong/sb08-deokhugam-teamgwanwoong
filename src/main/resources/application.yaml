@@ -1,8 +1,23 @@
 spring:
+  mail:
+    host: smtp.gmail.com
+    port: 587
+    username: ${MAIL_USERNAME}
+    password: ${MAIL_PASSWORD}
+    default-encoding: UTF-8
+    properties:
+      mail.smtp.auth: true
+      mail.smtp.starttls.enable: true
   application:
     name: SB08-Deokhugam-teamGwanwoong
   profiles:
     active: prod
+  batch:
+    job:
+      enabled: false  # Job은 스케줄러/API 등으로만 실행 (기동 시 자동 실행 방지)
+    jdbc:
+      # 운영(PostgreSQL): never. 메타데이터 테이블은 db/batch/schema-batch-postgresql.sql 한 번만 실행
+      initialize-schema: never
 
 # Actuator
 management:
