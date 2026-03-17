@@ -128,9 +128,9 @@ services:
       - ES_HOSTS=${ES_HOSTS}
     depends_on:
       deokhugam-db:
-        condition: service_healthy
+        condition: service_started
       elasticsearch:
-        condition: service_healthy
+        condition: service_started
 
     networks:
       - deokhugam-network
