@@ -98,6 +98,9 @@ services:
   elasticsearch:
     container_name: deokhugam-es
     image: docker.elastic.co/elasticsearch/elasticsearch:8.12.0
+    build:
+      context: .
+      dockerfile: elasticsearch.Dockerfile
     environment:
       - discovery.type=single-node
       - xpack.security.enabled=false
@@ -139,7 +142,6 @@ services:
         condition: service_started
       elasticsearch:
         condition: service_started
-
     networks:
       - deokhugam-network
 
