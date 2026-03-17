@@ -28,7 +28,7 @@ services:
       deokhugam-redis:
         condition: service_started
       elasticsearch:
-        condition: service_healthy
+        condition: service_started
 
     volumes:
       - ./.deokhugam:/app/.deokhugam # 로컬 파일 저장소
