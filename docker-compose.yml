@@ -106,7 +106,7 @@ services:
     environment:
       - discovery.type=single-node
       - xpack.security.enabled=false
-      - "ES_JAVA_OPTS=-Xms512m -Xmx512m" # 메모리 제한 필수
+      - "ES_JAVA_OPTS=-Xms256m -Xmx256m" # 메모리 제한 필수
     volumes:
 #      - ./.es-data:/usr/share/elasticsearch/data # 검색 데이터 영구 저장 (EC2 재부팅 방어)
       - deokhugam-es-data:/usr/share/elasticsearch/data
