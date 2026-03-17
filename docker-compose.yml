@@ -20,11 +20,15 @@ services:
       - AWS_S3_BUCKET=${AWS_S3_BUCKET}
       - REDIS_HOST=deokhugam-redis
       - REDIS_PORT=6379
+      - spring.elasticsearch.uris=http://deokhugam-es:9200/
     depends_on:
       deokhugam-db:
         condition: service_healthy
       deokhugam-redis:
         condition: service_started
+      elasticsearch:
+        condition: service_healthy
+
     volumes:
       - ./.deokhugam:/app/.deokhugam # 로컬 파일 저장소
       - ./.deokhugam-files:/app/.deokhugam-files # 파일 저장소
@@ -95,6 +99,9 @@ services:
   elasticsearch:
     container_name: deokhugam-es
     image: docker.elastic.co/elasticsearch/elasticsearch:8.12.0
+    build:
+      context: .
+      dockerfile: elasticsearch.Dockerfile
     environment:
       - discovery.type=single-node
       - xpack.security.enabled=false
@@ -106,6 +113,11 @@ services:
       - "9200:9200"
     networks:
       - deokhugam-network
+    healthcheck:
+      test: [ "CMD-SHELL", "curl -s http://localhost:9200 >/dev/null || exit 1" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
   logstash:
     image: docker.elastic.co/logstash/logstash:8.12.0
@@ -131,7 +143,6 @@ services:
         condition: service_started
       elasticsearch:
         condition: service_started
-
     networks:
       - deokhugam-network
 
