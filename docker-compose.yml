@@ -4,7 +4,8 @@ services:
   # 애플리케이션 서비스
   deokhugam-app:
     container_name: deokhugam-app
-    build: . # 현재 디렉토리의 Dockerfile 사용
+#    build: . # 현재 디렉토리의 Dockerfile 사용
+    image: public.ecr.aws/n4k5w8e3/gwanwoong_public_ecr:latest
     ports:
       - "8080:8080" # 호스트 8080, 컨테이너 8080
     env_file:
