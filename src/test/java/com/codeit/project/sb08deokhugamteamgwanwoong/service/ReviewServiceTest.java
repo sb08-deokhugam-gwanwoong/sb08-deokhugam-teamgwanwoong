@@ -1,6 +1,9 @@
 package com.codeit.project.sb08deokhugamteamgwanwoong.service;
 
 import com.codeit.project.sb08deokhugamteamgwanwoong.dto.review.*;
+import com.codeit.project.sb08deokhugamteamgwanwoong.dto.review.event.ReviewCreatedEventDto;
+import com.codeit.project.sb08deokhugamteamgwanwoong.dto.review.event.ReviewDeletedEventDto;
+import com.codeit.project.sb08deokhugamteamgwanwoong.dto.review.event.ReviewUpdatedEventDto;
 import com.codeit.project.sb08deokhugamteamgwanwoong.entity.Book;
 import com.codeit.project.sb08deokhugamteamgwanwoong.entity.Review;
 import com.codeit.project.sb08deokhugamteamgwanwoong.entity.ReviewLike;
@@ -19,7 +22,10 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.elasticsearch.core.SearchHit;
+import org.springframework.data.elasticsearch.core.SearchHits;
 import org.springframework.test.util.ReflectionTestUtils;
 
 import java.time.Instant;
@@ -31,6 +37,7 @@ import static org.assertj.core.api.AssertionsForClassTypes.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.BDDMockito.then;
+import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 
 @ExtendWith(MockitoExtension.class)
@@ -54,6 +61,11 @@ public class ReviewServiceTest {
     private NotificationService notificationService;
     @Mock
     private CommentRepository commentRepository;
+
+    @Mock
+    private ReviewSearchRepository reviewSearchRepository;
+    @Mock
+    private ApplicationEventPublisher eventPublisher;
 
     private ReviewCreateRequest createRequest;
     private ReviewUpdateRequest updateRequest;
@@ -164,6 +176,102 @@ public class ReviewServiceTest {
     }
 
     @Test
+    @DisplayName("ES 리뷰 조회 - 키워드가 있을 때 하이라이트 매핑 및 슬라이스 처리가 정상 동작한다")
+    void find_all_review_from_elasticsearch_success() {
+        // given
+        int limit = 1;
+        ReviewPageRequest request = new ReviewPageRequest(
+                null,
+                null,
+                "test",
+                null,
+                null,
+                null,
+                null,
+                limit,
+                user.getId()
+        );
+
+        @SuppressWarnings("unchecked")
+        SearchHit<ReviewDocument> hit1 = mock(SearchHit.class);
+        @SuppressWarnings("unchecked")
+        SearchHit<ReviewDocument> hit2 = mock(SearchHit.class);
+
+        ReviewDocument doc1 = mock(ReviewDocument.class);
+        given(doc1.getId()).willReturn(review.getId().toString());
+
+        given(hit1.getContent()).willReturn(doc1);
+
+        Map<String, List<String>> highlightMap = Map.of(
+                "content", List.of("<mark>테스트</mark> 내용"),
+                "book.title.ngram", List.of("<mark>테스트</mark> 책")
+        );
+        given(hit1.getHighlightFields()).willReturn(highlightMap);
+
+        @SuppressWarnings("unchecked")
+        SearchHits<ReviewDocument> searchHits = mock(SearchHits.class);
+        given(searchHits.getSearchHits()).willReturn(List.of(hit1, hit2));
+        given(reviewSearchRepository.searchByCursor(any(), any())).willReturn(searchHits);
+
+        //DB 조회 결과 모킹 (최신 DB 데이터를 가져옴)
+        given(reviewRepository.findAllById(any())).willReturn(List.of(review));
+
+        //좋아요 여부 모킹
+        given(reviewLikeRepository.findLikedReviewIds(any(), any())).willReturn(Set.of(review.getId()));
+
+        //Mapper 모킹 (하이라이트 추출 로직이 정확히 동작하지는 파라미터로 검증)
+        ReviewDto mockDto = createReviewDto(review, true);
+        given(reviewMapper.toDtoWithHighlights(
+                eq(review),
+                eq(true),
+                eq(review.getBook().getThumbnailUrl()),
+                eq("<mark>테스트</mark> 책"),
+                eq(review.getUser().getNickname()),
+                eq("<mark>테스트</mark> 내용")
+        )).willReturn(mockDto);
+
+        //when
+        CursorPageResponseReviewDto result = reviewService.findAllReview(request, user.getId());
+
+        //then
+        assertThat(result.hasNext()).isTrue();
+        assertThat(result.content()).hasSize(1);
+
+        then(reviewMapper).should().toDtoWithHighlights(any(), anyBoolean(), any(), any(), any(), any());
+    }
+
+    @Test
+    @DisplayName("ES 리뷰 조회 - ES에는 존재하지만 DB에서 삭제된(동기화 딜레이) 리뷰는 결과에서 제외된다.")
+    void find_all_review_from_elasticsearch_skip_deleted_in_db() {
+        // given
+        ReviewPageRequest request = new ReviewPageRequest(
+                null, null, "test", null, null, null, null, 10, user.getId()
+        );
+
+        @SuppressWarnings("unchecked")
+        SearchHit<ReviewDocument> hit = mock(SearchHit.class);
+        ReviewDocument doc = mock(UUID.randomUUID().toString());
+        given(doc.getId()).willReturn(UUID.randomUUID().toString());
+
+        given(hit.getContent()).willReturn(doc);
+
+        @SuppressWarnings("unchecked")
+        SearchHits<ReviewDocument> searchHits = mock(SearchHits.class);
+        given(searchHits.getSearchHits()).willReturn(List.of(hit));
+        given(reviewSearchRepository.searchByCursor(any(), any())).willReturn(searchHits);
+
+        given(reviewRepository.findAllById(any())).willReturn(Collections.emptyList());
+        given(reviewLikeRepository.findLikedReviewIds(any(), any())).willReturn(Collections.emptySet());
+
+        //when
+        CursorPageResponseReviewDto result = reviewService.findAllReview(request, user.getId());
+
+        //then
+        assertThat(result.content()).isEmpty();
+        assertThat(result.hasNext()).isFalse();
+    }
+
+    @Test
     @DisplayName("리뷰 생성 테스트 - 성공 (처음 작성하는 경우)")
     void create_review_success() {
         //given
@@ -171,7 +279,7 @@ public class ReviewServiceTest {
         given(bookRepository.findById(any())).willReturn(Optional.of(book));
         // 중복 리뷰인지 체크
         given(reviewRepository.existsByBookIdAndUserId(any(), any())).willReturn(false);
-        given(reviewRepository.save(any(Review.class))).willReturn(review);
+        given(reviewRepository.saveAndFlush(any(Review.class))).willReturn(review);
         given(reviewMapper.toDto(any(), anyBoolean(), any()))
                 .willAnswer(invocation -> createReviewDto(invocation.getArgument(0), invocation.getArgument(1)));
 
@@ -181,7 +289,8 @@ public class ReviewServiceTest {
         //then
         assertThat(result.content()).isEqualTo("test review");
         assertThat(result.bookThumbnailUrl()).isEqualTo("https://test-thumbnail.url/image.jpg");
-        then(reviewRepository).should().save(any(Review.class));
+        then(reviewRepository).should().saveAndFlush(any(Review.class));
+        then(eventPublisher).should().publishEvent(any(ReviewCreatedEventDto.class));
     }
 
     @Test
@@ -318,7 +427,7 @@ public class ReviewServiceTest {
     }
 
     @Test
-    @DisplayName("리뷰 논리 삭제 - 성공")
+    @DisplayName("리뷰 논리 삭제 - 성공 및 이벤트 발행")
     void soft_delete_review_success() {
         //given
         given(reviewRepository.findByIdWithPessimisticLock(review.getId())).willReturn(Optional.of(review));
@@ -330,6 +439,7 @@ public class ReviewServiceTest {
         //then
         then(reviewRepository).should().saveAndFlush(review);
         then(commentRepository).should().softDeleteAllByReviewId(eq(review.getId()), any(Instant.class));
+        then(eventPublisher).should().publishEvent(any(ReviewDeletedEventDto.class));
     }
 
     @Test
@@ -358,7 +468,7 @@ public class ReviewServiceTest {
     }
 
     @Test
-    @DisplayName("리뷰 수정 테스트 - 성공")
+    @DisplayName("리뷰 수정 테스트 - 성공 및 이벤트 발행")
     void modify_review_success() {
         //given
         UUID reviewId = review.getId();
@@ -381,6 +491,7 @@ public class ReviewServiceTest {
         // 반환된 ReviewDto가 올바른 값을 가져오는 지
         assertThat(result.rating()).isEqualTo(updateRequest.rating());
         assertThat(result.content()).isEqualTo(updateRequest.content());
+        then(eventPublisher).should().publishEvent(any(ReviewUpdatedEventDto.class));
     }
 
     @Test
@@ -432,6 +543,7 @@ public class ReviewServiceTest {
         then(commentRepository).should().hardDeleteAllByReviewId(review.getId());
         then(reviewLikeRepository).should().hardDeleteAllByReviewId(review.getId());
         then(reviewRepository).should().hardDeleteById(review.getId());
+        then(eventPublisher).should().publishEvent(any(ReviewDeletedEventDto.class));
     }
 
     @Test
