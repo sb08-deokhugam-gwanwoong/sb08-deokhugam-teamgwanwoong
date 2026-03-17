@@ -12,17 +12,12 @@ spring:
     name: SB08-Deokhugam-teamGwanwoong
   profiles:
     active: prod
-  kafka:
-    producer:
-      key-serializer: org.apache.kafka.common.serialization.StringSerializer
-      value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
-    consumer:
-      group-id: notification-group
-      auto-offset-reset: earliest
-      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
-      value-deserializer: org.springframework.kafka.support.serializer.JsonDeserializer
-      properties:
-        spring.json.trusted.packages: "com.codeit.project.*"
+  batch:
+    job:
+      enabled: false  # Job은 스케줄러/API 등으로만 실행 (기동 시 자동 실행 방지)
+    jdbc:
+      # 운영(PostgreSQL): never. 메타데이터 테이블은 db/batch/schema-batch-postgresql.sql 한 번만 실행
+      initialize-schema: never
 
 # Actuator
 management:

@@ -7,6 +7,26 @@ on:
 jobs:
   test:
     runs-on: ubuntu-latest
+
+    services:
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+
+      elasticsearch:
+        image: docker.elastic.co/elasticsearch/elasticsearch:8.12.0
+        env:
+          discovery.type: single-node
+          xpack.security.enabled: false
+        ports:
+          - 9200:9200
+        options: >-
+          --health-cmd "curl -f http://localhost:9200/_cluster/health?local=true || exit 1"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
     steps:
       - uses: actions/checkout@v4
 
@@ -16,11 +36,23 @@ jobs:
           java-version: '17'
           distribution: 'temurin'
 
+      # Nori 분석기는 기본 이미지에 없으므로 수동 설치
+      - name: Install Nori Plugin in Elasticsearch
+        run: |
+          docker exec $(docker ps -qf "ancestor=docker.elastic.co/elasticsearch/elasticsearch:8.12.0") bin/elasticsearch-plugin install analysis-nori || true
+          docker restart $(docker ps -qf "ancestor=docker.elastic.co/elasticsearch/elasticsearch:8.12.0")
+          sleep 20
+
       - name: Grant execute permission for gradlew
         run: chmod +x gradlew
 
+      # application-test.yaml을 사용하도록 프로파일을 지정
       - name: Test with Gradle
-        run: ./gradlew test
+        run: ./gradlew test -Dspring.profiles.active=test
+        env:
+          SPRING_DATA_REDIS_HOST: localhost
+          SPRING_DATA_REDIS_PORT: 6379
+          SPRING_ELASTICSEARCH_URIS: http://localhost:9200
 
       - name: Generate JaCoCo Report
         run: ./gradlew jacocoTestReport
