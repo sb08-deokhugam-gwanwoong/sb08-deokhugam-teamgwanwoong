@@ -68,7 +68,7 @@ jobs:
             cd /home/ec2-user/deokhugam-deploy
             
             # ECR에서 방금 올린 최신 앱 이미지 당겨오기 (Public이라 별도 로그인 불필요)
-            docker-compose pull deokhugam-app
+            sudo docker compose pull deokhugam-app
             
             # 전체 서비스 최신화 및 실행 (변경된 앱 컨테이너만 재시작됨)
-            docker-compose up -d
+            sudo docker compose up -d
