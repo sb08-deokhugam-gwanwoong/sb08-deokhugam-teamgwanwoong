@@ -14,9 +14,9 @@ import org.springframework.test.web.servlet.MockMvc;
 @Transactional
 public abstract class IntegrationTestSupport {
 
-  @Autowired
-  protected MockMvc mockMvc;
+    @Autowired
+    protected MockMvc mockMvc;
 
-  @Autowired
-  protected ObjectMapper objectMapper;
+    @Autowired
+    protected ObjectMapper objectMapper;
 }

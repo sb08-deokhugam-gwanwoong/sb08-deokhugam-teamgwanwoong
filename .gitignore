@@ -43,3 +43,6 @@ logs/
 
 # Querydsl
 src/main/generated/
+
+# Elasticsearch Local Data
+.es-data/
