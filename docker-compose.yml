@@ -20,6 +20,7 @@ services:
       - AWS_S3_BUCKET=${AWS_S3_BUCKET}
       - REDIS_HOST=deokhugam-redis
       - REDIS_PORT=6379
+      - spring.elasticsearch.uris=http://deokhugam-es:9200/
     depends_on:
       deokhugam-db:
         condition: service_healthy
