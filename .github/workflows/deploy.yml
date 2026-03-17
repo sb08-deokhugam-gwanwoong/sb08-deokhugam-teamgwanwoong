@@ -46,6 +46,10 @@ jobs:
           docker build --no-cache -t $ECR_REPOSITORY:latest .
           docker push $ECR_REPOSITORY:latest
 
+      - name: Make .env file
+        run: |
+          echo "${{ secrets.ENV_FILE_CONTENT }}" > .env
+
       # 2. EC2로 docker-compose.yml 및 설정 파일 전송
       - name: Copy files to EC2
         uses: appleboy/scp-action@master
@@ -53,7 +57,7 @@ jobs:
           host: ${{ secrets.EC2_HOST }}
           username: ${{ secrets.EC2_USERNAME }}
           key: ${{ secrets.EC2_SSH_KEY }}
-          source: "docker-compose.yml, logstash/, prometheus.yml"
+          source: "docker-compose.yml, logstash/, prometheus.yml, .env" # <-- .env 추가!
           target: "/home/ec2-user/deokhugam-deploy"
 
       # 3. EC2 접속 후 Docker Compose 실행
