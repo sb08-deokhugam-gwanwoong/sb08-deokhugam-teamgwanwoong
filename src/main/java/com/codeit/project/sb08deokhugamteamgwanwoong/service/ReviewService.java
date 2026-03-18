@@ -12,6 +12,10 @@ public interface ReviewService {
 
     ReviewLikeDto createReviewLike(UUID reviewId, UUID requestUserId);
 
+    void consumeReviewLike(ReviewLikeDto eventDto);
+
+    boolean checkIsLiked(UUID reviewId, UUID requestUserId);
+
     ReviewDto findDetailReview(UUID reviewId, UUID requestUserId);
 
     void softDeleteReview(UUID reviewId, UUID requestUserId);

@@ -25,6 +25,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.elasticsearch.core.SearchHit;
 import org.springframework.data.elasticsearch.core.SearchHits;
+import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -213,6 +214,7 @@ public class ReviewServiceImpl implements ReviewService {
     @Transactional
     public ReviewLikeDto createReviewLike(UUID reviewId, UUID requestUserId) {
         log.info("Service: 리뷰 좋아요 로직 시작 - reviewId: {}, requestUserId: {}", reviewId, requestUserId);
+
         Review review = findReviewWithLock(reviewId);
         User user = findUser(requestUserId);
 
@@ -222,16 +224,18 @@ public class ReviewServiceImpl implements ReviewService {
         if (existingReviewLike.isPresent()) {
             reviewLikeRepository.delete(existingReviewLike.get());
             reviewLikeRepository.flush();
-
             reviewRepository.decreaseLikeCount(reviewId);
+
             isLikedNow = false;
         } else {
             ReviewLike newReviewLike = ReviewLike.builder()
                     .review(review)
                     .user(user)
                     .build();
+
             reviewLikeRepository.saveAndFlush(newReviewLike);
             reviewRepository.increaseLikeCount(reviewId);
+
             isLikedNow = true;
 
             User toUser = review.getUser(); // 리뷰 작성자
@@ -239,11 +243,62 @@ public class ReviewServiceImpl implements ReviewService {
             // 다른 사람이 좋아요를 누를 경우만 알림 발송
             if (!toUser.getId().equals(user.getId())) {
                 String message = String.format("[%s]님이 나의 리뷰를 좋아합니다.", user.getNickname());
+
                 notificationService.createNotification(toUser, review, message);
             }
         }
         log.info("Service: 리뷰 좋아요 로직 성공 - reviewId: {}, requestUserId: {}", reviewId, requestUserId);
         return reviewLikeMapper.toDto(review.getId(), requestUserId, isLikedNow);
+    }
+
+    @Override
+    @Transactional
+    @KafkaListener(topics = "review-like", groupId = "deokhugam-group")
+    public void consumeReviewLike(ReviewLikeDto eventDto) {
+        UUID reviewId = eventDto.reviewId();
+        UUID requestUserId = eventDto.userId();
+        boolean likedState = eventDto.liked();
+
+        log.info("Service: 리뷰 좋아요 컨슈머 로직 시작 - reviewId: {}, userId: {}", reviewId, requestUserId);
+
+        // 비관적 락을 통한 DB 조회 로직
+        Review review = findReviewWithLock(reviewId);
+        User user = findUser(requestUserId);
+
+        Optional<ReviewLike> existingReviewLike = reviewLikeRepository.findByReviewIdAndUserId(reviewId, requestUserId);
+
+        if (likedState) {
+            if (existingReviewLike.isEmpty()) {
+                ReviewLike newReviewLike = ReviewLike.builder()
+                        .review(review)
+                        .user(user)
+                        .build();
+                reviewLikeRepository.saveAndFlush(newReviewLike);
+                reviewRepository.increaseLikeCount(reviewId);
+
+                User toUser = review.getUser(); // 리뷰 작성자
+                // 다른 사람이 좋아요를 누를 경우만 알림 발송
+                if (!toUser.getId().equals(user.getId())) {
+                    String message = String.format("[%s]님이 나의 리뷰를 좋아합니다.", user.getNickname());
+
+                    notificationService.createNotification(toUser, review, message);
+                }
+            }
+        } else {
+            if (existingReviewLike.isPresent()) {
+                reviewLikeRepository.delete(existingReviewLike.get());
+                reviewLikeRepository.flush();
+
+                reviewRepository.decreaseLikeCount(reviewId);
+            }
+        }
+        log.info("Service: 리뷰 좋아요 컨슈머 로직 성공 - reviewId: {}, requestUserId: {}", reviewId, requestUserId);
+    }
+
+    // 좋아요 상태만 확인하는 서비스 로직
+    @Override
+    public boolean checkIsLiked(UUID reviewId, UUID requestUserId) {
+        return reviewLikeRepository.findByReviewIdAndUserId(reviewId, requestUserId).isPresent();
     }
 
     @Override

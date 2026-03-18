@@ -12,6 +12,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.UUID;
@@ -24,6 +25,9 @@ public class ReviewController implements ReviewApi {
 
     private final ReviewService reviewService;
     private final DashboardService dashboardService;
+
+    // Value타입을 Object로 받아 JSON으로 변환되게 함
+    private final KafkaTemplate<UUID, Object> kafkaTemplate;
 
     @Override
     public ResponseEntity<CursorPageResponseReviewDto> findAll(
@@ -50,17 +54,37 @@ public class ReviewController implements ReviewApi {
                 .body(reviewDto);
     }
 
-    @Override
-    public ResponseEntity<ReviewLikeDto> createReviewLike(
+//    @Override
+//    public ResponseEntity<ReviewLikeDto> createReviewLike(
+//            @PathVariable("reviewId") UUID reviewId,
+//            @RequestHeader("Deokhugam-Request-User-ID") UUID requestUserId
+//    ) {
+//        log.info("Controller: 리뷰 좋아요 요청 - ID: {}, UserId: {}", reviewId, requestUserId);
+//        ReviewLikeDto reviewLikeDto = reviewService.createReviewLike(reviewId, requestUserId);
+//        kafkaTemplate.send("post-likes", reviewId, reviewLikeDto);
+//        log.info("Controller: 리뷰 좋아요 성공 - ID: {}, UserId: {}", reviewId, requestUserId);
+//        return ResponseEntity
+//                .status(HttpStatus.CREATED)
+//                .body(reviewLikeDto);
+//    }
+
+    @PostMapping("/{reviewId}/like")
+    public ResponseEntity<Void> createReviewLike(
             @PathVariable("reviewId") UUID reviewId,
             @RequestHeader("Deokhugam-Request-User-ID") UUID requestUserId
     ) {
-        log.info("Controller: 리뷰 좋아요 요청 - ID: {}, UserId: {}", reviewId, requestUserId);
-        ReviewLikeDto reviewLikeDto = reviewService.createReviewLike(reviewId, requestUserId);
-        log.info("Controller: 리뷰 좋아요 성공 - ID: {}, UserId: {}", reviewId, requestUserId);
-        return ResponseEntity
-                .status(HttpStatus.CREATED)
-                .body(reviewLikeDto);
+        // 현재 좋아요 눌렀는지 DB 상태 조회
+        boolean currentLiked = reviewService.checkIsLiked(reviewId, requestUserId);
+
+        // 카프카에 반영해야 할 목표 상태(낙관)
+        boolean targetState = !currentLiked;
+
+        // 기존 DTO에 목표 상태를 담아서 전송
+        ReviewLikeDto eventDto = new ReviewLikeDto(reviewId, requestUserId, targetState);
+        kafkaTemplate.send("review-like", reviewId, eventDto);
+
+        // 비동기 처리 완료 응답
+        return ResponseEntity.status(HttpStatus.ACCEPTED).build();
     }
 
     @Override
