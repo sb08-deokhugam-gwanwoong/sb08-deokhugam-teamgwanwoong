@@ -1,4 +1,4 @@
-package com.codeit.project.sb08deokhugamteamgwanwoong.consumer;
+package com.codeit.project.sb08deokhugamteamgwanwoong.service.impl;
 
 import com.codeit.project.sb08deokhugamteamgwanwoong.dto.notification.NotificationEvent;
 import com.codeit.project.sb08deokhugamteamgwanwoong.entity.Review;
