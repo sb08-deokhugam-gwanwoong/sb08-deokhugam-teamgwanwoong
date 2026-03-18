@@ -27,7 +27,7 @@ public class ReviewController implements ReviewApi {
     private final DashboardService dashboardService;
 
     // Value타입을 Object로 받아 JSON으로 변환되게 함
-    private final KafkaTemplate<UUID, Object> kafkaTemplate;
+    private final KafkaTemplate<String, Object> kafkaTemplate;
 
     @Override
     public ResponseEntity<CursorPageResponseReviewDto> findAll(
@@ -65,7 +65,7 @@ public class ReviewController implements ReviewApi {
 //        log.info("Controller: 리뷰 좋아요 성공 - ID: {}, UserId: {}", reviewId, requestUserId);
 //        return ResponseEntity
 //                .status(HttpStatus.CREATED)
-//                .body(reviewLikeDto);
+//                .body(reviewLikeDto);hu
 //    }
 
     @PostMapping("/{reviewId}/like")
@@ -81,7 +81,7 @@ public class ReviewController implements ReviewApi {
 
         // 기존 DTO에 목표 상태를 담아서 전송
         ReviewLikeDto eventDto = new ReviewLikeDto(reviewId, requestUserId, targetState);
-        kafkaTemplate.send("review-like", reviewId, eventDto);
+        kafkaTemplate.send("review-like", reviewId.toString(), eventDto);
 
         // 비동기 처리 완료 응답
         return ResponseEntity.status(HttpStatus.ACCEPTED).build();

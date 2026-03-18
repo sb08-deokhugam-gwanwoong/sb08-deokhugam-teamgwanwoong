@@ -289,7 +289,9 @@ public class ReviewServiceImpl implements ReviewService {
                 reviewLikeRepository.delete(existingReviewLike.get());
                 reviewLikeRepository.flush();
 
-                reviewRepository.decreaseLikeCount(reviewId);
+                if (review.getLikeCount() > 0) {
+                    reviewRepository.decreaseLikeCount(reviewId);
+                }
             }
         }
         log.info("Service: 리뷰 좋아요 컨슈머 로직 성공 - reviewId: {}, requestUserId: {}", reviewId, requestUserId);
