@@ -19,6 +19,20 @@ spring:
       # 운영(PostgreSQL): never. 메타데이터 테이블은 db/batch/schema-batch-postgresql.sql 한 번만 실행
       initialize-schema: never
 
+  kafka:
+    producer:
+      # 이름표를 붙이는 방식
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      # 알림 내용(객체)을 JSON 형식으로 포장
+      value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
+    consumer:
+      group-id: notification-group
+      auto-offset-reset: earliest
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.springframework.kafka.support.serializer.JsonDeserializer
+      properties:
+        spring.json.trusted.packages: "com.codeit.project.*"
+
 # Actuator
 management:
   endpoints:

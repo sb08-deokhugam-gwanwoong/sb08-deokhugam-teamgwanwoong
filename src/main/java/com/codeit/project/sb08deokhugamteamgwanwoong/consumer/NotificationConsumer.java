@@ -26,7 +26,8 @@ public class NotificationConsumer {
   @KafkaListener(topics = "notification-topic", groupId = "notification-group")
   public void consume(NotificationEvent event) {
 
-    log.info("[Kafka Consumer] 메시지 수신: {}", event.message());
+    log.info("[Kafka Consumer] 메시지 수신 - ToUser: {}, ReviewId: {}, Message: {}",
+        event.toUserId(), event.reviewId(), event.message());
 
     try {
       User toUser = userRepository.findById(event.toUserId())

@@ -29,6 +29,8 @@ services:
         condition: service_started
       elasticsearch:
         condition: service_started
+      deokhugam-kafka:
+        condition: service_started
 
     volumes:
       - ./.deokhugam:/app/.deokhugam # 로컬 파일 저장소
@@ -99,7 +101,6 @@ services:
   # Elasticsearch
   elasticsearch:
     container_name: deokhugam-es
-    image: docker.elastic.co/elasticsearch/elasticsearch:8.12.0
     build:
       context: .
       dockerfile: elasticsearch.Dockerfile
@@ -148,6 +149,51 @@ services:
     networks:
       - deokhugam-network
 
+  # Zookeeper 서비스 추가
+  zookeeper:
+    image: confluentinc/cp-zookeeper:7.4.0
+    container_name: deokhugam-zookeeper
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+      ZOOKEEPER_TICK_TIME: 2000
+    networks:
+      - deokhugam-network
+
+  # Kafka 서비스 (주키퍼 기반)
+  deokhugam-kafka:
+    image: confluentinc/cp-kafka:7.4.0
+    container_name: deokhugam-kafka
+    depends_on:
+      - zookeeper
+    ports:
+      - "9092:9092"
+    environment:
+      # 주키퍼 연결 설정
+      KAFKA_ZOOKEEPER_CONNECT: 'zookeeper:2181'
+
+      # 리스너 설정
+      KAFKA_LISTENERS: 'PLAINTEXT://0.0.0.0:9092,INTERNAL://0.0.0.0:29092'
+      KAFKA_ADVERTISED_LISTENERS: 'PLAINTEXT://localhost:9092,INTERNAL://deokhugam-kafka:29092'
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: 'PLAINTEXT:PLAINTEXT,INTERNAL:PLAINTEXT'
+      KAFKA_INTER_BROKER_LISTENER_NAME: 'INTERNAL'
+
+      # 기타 설정
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
+      KAFKA_HEAP_OPTS: "-Xms256m -Xmx256m"
+    volumes:
+      - deokhugam-kafka-data:/var/lib/kafka/data
+    networks:
+      - deokhugam-network
+
 networks:
   deokhugam-network:
     driver: bridge
+
+volumes:
+  deokhugam-kafka-data:
+    driver: local
+  deokhugam-es-data:
+    driver: local
+  deokhugam-logstash-data:
+    driver: local
