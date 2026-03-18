@@ -212,47 +212,6 @@ public class ReviewServiceImpl implements ReviewService {
 
     @Override
     @Transactional
-    public ReviewLikeDto createReviewLike(UUID reviewId, UUID requestUserId) {
-        log.info("Service: 리뷰 좋아요 로직 시작 - reviewId: {}, requestUserId: {}", reviewId, requestUserId);
-
-        Review review = findReviewWithLock(reviewId);
-        User user = findUser(requestUserId);
-
-        Optional<ReviewLike> existingReviewLike = reviewLikeRepository.findByReviewIdAndUserId(reviewId, requestUserId);
-
-        boolean isLikedNow;
-        if (existingReviewLike.isPresent()) {
-            reviewLikeRepository.delete(existingReviewLike.get());
-            reviewLikeRepository.flush();
-            reviewRepository.decreaseLikeCount(reviewId);
-
-            isLikedNow = false;
-        } else {
-            ReviewLike newReviewLike = ReviewLike.builder()
-                    .review(review)
-                    .user(user)
-                    .build();
-
-            reviewLikeRepository.saveAndFlush(newReviewLike);
-            reviewRepository.increaseLikeCount(reviewId);
-
-            isLikedNow = true;
-
-            User toUser = review.getUser(); // 리뷰 작성자
-
-            // 다른 사람이 좋아요를 누를 경우만 알림 발송
-            if (!toUser.getId().equals(user.getId())) {
-                String message = String.format("[%s]님이 나의 리뷰를 좋아합니다.", user.getNickname());
-
-                notificationService.createNotification(toUser, review, message);
-            }
-        }
-        log.info("Service: 리뷰 좋아요 로직 성공 - reviewId: {}, requestUserId: {}", reviewId, requestUserId);
-        return reviewLikeMapper.toDto(review.getId(), requestUserId, isLikedNow);
-    }
-
-    @Override
-    @Transactional
     @KafkaListener(topics = "review-like", groupId = "deokhugam-group")
     public void consumeReviewLike(ReviewLikeDto eventDto) {
         UUID reviewId = eventDto.reviewId();

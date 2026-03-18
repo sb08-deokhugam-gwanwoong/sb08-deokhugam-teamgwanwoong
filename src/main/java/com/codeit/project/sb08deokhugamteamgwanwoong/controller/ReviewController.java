@@ -54,20 +54,6 @@ public class ReviewController implements ReviewApi {
                 .body(reviewDto);
     }
 
-//    @Override
-//    public ResponseEntity<ReviewLikeDto> createReviewLike(
-//            @PathVariable("reviewId") UUID reviewId,
-//            @RequestHeader("Deokhugam-Request-User-ID") UUID requestUserId
-//    ) {
-//        log.info("Controller: 리뷰 좋아요 요청 - ID: {}, UserId: {}", reviewId, requestUserId);
-//        ReviewLikeDto reviewLikeDto = reviewService.createReviewLike(reviewId, requestUserId);
-//        kafkaTemplate.send("post-likes", reviewId, reviewLikeDto);
-//        log.info("Controller: 리뷰 좋아요 성공 - ID: {}, UserId: {}", reviewId, requestUserId);
-//        return ResponseEntity
-//                .status(HttpStatus.CREATED)
-//                .body(reviewLikeDto);hu
-//    }
-
     @PostMapping("/{reviewId}/like")
     public ResponseEntity<Void> createReviewLike(
             @PathVariable("reviewId") UUID reviewId,

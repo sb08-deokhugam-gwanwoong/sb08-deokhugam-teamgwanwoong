@@ -9,7 +9,10 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentCaptor;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.http.MediaType;
+import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.util.LinkedMultiValueMap;
 import org.springframework.util.MultiValueMap;
 
@@ -18,6 +21,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
+import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.BDDMockito.*;
 import static org.mockito.Mockito.never;
@@ -34,6 +38,9 @@ public class ReviewControllerTest extends ControllerTestSupport {
     private UUID userId;
     private UUID otherUserId;
     private UUID requestUserId;
+
+    @MockitoBean
+    private KafkaTemplate<String, Object> kafkaTemplate;
 
     @BeforeEach
     void setUp() {
@@ -178,24 +185,33 @@ public class ReviewControllerTest extends ControllerTestSupport {
     }
 
     @Test
-    @DisplayName("POST /api/reviews/{reviewId}/like - 리뷰 좋아요 성공")
+    @DisplayName("POST /api/reviews/{reviewId}/like - 리뷰 좋아요 성공(카프카 비동기)")
     void createReviewLike_success() throws Exception {
         //given
-        ReviewLikeDto reviewLikeDto = new ReviewLikeDto(reviewId, requestUserId, true);
+        //현재 DB에는 좋아요가 안 눌러져 있다고 가정
+        boolean currentLiked = false;
+        boolean targetState = true;
 
         //BDD 모킹
-        given(reviewService.createReviewLike(reviewId, requestUserId)).willReturn(reviewLikeDto);
+        given(reviewService.checkIsLiked(reviewId, requestUserId)).willReturn(currentLiked);
 
         //when & then
         mockMvc.perform(post("/api/reviews/{reviewId}/like", reviewId)
                         .header("Deokhugam-Request-User-ID", requestUserId.toString()))
-                .andExpect(status().isCreated())
-                .andExpect(jsonPath("$.reviewId").value(reviewId.toString()))
-                .andExpect(jsonPath("$.liked").value(true))
-                .andExpect(jsonPath("$.userId").value(requestUserId.toString()));
+                .andExpect(status().isAccepted());
 
         //BDD 검증
-        then(reviewService).should().createReviewLike(reviewId, requestUserId);
+        then(reviewService).should(times(1)).checkIsLiked(reviewId, requestUserId);
+
+        //카프카로 메시지가 잘 발행되었는가? (ArgumentCaptor를 사용해 DTO 내부 값까지 검증)
+        ArgumentCaptor<ReviewLikeDto> dtoCaptor = ArgumentCaptor.forClass(ReviewLikeDto.class);
+        then(kafkaTemplate).should(times(1))
+                .send(eq("review-like"), eq(reviewId.toString()), dtoCaptor.capture());
+
+        ReviewLikeDto capturedDto = dtoCaptor.getValue();
+        assertThat(capturedDto.reviewId()).isEqualTo(reviewId);
+        assertThat(capturedDto.userId()).isEqualTo(requestUserId);
+        assertThat(capturedDto.liked()).isEqualTo(targetState);
     }
 
     @Test
@@ -206,14 +222,15 @@ public class ReviewControllerTest extends ControllerTestSupport {
                 .andExpect(status().isBadRequest());
 
         //BDD 검증
-        then(reviewService).should(never()).createReviewLike(any(), any());
+        then(reviewService).should(never()).checkIsLiked(reviewId, requestUserId);
+        then(kafkaTemplate).should(never()).send(anyString(), any());
     }
 
     @Test
     @DisplayName("POST /api/reviews/{reviewId}/like - 리뷰 좋아요 실패(존재하지 않는 리뷰")
     void createReviewLike_fail_not_found() throws Exception {
         //BDD 모킹
-        given(reviewService.createReviewLike(notFoundReviewId, requestUserId))
+        given(reviewService.checkIsLiked(notFoundReviewId, requestUserId))
                 .willThrow(new BusinessException(ReviewErrorCode.REVIEW_NOT_FOUND));
 
         //when & then
@@ -222,7 +239,8 @@ public class ReviewControllerTest extends ControllerTestSupport {
                 .andExpect(status().isNotFound());
 
         //BDD 검증
-        then(reviewService).should(times(1)).createReviewLike(notFoundReviewId, requestUserId);
+        then(reviewService).should(times(1)).checkIsLiked(notFoundReviewId, requestUserId);
+        then(kafkaTemplate).should(never()).send(anyString(), any());
     }
 
     @Test

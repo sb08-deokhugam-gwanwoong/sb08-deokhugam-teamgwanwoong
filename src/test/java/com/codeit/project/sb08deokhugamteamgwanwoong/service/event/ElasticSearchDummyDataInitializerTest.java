@@ -13,6 +13,9 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.Pageable;
 import org.springframework.test.util.ReflectionTestUtils;
 
 import java.time.LocalDate;
@@ -20,6 +23,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.UUID;
 
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.BDDMockito.then;
@@ -72,7 +76,8 @@ public class ElasticSearchDummyDataInitializerTest {
     @DisplayName("더미 데이터 동기화 - DB에 데이터가 있는 경우 변환 후 ES에 저장한다.")
     void run_initializer() {
         //given
-        given(reviewRepository.findAll()).willReturn(List.of(review));
+        Page<Review> reviewPage = new PageImpl<>(List.of(review));
+        given(reviewRepository.findAll(any(Pageable.class))).willReturn(reviewPage);
 
         Thread.currentThread().interrupt();
 
@@ -81,7 +86,7 @@ public class ElasticSearchDummyDataInitializerTest {
 
         //then
         then(reviewSearchRepository).should(times(1)).deleteAll();
-        then(reviewRepository).should(times(1)).findAll();
+        then(reviewRepository).should(times(1)).findAll(any(Pageable.class));
         then(reviewSearchRepository).should(times(1)).saveAll(anyList());
     }
 
@@ -89,14 +94,15 @@ public class ElasticSearchDummyDataInitializerTest {
     @DisplayName("더미 데이터 동기화 - DB에 데이터가 없는 경우 ES에 저장하지 않는다.")
     void sync_dummy_data_empty() {
         //given
-        given(reviewRepository.findAll()).willReturn(Collections.emptyList());
+        Page<Review> emptyPage = new PageImpl<>(Collections.emptyList());
+        given(reviewRepository.findAll(any(Pageable.class))).willReturn(emptyPage);
 
         Thread.currentThread().interrupt();
 
         initializer.syncDummyDataToElasticSearch();
 
         then(reviewSearchRepository).should(times(1)).deleteAll();
-        then(reviewRepository).should(times(1)).findAll();
+        then(reviewRepository).should(times(1)).findAll(any(Pageable.class));
         then(reviewSearchRepository).should(never()).saveAll(anyList());
     }
 }
