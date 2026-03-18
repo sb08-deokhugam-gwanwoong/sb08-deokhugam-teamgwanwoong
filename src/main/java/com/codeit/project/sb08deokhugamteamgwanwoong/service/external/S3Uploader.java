@@ -2,19 +2,21 @@ package com.codeit.project.sb08deokhugamteamgwanwoong.service.external;
 
 import com.codeit.project.sb08deokhugamteamgwanwoong.exception.BusinessException;
 import com.codeit.project.sb08deokhugamteamgwanwoong.exception.enums.GlobalErrorCode;
+import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.IOException;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import net.coobird.thumbnailator.Thumbnails;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 import org.springframework.web.multipart.MultipartFile;
 import software.amazon.awssdk.core.sync.RequestBody;
 import software.amazon.awssdk.services.s3.S3Client;
+import software.amazon.awssdk.services.s3.model.DeleteObjectRequest;
 import software.amazon.awssdk.services.s3.model.GetUrlRequest;
 import software.amazon.awssdk.services.s3.model.PutObjectRequest;
-import software.amazon.awssdk.services.s3.model.DeleteObjectRequest;
 
 @Slf4j
 @Component
@@ -31,7 +33,7 @@ public class S3Uploader {
   private String bucket;
 
   /**
-   * MultipartFile을 S3에 업로드하고, 업로드된 파일의 URL을 반환한다.
+   * MultipartFile을 리사이징(압축)해서 S3에 업로드하고, 업로드된 파일의 URL을 반환한다.
    *
    * @param file 업로드할 파일 (이미지 등)
    * @return 업로드된 파일의 S3 URL (실패 시 예외 발생, 파일 없으면 null 반환)
@@ -42,30 +44,32 @@ public class S3Uploader {
       return null;
     }
 
-    // 2. 원본 파일명 추출
-    String originalFileName = file.getOriginalFilename();
-
-    // 3. 파일 확장자 추출 (.jpg, .png 등)
-    String extension = "";
-    if (originalFileName != null && originalFileName.contains(".")) {
-      extension = originalFileName.substring(originalFileName.lastIndexOf("."));
-    }
-
-    // 4. S3에 저장할 고유 파일명 생성 (UUID 사용 -> 파일 중복 방지)
-    String s3FileName = UUID.randomUUID().toString() + extension;
+    // 2. 리사이징 시 포맷을 강제로 jpg로 확장자 고정
+    String s3FileName = UUID.randomUUID().toString() + ".jpg";
 
     try {
+      // 3. 리사이징 결과를 담을 메모리 스트림 생성
+      ByteArrayOutputStream os = new ByteArrayOutputStream();
+
+      // 4. Thumbnailator로 이미지 압축 + 리사이징 (400x600, 화질 80%)
+      Thumbnails.of(file.getInputStream())
+          .size(400, 600) // 비율을 유지하면서 축소
+          .outputFormat("jpg") // jpg 일괄 변환
+          .outputQuality(0.8) // 화질 80% -> 용량 축소
+          .toOutputStream(os);
+
+      byte[] imageBytes = os.toByteArray();
+
       // 5. S3 업로드 요청 객체 생성
       PutObjectRequest putObjectRequest = PutObjectRequest.builder()
           .bucket(bucket) // 업로드할 버킷 이름
           .key(s3FileName) // 저장할 파일명 (Key)
-          .contentType(file.getContentType()) // 파일 MIME 타입 설정
+          .contentType("image/jpeg") // 파일 MIME 타입 설정
           .build();
 
       // 6. S3에 파일 업로드
-      // RequestBody.fromInputStream : 파일의 내용을 스트림으로 읽어서 전송
-      // file.getSize() : 파일 크기를 명시해서 S3가 효율적으로 처리하도록 함
-      s3Client.putObject(putObjectRequest, RequestBody.fromInputStream(file.getInputStream(), file.getSize()));
+      // 바이트 배열을 바로 넘겨서 AWS SDK가 사이즈를 알아서 계산하게 함
+      s3Client.putObject(putObjectRequest, RequestBody.fromBytes(imageBytes));
 
       // 업로드된 파일 URL 반환
       // GetUrlRequest를 사용해서 해당 버킷과 키에 해당하는 URL 생성함

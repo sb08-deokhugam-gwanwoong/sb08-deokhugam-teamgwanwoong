@@ -4,7 +4,8 @@ services:
   # 애플리케이션 서비스
   deokhugam-app:
     container_name: deokhugam-app
-    build: . # 현재 디렉토리의 Dockerfile 사용
+#    build: . # 현재 디렉토리의 Dockerfile 사용
+    image: public.ecr.aws/n4k5w8e3/gwanwoong_public_ecr:latest
     ports:
       - "8080:8080" # 호스트 8080, 컨테이너 8080
     env_file:
@@ -22,12 +23,12 @@ services:
       - REDIS_PORT=6379
       - spring.elasticsearch.uris=http://deokhugam-es:9200/
     depends_on:
-      deokhugam-db:
-        condition: service_healthy
+#      deokhugam-db:
+#        condition: service_healthy
       deokhugam-redis:
         condition: service_started
       elasticsearch:
-        condition: service_healthy
+        condition: service_started
 
     volumes:
       - ./.deokhugam:/app/.deokhugam # 로컬 파일 저장소
@@ -42,26 +43,26 @@ services:
       - deokhugam-network
 
   # DB 서비스 (PostgreSQL)
-  deokhugam-db:
-    container_name: deokhugam-db
-    image: postgres:17.2
-    environment:
-      - POSTGRES_DB=${PGDATABASE}
-      - POSTGRES_USER=${PGUSER}
-      - POSTGRES_PASSWORD=${PGPASSWORD}
-    volumes:
-      - ./.postgres-data:/var/lib/postgresql/data # DB 데이터 유지
-      # 초기화 스크립트 (최초 실행 시 자동 실행)
-      - ./src/main/resources/schema.sql:/docker-entrypoint-initdb.d/schema.sql
-    healthcheck:
-      test: [ "CMD-SHELL", "pg_isready -U ${PGUSER} -d ${PGDATABASE}" ]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-    ports:
-      - "5432:5432" # 호스트 접속 가능
-    networks:
-      - deokhugam-network
+#  deokhugam-db:
+#    container_name: deokhugam-db
+#    image: postgres:17.2
+#    environment:
+#      - POSTGRES_DB=${PGDATABASE}
+#      - POSTGRES_USER=${PGUSER}
+#      - POSTGRES_PASSWORD=${PGPASSWORD}
+#    volumes:
+#      - ./.postgres-data:/var/lib/postgresql/data # DB 데이터 유지
+#      # 초기화 스크립트 (최초 실행 시 자동 실행)
+#      - ./src/main/resources/schema.sql:/docker-entrypoint-initdb.d/schema.sql
+#    healthcheck:
+#      test: [ "CMD-SHELL", "pg_isready -U ${PGUSER} -d ${PGDATABASE}" ]
+#      interval: 10s
+#      timeout: 5s
+#      retries: 5
+#    ports:
+#      - "5432:5432" # 호스트 접속 가능
+#    networks:
+#      - deokhugam-network
 
   # 프로메테우스
   prometheus:
@@ -105,9 +106,10 @@ services:
     environment:
       - discovery.type=single-node
       - xpack.security.enabled=false
-      - "ES_JAVA_OPTS=-Xms512m -Xmx512m" # 메모리 제한 필수
+      - "ES_JAVA_OPTS=-Xms256m -Xmx256m" # 메모리 제한 필수
     volumes:
-      - ./.es-data:/usr/share/elasticsearch/data # 검색 데이터 영구 저장 (EC2 재부팅 방어)
+#      - ./.es-data:/usr/share/elasticsearch/data # 검색 데이터 영구 저장 (EC2 재부팅 방어)
+      - deokhugam-es-data:/usr/share/elasticsearch/data
     restart: always
     ports:
       - "9200:9200"
@@ -139,8 +141,8 @@ services:
       - PGPASSWORD=${PGPASSWORD}
       - ES_HOSTS=${ES_HOSTS}
     depends_on:
-      deokhugam-db:
-        condition: service_started
+#      deokhugam-db:
+#        condition: service_started
       elasticsearch:
         condition: service_started
     networks:

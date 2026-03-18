@@ -132,6 +132,9 @@ dependencies {
 
     // Redis
     implementation 'org.springframework.boot:spring-boot-starter-data-redis'
+
+    // 이미지 리사이징 Thumbnailator
+    implementation 'net.coobird:thumbnailator:0.4.20'
 }
 
 // QClass 생성 위치 설정
