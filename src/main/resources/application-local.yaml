@@ -22,6 +22,8 @@ spring:
     redis:
       host: localhost
       port: 6379
+  kafka:
+    bootstrap-servers: localhost:9092
 
   # Spring Boot의 SQL 초기화 기능 끄기 (Hibernate 기능 사용)
   sql:
