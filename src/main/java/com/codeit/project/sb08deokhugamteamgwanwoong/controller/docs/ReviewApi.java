@@ -78,37 +78,34 @@ public interface ReviewApi {
             @Valid @RequestBody ReviewCreateRequest request
     );
 
-//    @Operation(
-//            summary = "리뷰 좋아요",
-//            description = "리뷰에 좋아요를 추가하거나 취소합니다.",
-//            responses = {
-//                    @ApiResponse(
-//                            responseCode = "201",
-//                            description = "리뷰 좋아요 성공",
-//                            content = @Content(schema = @Schema(implementation = ReviewLikeDto.class))
-//                    ),
-//                    @ApiResponse(
-//                            responseCode = "400",
-//                            description = "잘못된 요청(요청자 ID 누락)",
-//                            content = @Content(schema = @Schema(implementation = ReviewLikeDto.class))
-//                    ),
-//                    @ApiResponse(
-//                            responseCode = "404",
-//                            description = "리뷰 정보 없음",
-//                            content = @Content(schema = @Schema(implementation = ReviewLikeDto.class))
-//                    ),
-//                    @ApiResponse(
-//                            responseCode = "500",
-//                            description = "서버 내부 오류",
-//                            content = @Content(schema = @Schema(implementation = ReviewDto.class))
-//                    )
-//            }
-//    )
-//    @PostMapping("/{reviewId}/like")
-//    ResponseEntity<ReviewLikeDto> createReviewLike(
-//            @PathVariable("reviewId") UUID reviewId,
-//            @RequestHeader("Deokhugam-Request-User-ID") UUID requestUserId
-//    );
+    @Operation(
+            summary = "리뷰 좋아요 (비동기 처리)",
+            description = "리뷰에 좋아요를 추가하거나 취소하는 요청을 카프카 큐에 접수합니다.",
+            responses = {
+                    @ApiResponse(
+                            responseCode = "202",
+                            description = "리뷰 좋아요 요청 접수 성공 (처리 중)",
+                            content = @Content(schema = @Schema(hidden = true))
+                    ),
+                    @ApiResponse(
+                            responseCode = "400",
+                            description = "잘못된 요청(요청자 ID 누락)"
+                    ),
+                    @ApiResponse(
+                            responseCode = "404",
+                            description = "리뷰 정보 없음"
+                    ),
+                    @ApiResponse(
+                            responseCode = "500",
+                            description = "서버 내부 오류"
+                    )
+            }
+    )
+    @PostMapping("/{reviewId}/like")
+    ResponseEntity<Void> createReviewLike( // 반환 타입을 ReviewLikeDto -> Void 로 변경
+                                           @PathVariable("reviewId") UUID reviewId,
+                                           @RequestHeader("Deokhugam-Request-User-ID") UUID requestUserId
+    );
 
     @Operation(
             summary = "리뷰 상세 정보 조회",

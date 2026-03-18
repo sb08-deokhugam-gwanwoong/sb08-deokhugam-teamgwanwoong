@@ -1,7 +1,6 @@
 package com.codeit.project.sb08deokhugamteamgwanwoong.controller;
 
 import com.codeit.project.sb08deokhugamteamgwanwoong.controller.docs.ReviewApi;
-import com.codeit.project.sb08deokhugamteamgwanwoong.dto.dashboard.CursorPageResponsePopularBookDto;
 import com.codeit.project.sb08deokhugamteamgwanwoong.dto.dashboard.CursorPageResponsePopularReviewDto;
 import com.codeit.project.sb08deokhugamteamgwanwoong.dto.dashboard.DashboardPageRequest;
 import com.codeit.project.sb08deokhugamteamgwanwoong.dto.review.*;
@@ -54,7 +53,7 @@ public class ReviewController implements ReviewApi {
                 .body(reviewDto);
     }
 
-    @PostMapping("/{reviewId}/like")
+    @Override
     public ResponseEntity<Void> createReviewLike(
             @PathVariable("reviewId") UUID reviewId,
             @RequestHeader("Deokhugam-Request-User-ID") UUID requestUserId
