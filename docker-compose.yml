@@ -153,6 +153,8 @@ services:
   deokhugam-kafka:
     image: confluentinc/cp-kafka:7.4.0
     container_name: deokhugam-kafka
+    depends_on:
+      - zookeeper
     ports:
       - "9092:9092"
     environment:
@@ -174,7 +176,7 @@ services:
       # 4. 기타 필수 운영 설정
       - KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR=1
       - KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS=0
-      - KAFKA_HEAP_OPTS=-Xms256m -Xmx256m
+      - KAFKA_HEAP_OPTS=-Xms512m -Xmx512m
     volumes:
       - deokhugam-kafka-data:/var/lib/kafka/data
     networks:

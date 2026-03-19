@@ -20,7 +20,8 @@ def jacocoExcludePatterns = [
         "**/*Exception*",
         "**/*MapperImpl*",
         "**/*TestController*",
-        "**/config/**"
+        "**/config/**",
+        "**/*Event*"
 ]
 
 jacocoTestReport {
