@@ -11,6 +11,7 @@ import com.codeit.project.sb08deokhugamteamgwanwoong.mapper.DashboardMapper;
 import com.codeit.project.sb08deokhugamteamgwanwoong.mapper.NotificationMapper;
 import com.codeit.project.sb08deokhugamteamgwanwoong.mapper.ReviewMapper;
 import com.codeit.project.sb08deokhugamteamgwanwoong.mapper.UserMapper;
+import com.codeit.project.sb08deokhugamteamgwanwoong.repository.ReviewSearchRepository;
 import com.codeit.project.sb08deokhugamteamgwanwoong.service.BookService;
 import com.codeit.project.sb08deokhugamteamgwanwoong.service.CommentService;
 import com.codeit.project.sb08deokhugamteamgwanwoong.service.DashboardService;
@@ -21,6 +22,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.context.annotation.Import;
+import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
@@ -57,6 +59,9 @@ public abstract class ControllerTestSupport {
 
   @MockitoBean
   protected DashboardService dashboardService;
+
+  @MockitoBean
+  protected KafkaTemplate<String, Object> kafkaTemplate;
 
   /* Mapper 부분 */
   @MockitoBean
