@@ -5,8 +5,8 @@ import com.codeit.project.sb08deokhugamteamgwanwoong.entity.Review;
 import com.codeit.project.sb08deokhugamteamgwanwoong.entity.User;
 import com.codeit.project.sb08deokhugamteamgwanwoong.entity.enums.DashboardPeriodEnums;
 import com.codeit.project.sb08deokhugamteamgwanwoong.entity.enums.DashboardTargetType;
+import com.codeit.project.sb08deokhugamteamgwanwoong.dto.notification.NotificationEvent;
 import com.codeit.project.sb08deokhugamteamgwanwoong.repository.DashboardRepository;
-import com.codeit.project.sb08deokhugamteamgwanwoong.service.NotificationService;
 import jakarta.persistence.EntityManager;
 import java.time.Duration;
 import java.time.Instant;
@@ -17,8 +17,10 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.kafka.core.KafkaTemplate;
 
 @Service
 @RequiredArgsConstructor
@@ -27,7 +29,7 @@ public class DashboardBatchService {
 
 	private final DashboardRepository dashboardRepository;
 	private final EntityManager entityManager;
-	private final NotificationService notificationService;
+	private final KafkaTemplate<String, NotificationEvent> kafkaTemplate;
 
 	/** 기간에 따른 조회 시작 시점 */
 	private static Instant getSince(DashboardPeriodEnums period) {
@@ -41,6 +43,7 @@ public class DashboardBatchService {
 
 	/** 인기 도서 랭킹 갱신 (점수 = 리뷰수×0.4 + 평균평점×0.6, SQL Window Function으로 ranking_pos 계산) */
 	@Transactional
+	@CacheEvict(cacheNames = "dashboard:popularBooks", key = "#period.name()", cacheManager = "redisCacheManager")
 	public void refreshPopularBooks(DashboardPeriodEnums period) {
 		Instant since = getSince(period);
 		dashboardRepository.deleteByTargetTypeAndPeriodType(DashboardTargetType.BOOK, period);
@@ -50,6 +53,7 @@ public class DashboardBatchService {
 
 	/** 인기 리뷰 랭킹 갱신 (점수 = 좋아요수×0.3 + 댓글수×0.7, SQL Window Function으로 ranking_pos 계산) */
 	@Transactional
+	@CacheEvict(cacheNames = "dashboard:popularReviews", key = "#period.name()", cacheManager = "redisCacheManager")
 	public void refreshPopularReviews(DashboardPeriodEnums period) {
 		Instant since = getSince(period);
 		dashboardRepository.deleteByTargetTypeAndPeriodType(DashboardTargetType.REVIEW, period);
@@ -82,7 +86,19 @@ public class DashboardBatchService {
 			}
 			User toUser = review.getUser();
 			String message = String.format("[%s]님의 리뷰가 %s 인기 리뷰 %d위에 선정되었습니다!", toUser.getNickname(), periodLabel, d.getRankingPos());
-			notificationService.createNotification(toUser, review, message);
+			NotificationEvent event = new NotificationEvent(toUser.getId(), review.getId(), message);
+
+			// Kafka 비동기 전송 결과를 로그로 남겨 운영에서 추적 가능하게 함.
+			kafkaTemplate.send("notification-topic", event)
+					.whenComplete((result, ex) -> {
+						if (ex == null) {
+							log.info("[알림] 전송 성공! Topic: {}, Offset: {}",
+									result.getRecordMetadata().topic(),
+									result.getRecordMetadata().offset());
+						} else {
+							log.error("[알림] 전송 실패: {}", ex.getMessage());
+						}
+					});
 		}
 	}
 
@@ -97,6 +113,7 @@ public class DashboardBatchService {
 
 	/** 파워 유저 랭킹 갱신 (점수 = 리뷰인기점수합×0.5 + 좋아요×0.2 + 댓글수×0.3, SQL Window Function으로 ranking_pos 계산) */
 	@Transactional
+	@CacheEvict(cacheNames = "dashboard:powerUsers", key = "#period.name()", cacheManager = "redisCacheManager")
 	public void refreshPowerUsers(DashboardPeriodEnums period) {
 		Instant since = getSince(period);
 		dashboardRepository.deleteByTargetTypeAndPeriodType(DashboardTargetType.USER, period);

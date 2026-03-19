@@ -11,7 +11,6 @@ import com.codeit.project.sb08deokhugamteamgwanwoong.entity.User;
 import com.codeit.project.sb08deokhugamteamgwanwoong.exception.BusinessException;
 import com.codeit.project.sb08deokhugamteamgwanwoong.exception.enums.BookErrorCode;
 import com.codeit.project.sb08deokhugamteamgwanwoong.exception.enums.ReviewErrorCode;
-import com.codeit.project.sb08deokhugamteamgwanwoong.mapper.ReviewLikeMapper;
 import com.codeit.project.sb08deokhugamteamgwanwoong.mapper.ReviewMapper;
 import com.codeit.project.sb08deokhugamteamgwanwoong.repository.*;
 import com.codeit.project.sb08deokhugamteamgwanwoong.service.impl.ReviewServiceImpl;
@@ -55,8 +54,6 @@ public class ReviewServiceTest {
     private BookRepository bookRepository;
     @Mock
     private ReviewMapper reviewMapper;
-    @Mock
-    private ReviewLikeMapper reviewLikeMapper;
     @Mock
     private NotificationService notificationService;
     @Mock
@@ -324,23 +321,24 @@ public class ReviewServiceTest {
     }
 
     @Test
-    @DisplayName("리뷰 좋아요 - 이미 누른 경우(좋아요 취소), 알림 발송 x")
+    @DisplayName("리뷰 좋아요(컨슈머) - 이미 누른 경우(좋아요 취소), 알림 발송 x")
     void create_reviewLike_success() {
-        //given
+        ReviewLikeDto eventDto = new ReviewLikeDto(review.getId(), user.getId(), false);
         ReviewLike exitingReviewLike = ReviewLike.builder()
                 .review(review)
                 .user(user)
                 .build();
-        given(reviewRepository.findByIdWithPessimisticLock(any())).willReturn(Optional.of(review));
-        given(userRepository.findById(any())).willReturn(Optional.of(user));
-        given(reviewLikeRepository.findByReviewIdAndUserId(any(), any())).willReturn(Optional.of(exitingReviewLike));
-        given(reviewLikeMapper.toDto(any(), any(), anyBoolean())).willReturn(new ReviewLikeDto(review.getId(), user.getId(), false));
+
+        // if (review.getLikeCount() > 0) - 기존에 방어로직을 사용해서 강제적으로 좋아요 수를 한개 추가
+        ReflectionTestUtils.setField(review, "likeCount", 1);
+        given(reviewRepository.findByIdWithPessimisticLock(review.getId())).willReturn(Optional.of(review));
+        given(userRepository.findById(user.getId())).willReturn(Optional.of(user));
+        given(reviewLikeRepository.findByReviewIdAndUserId(review.getId(), user.getId())).willReturn(Optional.of(exitingReviewLike));
 
         //when
-        ReviewLikeDto result = reviewService.createReviewLike(review.getId(), user.getId());
+        reviewService.consumeReviewLike(eventDto);
 
         //then
-        assertThat(result.liked()).isFalse();
         then(reviewLikeRepository).should().delete(exitingReviewLike);
         then(reviewLikeRepository).should().flush();
         then(reviewRepository).should().decreaseLikeCount(review.getId());
@@ -348,51 +346,53 @@ public class ReviewServiceTest {
     }
 
     @Test
-    @DisplayName("리뷰 좋아요 테스트 - 처음 누르는 경우: 본인 리뷰는 알림이 오지 않음")
+    @DisplayName("리뷰 좋아요(컨슈머) 테스트 - 처음 누르는 경우: 본인 리뷰는 알림이 오지 않음")
     void create_reviewLike_success_new_same_user() {
         //given
+        ReviewLikeDto eventDto = new ReviewLikeDto(review.getId(), user.getId(), true);
+
         given(reviewRepository.findByIdWithPessimisticLock(review.getId())).willReturn(Optional.of(review));
         given(userRepository.findById(user.getId())).willReturn(Optional.of(user));
         given(reviewLikeRepository.findByReviewIdAndUserId(review.getId(), user.getId())).willReturn(Optional.empty());
-        given(reviewLikeMapper.toDto(any(), any(), anyBoolean())).willReturn(new ReviewLikeDto(review.getId(), user.getId(), true));
 
         //when
-        ReviewLikeDto result = reviewService.createReviewLike(review.getId(), user.getId());
+        reviewService.consumeReviewLike(eventDto);
 
         //then
-        assertThat(result.liked()).isTrue();
         then(reviewLikeRepository).should().saveAndFlush(any(ReviewLike.class));
         then(reviewRepository).should().increaseLikeCount(review.getId());
         then(notificationService).should(never()).createNotification(any(), any(), any());
     }
 
     @Test
-    @DisplayName("리뷰 좋아요 - 다른 사람 리뷰에 처음 좋아요를 누른 경우, 알림 발송")
+    @DisplayName("리뷰 좋아요(컨슈머) - 다른 사람 리뷰에 처음 좋아요를 누른 경우, 알림 발송")
     void create_reviewLike_success_new_other_user() {
+        //given
+        ReviewLikeDto eventDto = new ReviewLikeDto(review.getId(), otherUser.getId(), true);
+
         //when
         given(reviewRepository.findByIdWithPessimisticLock(any())).willReturn(Optional.of(review));
         given(userRepository.findById(otherUser.getId())).willReturn(Optional.of(otherUser));
         given(reviewLikeRepository.findByReviewIdAndUserId(review.getId(), otherUser.getId())).willReturn(Optional.empty());
-        given(reviewLikeMapper.toDto(any(), any(), anyBoolean())).willReturn(new ReviewLikeDto(review.getId(), otherUser.getId(), true));
 
         //when
-        ReviewLikeDto result = reviewService.createReviewLike(review.getId(), otherUser.getId());
+        reviewService.consumeReviewLike(eventDto);
 
         //then
-        assertThat(result.liked()).isTrue();
         then(reviewLikeRepository).should().saveAndFlush(any(ReviewLike.class));
         then(reviewRepository).should().increaseLikeCount(review.getId());
-        then(notificationService).should().createNotification(any(), any(), anyString());
+        then(notificationService).should().createNotification(eq(review.getUser()), eq(review), anyString());
     }
 
     @Test
-    @DisplayName("리뷰 좋아요 테스트 - 실패(리뷰를 찾을 수 없음)")
+    @DisplayName("리뷰 좋아요(컨슈머) 테스트 - 실패(리뷰를 찾을 수 없음)")
     void create_reviewLike_fail_review_not_found() {
         //given
+        ReviewLikeDto eventDto = new ReviewLikeDto(review.getId(), user.getId(), true);
         given(reviewRepository.findByIdWithPessimisticLock(any())).willReturn(Optional.empty());
 
         //when & then
-        assertThatThrownBy(() -> reviewService.createReviewLike(review.getId(), user.getId()))
+        assertThatThrownBy(() -> reviewService.consumeReviewLike(eventDto))
                 .isInstanceOf(BusinessException.class)
                 .hasFieldOrPropertyWithValue("errorCode", ReviewErrorCode.REVIEW_NOT_FOUND);
     }

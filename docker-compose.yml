@@ -29,6 +29,8 @@ services:
         condition: service_started
       elasticsearch:
         condition: service_started
+      deokhugam-kafka:
+        condition: service_started
 
     volumes:
       - ./.deokhugam:/app/.deokhugam # 로컬 파일 저장소
@@ -99,7 +101,6 @@ services:
   # Elasticsearch
   elasticsearch:
     container_name: deokhugam-es
-    image: docker.elastic.co/elasticsearch/elasticsearch:8.12.0
     build:
       context: .
       dockerfile: elasticsearch.Dockerfile
@@ -148,12 +149,47 @@ services:
     networks:
       - deokhugam-network
 
+  # Kafka Broker (KRaft 모드 - 주키퍼 없이 단독 구동)
+  deokhugam-kafka:
+    image: confluentinc/cp-kafka:7.4.0
+    container_name: deokhugam-kafka
+    depends_on:
+      - zookeeper
+    ports:
+      - "9092:9092"
+    environment:
+      # 1. KRaft 전용 프로세스 역할 설정 (본인이 브로커이자 컨트롤러)
+      - KAFKA_NODE_ID=1
+      - KAFKA_PROCESS_ROLES=broker,controller
+      - KAFKA_CONTROLLER_QUORUM_VOTERS=1@deokhugam-kafka:29093
+      - KAFKA_CONTROLLER_LISTENER_NAMES=CONTROLLER
+
+      # 2. 리스너 설정 (외부/내부/컨트롤러 통로 분리)
+      - KAFKA_LISTENERS=PLAINTEXT://0.0.0.0:9092,CONTROLLER://0.0.0.0:29093,INTERNAL://0.0.0.0:29092
+      - KAFKA_ADVERTISED_LISTENERS=PLAINTEXT://localhost:9092,INTERNAL://deokhugam-kafka:29092
+      - KAFKA_LISTENER_SECURITY_PROTOCOL_MAP=CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT,INTERNAL:PLAINTEXT
+      - KAFKA_INTER_BROKER_LISTENER_NAME=INTERNAL
+
+      # 3. 클러스터 ID
+      - CLUSTER_ID=MkU3OEVBNTcwNTJDRDRCMz
+
+      # 4. 기타 필수 운영 설정
+      - KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR=1
+      - KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS=0
+      - KAFKA_HEAP_OPTS=-Xms512m -Xmx512m
+    volumes:
+      - deokhugam-kafka-data:/var/lib/kafka/data
+    networks:
+      - deokhugam-network
+
 networks:
   deokhugam-network:
     driver: bridge
 
-# 데이터를 영구 저장할 볼륨
 volumes:
-  deokhugam-db-data:
-  deokhugam-logstash-data:
+  deokhugam-kafka-data:
+    driver: local
   deokhugam-es-data:
+    driver: local
+  deokhugam-logstash-data:
+    driver: local

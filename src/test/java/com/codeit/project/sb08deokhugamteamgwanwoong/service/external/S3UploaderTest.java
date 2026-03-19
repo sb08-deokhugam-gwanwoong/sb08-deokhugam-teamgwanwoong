@@ -12,9 +12,12 @@ import static org.mockito.Mockito.verify;
 
 import com.codeit.project.sb08deokhugamteamgwanwoong.exception.BusinessException;
 import com.codeit.project.sb08deokhugamteamgwanwoong.exception.enums.GlobalErrorCode;
+import java.awt.image.BufferedImage;
+import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.IOException;
 import java.net.URL;
+import javax.imageio.ImageIO;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -48,12 +51,26 @@ public class S3UploaderTest {
     ReflectionTestUtils.setField(s3Uploader, "bucket", "test-bucket");
   }
 
-  @DisplayName("파일을 S3에 업로드하고 URL을 반환한다.")
+  /*
+  * Thumbnailator 테스트 통과를 위한 1x1 픽셀 가짜 이미지 생성 헬퍼 메서드
+  * */
+  private byte[] createDummyImage() throws IOException {
+    BufferedImage image = new BufferedImage(1, 1, BufferedImage.TYPE_INT_RGB);
+    ByteArrayOutputStream baos = new ByteArrayOutputStream();
+    ImageIO.write(image, "jpg", baos);
+
+    return baos.toByteArray();
+  }
+
+  @DisplayName("이미지 파일을 리사이징하여 S3에 .jpg로 업로드하고 URL을 반환한다.")
   @Test
   void upload_Success() throws IOException {
     // given
+    byte[] validImageBytes = createDummyImage(); // 진짜 이미지 형식의 바이트 배열 사용
+
+    // PNG 형식으로 올리더라도 로직 안에서 JPG로 강제 변환 테스트
     MockMultipartFile file = new MockMultipartFile(
-        "file", "test.jpg", "image/jpeg", "content".getBytes()
+        "file", "test.png", "image/png", validImageBytes
     );
 
     S3Utilities s3Utilities = mock(S3Utilities.class);
@@ -74,15 +91,13 @@ public class S3UploaderTest {
     verify(s3Client).putObject(any(PutObjectRequest.class), any(RequestBody.class));
   }
 
-  @DisplayName("S3 업로드 중 에러가 발생하면 예외를 던진다.")
+  @DisplayName("S3 업로드(또는 리사이징) 중 에러가 발생하면 예외를 던진다.")
   @Test
   void upload_Failure() throws IOException{
     // given
     MultipartFile file = mock(MultipartFile.class);
 
     given(file.isEmpty()).willReturn(false);
-    given(file.getOriginalFilename()).willReturn("test.jpg");
-    given(file.getContentType()).willReturn("image/jpeg");
 
     // getInputStream 호출 시 IOException 발생
     given(file.getInputStream()).willThrow(new IOException("IO Error"));
@@ -90,7 +105,7 @@ public class S3UploaderTest {
     // when & then
     assertThatThrownBy(() -> s3Uploader.upload(file))
         .isInstanceOf(BusinessException.class)
-        .hasMessageContaining("파일 업로드에 실패했습니다.");
+        .hasMessageContaining(GlobalErrorCode.FILE_UPLOAD_FAILED.getMessage());
   }
 
   @DisplayName("업로드할 파일이 null이면 null을 반환한다.")
@@ -116,12 +131,13 @@ public class S3UploaderTest {
     assertThat(result).isNull();
   }
 
-  @DisplayName("확장자가 없는 파일도 정상적으로 S3에 업로드한다.")
+  @DisplayName("확장자가 없는 파일이 들어와도 리사이징 후 정상적으로 .jpg로 S3에 업로드한다.")
   @Test
   void upload_Success_WithoutExtension() throws IOException {
     // given (확장자 없는 파일명)
+    byte[] validImageBytes = createDummyImage();
     MockMultipartFile fileWithoutExt = new MockMultipartFile(
-        "file", "testfile_no_extension", "image/jpeg", "content".getBytes()
+        "file", "testfile_no_extension", "image/jpeg", validImageBytes
     );
 
     S3Utilities s3Utilities = mock(S3Utilities.class);

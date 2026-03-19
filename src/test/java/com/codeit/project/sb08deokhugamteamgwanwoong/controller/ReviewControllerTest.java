@@ -9,7 +9,10 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentCaptor;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.http.MediaType;
+import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.util.LinkedMultiValueMap;
 import org.springframework.util.MultiValueMap;
 
@@ -18,6 +21,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
+import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.BDDMockito.*;
 import static org.mockito.Mockito.never;
@@ -178,24 +182,18 @@ public class ReviewControllerTest extends ControllerTestSupport {
     }
 
     @Test
-    @DisplayName("POST /api/reviews/{reviewId}/like - 리뷰 좋아요 성공")
+    @DisplayName("POST /api/reviews/{reviewId}/like - 리뷰 좋아요 성공(카프카 비동기)")
     void createReviewLike_success() throws Exception {
-        //given
-        ReviewLikeDto reviewLikeDto = new ReviewLikeDto(reviewId, requestUserId, true);
-
         //BDD 모킹
-        given(reviewService.createReviewLike(reviewId, requestUserId)).willReturn(reviewLikeDto);
+        willDoNothing().given(reviewService).toggleReviewLikeAsync(reviewId, requestUserId);
 
         //when & then
         mockMvc.perform(post("/api/reviews/{reviewId}/like", reviewId)
                         .header("Deokhugam-Request-User-ID", requestUserId.toString()))
-                .andExpect(status().isCreated())
-                .andExpect(jsonPath("$.reviewId").value(reviewId.toString()))
-                .andExpect(jsonPath("$.liked").value(true))
-                .andExpect(jsonPath("$.userId").value(requestUserId.toString()));
+                .andExpect(status().isAccepted());
 
         //BDD 검증
-        then(reviewService).should().createReviewLike(reviewId, requestUserId);
+        then(reviewService).should(times(1)).toggleReviewLikeAsync(reviewId, requestUserId);
     }
 
     @Test
@@ -206,15 +204,15 @@ public class ReviewControllerTest extends ControllerTestSupport {
                 .andExpect(status().isBadRequest());
 
         //BDD 검증
-        then(reviewService).should(never()).createReviewLike(any(), any());
+        then(reviewService).should(never()).toggleReviewLikeAsync(reviewId, requestUserId);
     }
 
     @Test
     @DisplayName("POST /api/reviews/{reviewId}/like - 리뷰 좋아요 실패(존재하지 않는 리뷰")
     void createReviewLike_fail_not_found() throws Exception {
-        //BDD 모킹
-        given(reviewService.createReviewLike(notFoundReviewId, requestUserId))
-                .willThrow(new BusinessException(ReviewErrorCode.REVIEW_NOT_FOUND));
+        //given
+        willThrow(new BusinessException(ReviewErrorCode.REVIEW_NOT_FOUND))
+                .given(reviewService).toggleReviewLikeAsync(notFoundReviewId, requestUserId);
 
         //when & then
         mockMvc.perform(post("/api/reviews/{reviewId}/like", notFoundReviewId)
@@ -222,7 +220,7 @@ public class ReviewControllerTest extends ControllerTestSupport {
                 .andExpect(status().isNotFound());
 
         //BDD 검증
-        then(reviewService).should(times(1)).createReviewLike(notFoundReviewId, requestUserId);
+        then(reviewService).should(times(1)).toggleReviewLikeAsync(notFoundReviewId, requestUserId);
     }
 
     @Test
