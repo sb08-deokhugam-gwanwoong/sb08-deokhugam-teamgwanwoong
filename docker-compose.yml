@@ -43,29 +43,7 @@ services:
       retries: 5
     networks:
       - deokhugam-network
-
-  # DB 서비스 (PostgreSQL)
-#  deokhugam-db:
-#    container_name: deokhugam-db
-#    image: postgres:17.2
-#    environment:
-#      - POSTGRES_DB=${PGDATABASE}
-#      - POSTGRES_USER=${PGUSER}
-#      - POSTGRES_PASSWORD=${PGPASSWORD}
-#    volumes:
-#      - ./.postgres-data:/var/lib/postgresql/data # DB 데이터 유지
-#      # 초기화 스크립트 (최초 실행 시 자동 실행)
-#      - ./src/main/resources/schema.sql:/docker-entrypoint-initdb.d/schema.sql
-#    healthcheck:
-#      test: [ "CMD-SHELL", "pg_isready -U ${PGUSER} -d ${PGDATABASE}" ]
-#      interval: 10s
-#      timeout: 5s
-#      retries: 5
-#    ports:
-#      - "5432:5432" # 호스트 접속 가능
-#    networks:
-#      - deokhugam-network
-
+      
   # 프로메테우스
   prometheus:
     image: prom/prometheus
@@ -153,8 +131,6 @@ services:
   deokhugam-kafka:
     image: confluentinc/cp-kafka:7.4.0
     container_name: deokhugam-kafka
-    depends_on:
-      - zookeeper
     ports:
       - "9092:9092"
     environment:
