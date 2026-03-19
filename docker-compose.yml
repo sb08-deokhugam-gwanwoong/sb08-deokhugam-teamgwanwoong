@@ -79,6 +79,7 @@ services:
   # Elasticsearch
   elasticsearch:
     container_name: deokhugam-es
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.12.0
     build:
       context: .
       dockerfile: elasticsearch.Dockerfile
