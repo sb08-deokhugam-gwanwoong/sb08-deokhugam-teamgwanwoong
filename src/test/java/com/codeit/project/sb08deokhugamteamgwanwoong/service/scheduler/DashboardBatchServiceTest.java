@@ -10,19 +10,20 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.codeit.project.sb08deokhugamteamgwanwoong.component.batch.DashboardBatchService;
+import com.codeit.project.sb08deokhugamteamgwanwoong.dto.notification.NotificationEvent;
 import com.codeit.project.sb08deokhugamteamgwanwoong.entity.Dashboard;
 import com.codeit.project.sb08deokhugamteamgwanwoong.entity.Review;
 import com.codeit.project.sb08deokhugamteamgwanwoong.entity.User;
 import com.codeit.project.sb08deokhugamteamgwanwoong.entity.enums.DashboardPeriodEnums;
 import com.codeit.project.sb08deokhugamteamgwanwoong.entity.enums.DashboardTargetType;
 import com.codeit.project.sb08deokhugamteamgwanwoong.repository.DashboardRepository;
-import com.codeit.project.sb08deokhugamteamgwanwoong.service.NotificationService;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.TypedQuery;
 import java.time.Instant;
 import java.util.Collections;
 import java.util.List;
 import java.util.UUID;
+import java.util.concurrent.CompletableFuture;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
@@ -33,6 +34,9 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.kafka.core.KafkaTemplate;
+import org.apache.kafka.clients.producer.RecordMetadata;
+import org.springframework.kafka.support.SendResult;
 
 @ExtendWith(MockitoExtension.class)
 @DisplayName("대시보드 배치 서비스")
@@ -45,7 +49,7 @@ class DashboardBatchServiceTest {
 	private EntityManager entityManager;
 
 	@Mock
-	private NotificationService notificationService;
+	private KafkaTemplate<String, NotificationEvent> kafkaTemplate;
 
 	@InjectMocks
 	private DashboardBatchService dashboardBatchService;
@@ -117,8 +121,10 @@ class DashboardBatchServiceTest {
 		void withTop10_createsNotification() {
 			// Given
 			UUID reviewId = UUID.randomUUID();
+			UUID userId = UUID.randomUUID();
 			User user = mock(User.class);
 			when(user.getNickname()).thenReturn("테스트유저");
+			when(user.getId()).thenReturn(userId);
 			Review review = mock(Review.class);
 			when(review.getId()).thenReturn(reviewId);
 			when(review.getUser()).thenReturn(user);
@@ -141,13 +147,26 @@ class DashboardBatchServiceTest {
 			when(typedQuery.setParameter(anyString(), any())).thenReturn(typedQuery);
 			when(typedQuery.getResultList()).thenReturn(List.of(review));
 
+			@SuppressWarnings("unchecked")
+			SendResult<String, NotificationEvent> sendResult = (SendResult<String, NotificationEvent>) mock(SendResult.class);
+			RecordMetadata recordMetadata = mock(RecordMetadata.class);
+			when(recordMetadata.topic()).thenReturn("notification-topic");
+			when(recordMetadata.offset()).thenReturn(123L);
+			when(sendResult.getRecordMetadata()).thenReturn(recordMetadata);
+			when(kafkaTemplate.send(eq("notification-topic"), any(NotificationEvent.class)))
+					.thenReturn(CompletableFuture.completedFuture(sendResult));
+
 			// When
 			dashboardBatchService.refreshPopularReviews(DashboardPeriodEnums.DAILY);
 
 			// Then
-			ArgumentCaptor<String> messageCaptor = ArgumentCaptor.forClass(String.class);
-			verify(notificationService).createNotification(eq(user), eq(review), messageCaptor.capture());
-			assertThat(messageCaptor.getValue()).isEqualTo("[테스트유저]님의 리뷰가 일간 인기 리뷰 1위에 선정되었습니다!");
+			ArgumentCaptor<NotificationEvent> eventCaptor = ArgumentCaptor.forClass(NotificationEvent.class);
+			verify(kafkaTemplate).send(eq("notification-topic"), eventCaptor.capture());
+
+			NotificationEvent event = eventCaptor.getValue();
+			assertThat(event.toUserId()).isEqualTo(userId);
+			assertThat(event.reviewId()).isEqualTo(reviewId);
+			assertThat(event.message()).isEqualTo("[테스트유저]님의 리뷰가 일간 인기 리뷰 1위에 선정되었습니다!");
 		}
 
 		@ParameterizedTest
@@ -163,8 +182,10 @@ class DashboardBatchServiceTest {
 			};
 
 			UUID reviewId = UUID.randomUUID();
+			UUID userId = UUID.randomUUID();
 			User user = mock(User.class);
 			when(user.getNickname()).thenReturn("닉네임");
+			when(user.getId()).thenReturn(userId);
 			Review review = mock(Review.class);
 			when(review.getId()).thenReturn(reviewId);
 			when(review.getUser()).thenReturn(user);
@@ -187,13 +208,22 @@ class DashboardBatchServiceTest {
 			when(typedQuery.setParameter(anyString(), any())).thenReturn(typedQuery);
 			when(typedQuery.getResultList()).thenReturn(List.of(review));
 
+			@SuppressWarnings("unchecked")
+			SendResult<String, NotificationEvent> sendResult = (SendResult<String, NotificationEvent>) mock(SendResult.class);
+			RecordMetadata recordMetadata = mock(RecordMetadata.class);
+			when(recordMetadata.topic()).thenReturn("notification-topic");
+			when(recordMetadata.offset()).thenReturn(123L);
+			when(sendResult.getRecordMetadata()).thenReturn(recordMetadata);
+			when(kafkaTemplate.send(eq("notification-topic"), any(NotificationEvent.class)))
+					.thenReturn(CompletableFuture.completedFuture(sendResult));
+
 			// When
 			dashboardBatchService.refreshPopularReviews(period);
 
 			// Then
-			ArgumentCaptor<String> messageCaptor = ArgumentCaptor.forClass(String.class);
-			verify(notificationService).createNotification(eq(user), eq(review), messageCaptor.capture());
-			assertThat(messageCaptor.getValue()).contains(expectedLabel);
+			ArgumentCaptor<NotificationEvent> eventCaptor = ArgumentCaptor.forClass(NotificationEvent.class);
+			verify(kafkaTemplate).send(eq("notification-topic"), eventCaptor.capture());
+			assertThat(eventCaptor.getValue().message()).contains(expectedLabel);
 		}
 
 		@Test
@@ -223,7 +253,7 @@ class DashboardBatchServiceTest {
 			dashboardBatchService.refreshPopularReviews(DashboardPeriodEnums.WEEKLY);
 
 			// Then
-			verify(notificationService, never()).createNotification(any(), any(), anyString());
+			verify(kafkaTemplate, never()).send(anyString(), any(NotificationEvent.class));
 		}
 	}
 }

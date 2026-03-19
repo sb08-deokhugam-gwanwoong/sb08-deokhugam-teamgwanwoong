@@ -5,6 +5,7 @@ import com.codeit.project.sb08deokhugamteamgwanwoong.dto.comment.CommentDto;
 import com.codeit.project.sb08deokhugamteamgwanwoong.dto.comment.CommentSearchCondition;
 import com.codeit.project.sb08deokhugamteamgwanwoong.dto.comment.CommentUpdateRequest;
 import com.codeit.project.sb08deokhugamteamgwanwoong.dto.comment.CursorPageResponseCommentDto;
+import com.codeit.project.sb08deokhugamteamgwanwoong.dto.notification.NotificationEvent;
 import com.codeit.project.sb08deokhugamteamgwanwoong.entity.Comment;
 import com.codeit.project.sb08deokhugamteamgwanwoong.entity.Review;
 import com.codeit.project.sb08deokhugamteamgwanwoong.entity.User;
@@ -17,13 +18,12 @@ import com.codeit.project.sb08deokhugamteamgwanwoong.repository.CommentRepositor
 import com.codeit.project.sb08deokhugamteamgwanwoong.repository.ReviewRepository;
 import com.codeit.project.sb08deokhugamteamgwanwoong.repository.UserRepository;
 import com.codeit.project.sb08deokhugamteamgwanwoong.service.CommentService;
-import com.codeit.project.sb08deokhugamteamgwanwoong.service.NotificationService;
 import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.data.domain.PageRequest;
+import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -37,7 +37,7 @@ public class CommentServiceImpl implements CommentService {
   private final ReviewRepository reviewRepository;
   private final CommentRepository commentRepository;
   private final CommentMapper commentMapper;
-  private final NotificationService notificationService;
+  private final KafkaTemplate<String, NotificationEvent> kafkaTemplate;
 
   @Override
   @Transactional
@@ -61,9 +61,21 @@ public class CommentServiceImpl implements CommentService {
 
     User reviewAuthor = review.getUser();
     if (!reviewAuthor.getId().equals(user.getId())) {
-      log.info("[알림] 알림 발송 - 수신자: {}, 발신자: {}", reviewAuthor.getId(), user.getId());
       String message = String.format("[%s]님이 내 리뷰에 댓글을 남겼습니다.", user.getNickname());
-      notificationService.createNotification(reviewAuthor, review, message);
+      NotificationEvent event = new NotificationEvent(reviewAuthor.getId(), review.getId(), message);
+
+      kafkaTemplate.send("notification-topic", event)
+          .whenComplete((result, ex) -> {
+            if (ex == null) {
+              log.info("[알림] 전송 성공! Topic: {}, Offset: {}",
+                  result.getRecordMetadata().topic(),
+                  result.getRecordMetadata().offset());
+            } else {
+              log.error("[알림] 전송 실패: {}", ex.getMessage());
+            }
+          });
+
+      log.info("[Kafka] 댓글 생성 이벤트 발송 완료 - commentId: {}", savedComment.getId());
     }
 
     log.info("[댓글 등록] 완료 - commentId: {}", savedComment.getId());
@@ -183,4 +195,3 @@ public class CommentServiceImpl implements CommentService {
     }
   }
 }
-

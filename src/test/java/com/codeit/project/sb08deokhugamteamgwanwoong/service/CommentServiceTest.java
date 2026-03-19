@@ -3,6 +3,7 @@ package com.codeit.project.sb08deokhugamteamgwanwoong.service;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.BDDMockito.then;
 import static org.mockito.Mockito.times;
@@ -12,6 +13,7 @@ import com.codeit.project.sb08deokhugamteamgwanwoong.dto.comment.CommentDto;
 import com.codeit.project.sb08deokhugamteamgwanwoong.dto.comment.CommentSearchCondition;
 import com.codeit.project.sb08deokhugamteamgwanwoong.dto.comment.CommentUpdateRequest;
 import com.codeit.project.sb08deokhugamteamgwanwoong.dto.comment.CursorPageResponseCommentDto;
+import com.codeit.project.sb08deokhugamteamgwanwoong.dto.notification.NotificationEvent;
 import com.codeit.project.sb08deokhugamteamgwanwoong.entity.Book;
 import com.codeit.project.sb08deokhugamteamgwanwoong.entity.Comment;
 import com.codeit.project.sb08deokhugamteamgwanwoong.entity.Review;
@@ -29,6 +31,7 @@ import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.concurrent.CompletableFuture;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
@@ -37,6 +40,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.test.util.ReflectionTestUtils;
 
 @ExtendWith(MockitoExtension.class)
@@ -51,7 +55,7 @@ class CommentServiceTest {
   @Mock
   private CommentMapper commentMapper;
   @Mock
-  private NotificationService notificationService;
+  private KafkaTemplate<String, NotificationEvent> kafkaTemplate; // NotificationService 대신 KafkaTemplate 모킹
 
   @InjectMocks
   private CommentServiceImpl commentService;
@@ -145,7 +149,7 @@ class CommentServiceTest {
     }
 
     @Test
-    @DisplayName("성공 : 남이 내 리뷰에 댓글을 달면 알림이 생성되어야 한다")
+    @DisplayName("성공 : 남이 내 리뷰에 댓글을 달면 Kafka 알림 이벤트가 발행되어야 한다")
     void createComment_ShouldNotify_WhenOtherUserComments() {
       //given
       User reviewAuthor = User.builder()
@@ -162,6 +166,10 @@ class CommentServiceTest {
       given(reviewRepository.findById(reviewId)).willReturn(Optional.of(review));
       given(commentRepository.saveAndFlush(any(Comment.class))).willReturn(comment);
 
+      // KafkaTemplate.send() 가 CompletableFuture를 반환하도록 Mocking
+      given(kafkaTemplate.send(eq("notification-topic"), any(NotificationEvent.class)))
+          .willReturn(CompletableFuture.completedFuture(null));
+
       CommentDto dto = new CommentDto(comment.getId(), reviewId, userId, "웅제", "알림!", Instant.now(), Instant.now());
       given(commentMapper.toDto(any(Comment.class))).willReturn(dto);
 
@@ -169,7 +177,7 @@ class CommentServiceTest {
       commentService.create(request);
 
       //then
-      then(notificationService).should(times(1)).createNotification(any(), any(), any());
+      then(kafkaTemplate).should(times(1)).send(eq("notification-topic"), any(NotificationEvent.class));
       then(reviewRepository).should(times(1)).increaseCommentCount(reviewId);
     }
 
