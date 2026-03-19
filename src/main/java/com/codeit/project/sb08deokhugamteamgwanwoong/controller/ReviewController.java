@@ -58,16 +58,7 @@ public class ReviewController implements ReviewApi {
             @PathVariable("reviewId") UUID reviewId,
             @RequestHeader("Deokhugam-Request-User-ID") UUID requestUserId
     ) {
-        // 현재 좋아요 눌렀는지 DB 상태 조회
-        boolean currentLiked = reviewService.checkIsLiked(reviewId, requestUserId);
-
-        // 카프카에 반영해야 할 목표 상태(낙관)
-        boolean targetState = !currentLiked;
-
-        // 기존 DTO에 목표 상태를 담아서 전송
-        ReviewLikeDto eventDto = new ReviewLikeDto(reviewId, requestUserId, targetState);
-        kafkaTemplate.send("review-like", reviewId.toString(), eventDto);
-
+        reviewService.toggleReviewLikeAsync(reviewId, requestUserId);
         // 비동기 처리 완료 응답
         return ResponseEntity.status(HttpStatus.ACCEPTED).build();
     }

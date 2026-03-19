@@ -12,7 +12,6 @@ import com.codeit.project.sb08deokhugamteamgwanwoong.exception.BusinessException
 import com.codeit.project.sb08deokhugamteamgwanwoong.exception.enums.BookErrorCode;
 import com.codeit.project.sb08deokhugamteamgwanwoong.exception.enums.ReviewErrorCode;
 import com.codeit.project.sb08deokhugamteamgwanwoong.exception.enums.UserErrorCode;
-import com.codeit.project.sb08deokhugamteamgwanwoong.mapper.ReviewLikeMapper;
 import com.codeit.project.sb08deokhugamteamgwanwoong.mapper.ReviewMapper;
 import com.codeit.project.sb08deokhugamteamgwanwoong.repository.*;
 import com.codeit.project.sb08deokhugamteamgwanwoong.service.NotificationService;
@@ -26,6 +25,7 @@ import org.springframework.data.domain.Sort;
 import org.springframework.data.elasticsearch.core.SearchHit;
 import org.springframework.data.elasticsearch.core.SearchHits;
 import org.springframework.kafka.annotation.KafkaListener;
+import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -47,7 +47,7 @@ public class ReviewServiceImpl implements ReviewService {
     private final CommentRepository commentRepository;
 
     private final ReviewMapper reviewMapper;
-    private final ReviewLikeMapper reviewLikeMapper;
+    private final KafkaTemplate<String, ReviewLikeDto> kafkaTemplate;
 
     private final NotificationService notificationService;
 
@@ -254,6 +254,19 @@ public class ReviewServiceImpl implements ReviewService {
             }
         }
         log.info("Service: 리뷰 좋아요 컨슈머 로직 성공 - reviewId: {}, requestUserId: {}", reviewId, requestUserId);
+    }
+
+    @Override
+    public void toggleReviewLikeAsync(UUID reviewId, UUID requestUserId) {
+        // 현재 좋아요 상태 조회
+        boolean currentLiked = this.checkIsLiked(reviewId, requestUserId);
+
+        // 카프카에 반영할 목표 상태 계산
+        boolean targetState = !currentLiked;
+
+        // 이벤트 발행
+        ReviewLikeDto eventDto = new ReviewLikeDto(reviewId, requestUserId, targetState);
+        kafkaTemplate.send("review-like", eventDto);
     }
 
     // 좋아요 상태만 확인하는 서비스 로직
