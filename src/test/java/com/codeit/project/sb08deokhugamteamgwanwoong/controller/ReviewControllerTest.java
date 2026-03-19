@@ -39,9 +39,6 @@ public class ReviewControllerTest extends ControllerTestSupport {
     private UUID otherUserId;
     private UUID requestUserId;
 
-    @MockitoBean
-    private KafkaTemplate<String, Object> kafkaTemplate;
-
     @BeforeEach
     void setUp() {
         reviewId = UUID.randomUUID();
@@ -187,13 +184,8 @@ public class ReviewControllerTest extends ControllerTestSupport {
     @Test
     @DisplayName("POST /api/reviews/{reviewId}/like - 리뷰 좋아요 성공(카프카 비동기)")
     void createReviewLike_success() throws Exception {
-        //given
-        //현재 DB에는 좋아요가 안 눌러져 있다고 가정
-        boolean currentLiked = false;
-        boolean targetState = true;
-
         //BDD 모킹
-        given(reviewService.checkIsLiked(reviewId, requestUserId)).willReturn(currentLiked);
+        willDoNothing().given(reviewService).toggleReviewLikeAsync(reviewId, requestUserId);
 
         //when & then
         mockMvc.perform(post("/api/reviews/{reviewId}/like", reviewId)
@@ -201,17 +193,7 @@ public class ReviewControllerTest extends ControllerTestSupport {
                 .andExpect(status().isAccepted());
 
         //BDD 검증
-        then(reviewService).should(times(1)).checkIsLiked(reviewId, requestUserId);
-
-        //카프카로 메시지가 잘 발행되었는가? (ArgumentCaptor를 사용해 DTO 내부 값까지 검증)
-        ArgumentCaptor<ReviewLikeDto> dtoCaptor = ArgumentCaptor.forClass(ReviewLikeDto.class);
-        then(kafkaTemplate).should(times(1))
-                .send(eq("review-like"), eq(reviewId.toString()), dtoCaptor.capture());
-
-        ReviewLikeDto capturedDto = dtoCaptor.getValue();
-        assertThat(capturedDto.reviewId()).isEqualTo(reviewId);
-        assertThat(capturedDto.userId()).isEqualTo(requestUserId);
-        assertThat(capturedDto.liked()).isEqualTo(targetState);
+        then(reviewService).should(times(1)).toggleReviewLikeAsync(reviewId, requestUserId);
     }
 
     @Test
@@ -222,16 +204,15 @@ public class ReviewControllerTest extends ControllerTestSupport {
                 .andExpect(status().isBadRequest());
 
         //BDD 검증
-        then(reviewService).should(never()).checkIsLiked(reviewId, requestUserId);
-        then(kafkaTemplate).should(never()).send(anyString(), any());
+        then(reviewService).should(never()).toggleReviewLikeAsync(reviewId, requestUserId);
     }
 
     @Test
     @DisplayName("POST /api/reviews/{reviewId}/like - 리뷰 좋아요 실패(존재하지 않는 리뷰")
     void createReviewLike_fail_not_found() throws Exception {
-        //BDD 모킹
-        given(reviewService.checkIsLiked(notFoundReviewId, requestUserId))
-                .willThrow(new BusinessException(ReviewErrorCode.REVIEW_NOT_FOUND));
+        //given
+        willThrow(new BusinessException(ReviewErrorCode.REVIEW_NOT_FOUND))
+                .given(reviewService).toggleReviewLikeAsync(notFoundReviewId, requestUserId);
 
         //when & then
         mockMvc.perform(post("/api/reviews/{reviewId}/like", notFoundReviewId)
@@ -239,8 +220,7 @@ public class ReviewControllerTest extends ControllerTestSupport {
                 .andExpect(status().isNotFound());
 
         //BDD 검증
-        then(reviewService).should(times(1)).checkIsLiked(notFoundReviewId, requestUserId);
-        then(kafkaTemplate).should(never()).send(anyString(), any());
+        then(reviewService).should(times(1)).toggleReviewLikeAsync(notFoundReviewId, requestUserId);
     }
 
     @Test
