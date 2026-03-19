@@ -10,7 +10,7 @@
 | <img src="https://github.com/idktomorrow.png" width="100" height="100"> | **[선웅제](https://github.com/idktomorrow)** |       **형상관리(Github)**       | **[주요 기능]** <br>- **댓글 기능** <br> **[추가/인프라 기능]**<br>- Kafka 비동기 댓글 알림 시스템 구축<br>- Prometheus + Grafana 서버 모니터링 데이터 시각화                                                                        |
 |    <img src="https://github.com/jaejo.png" width="100" height="100">    |  **[이재준](https://github.com/jaejo)**  |      **Notion 관리 / 서기**      | **[주요 기능]**<br>- **리뷰 기능**<br>**[추가/인프라 기능]**<br>- ElasticSearch 검색 최적화<br>- 검색 하이라이트 기능(UX)<br>- LogStash 데이터 동기화<br>- Kafka 비동기 처리(낙관적 응답)<br>- DB 비관적 락 처리<br>- 하이브리드 동시성 제어(비동기 파이프라인 구축) |
 |   <img src="https://github.com/junkov0.png" width="100" height="100">   |  **[최준영](https://github.com/junkov0)**  |        **배포 관리(AWS)**        | **[주요 기능]**<br>- **사용자 기능**<br>- **알림 기능**<br>**[추가/인프라 기능]**<br>- Spring Security 암호화 및 변경 기능<br> - 이메일 기반 비밀번호 재설정<br>- Kafka 기반 알림 기능 비동기 처리<br>- Spring Batch 기반 대용량 데이터 삭제               |
-| <img src="https://github.com/seungwon00.png" width="100" height="100">  |  **[현승원](https://github.com/seungwon00)**  |          **DB 관리**           | **[주요 기능]**<br>- **대시보드 기능**<br>**[추가/인프라 기능]**<br>- Spring Batch 대시보드 배치 작업<br>- Redis 활용 대시보드 조회 캐시 처리 성능 최적화                                                                               |
+| <img src="https://github.com/seungwon00.png" width="100" height="100">  |  **[현승원](https://github.com/seungwon00)**  |          **DB 관리**           | **[주요 기능]**<br>- **대시보드 기능**<br>**[추가/인프라 기능]**<br>- Spring Batch 대시보드 배치 작업<br>- Redis 활용 대시보드 조회 캐시 처리 성능 최적화<br>- Kafka 기반 대시보드 랭킹 알림 비동기 처리                                                                               |
 |  <img src="https://github.com/SungHuii.png" width="100" height="100">   |  **[홍성휘](https://github.com/SungHuii)**  | **PM<br/>(Project Manager)** | **[주요 기능]**<br>- **도서 기능**<br>**[추가/인프라 기능]**<br>- Naver API & OCR Space API 연동<br>- Redis 도서 ISBN 캐시 처리<br>- S3 로그 주기적 업로드 기능<br>- 이미지 리사이징 파이프라인 구축                                         |
 
 ## 프로젝트 소개
@@ -92,3 +92,6 @@
  
 ## ⚙️인프라 아키텍처 다이어그램
 <img width="1400" height="784" alt="최종 drawio" src="https://github.com/user-attachments/assets/c6034391-1b5f-4ada-8c9b-cf3855c30836" />
+
+## ⚙️어플리케이션 아키텍처 다이어그램
+<img width="1123" height="1158" alt="image" src="https://github.com/user-attachments/assets/39e7f622-4df1-450d-8d99-3f2f18396dc7" />
