@@ -25,6 +25,7 @@ import java.util.Map;
 import java.util.UUID;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -45,6 +46,14 @@ public class DashboardServiceImpl implements DashboardService {
 		return getPopularBooks(DashboardPeriodEnums.ALL_TIME);
 	}
 
+	/**
+	 * 인기 도서 랭킹 조회 (기간별, Redis 캐시 사용).
+	 */
+	@Cacheable(
+			cacheNames = "dashboard:popularBooks",
+			key = "#period.name()",
+			cacheManager = "redisCacheManager"
+	)
 	public List<PopularBookDto> getPopularBooks(DashboardPeriodEnums period) {
 		List<Dashboard> rankings = dashboardRepository.findRecentRankings(
 				DashboardTargetType.BOOK, period, PageRequest.of(0, 10));
@@ -68,6 +77,11 @@ public class DashboardServiceImpl implements DashboardService {
 	}
 
 	@Override
+	@Cacheable(
+			cacheNames = "dashboard:popularReviews",
+			key = "#period.name()",
+			cacheManager = "redisCacheManager"
+	)
 	public List<PopularReviewDto> getPopularReviews(DashboardPeriodEnums period) {
 		List<Dashboard> rankings = dashboardRepository.findRecentRankings(
 				DashboardTargetType.REVIEW, period, PageRequest.of(0, 10));
@@ -90,6 +104,11 @@ public class DashboardServiceImpl implements DashboardService {
 	}
 
 	@Override
+	@Cacheable(
+			cacheNames = "dashboard:powerUsers",
+			key = "#period.name()",
+			cacheManager = "redisCacheManager"
+	)
 	public List<PowerUserDto> getPowerUsers(DashboardPeriodEnums period) {
 		List<Dashboard> rankings = dashboardRepository.findRecentRankings(
 				DashboardTargetType.USER, period, PageRequest.of(0, 10));

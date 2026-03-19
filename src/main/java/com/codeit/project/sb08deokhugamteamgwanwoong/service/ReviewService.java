@@ -10,7 +10,9 @@ public interface ReviewService {
 
     ReviewDto createReview(ReviewCreateRequest request);
 
-    ReviewLikeDto createReviewLike(UUID reviewId, UUID requestUserId);
+    void consumeReviewLike(ReviewLikeDto eventDto);
+
+    boolean checkIsLiked(UUID reviewId, UUID requestUserId);
 
     ReviewDto findDetailReview(UUID reviewId, UUID requestUserId);
 

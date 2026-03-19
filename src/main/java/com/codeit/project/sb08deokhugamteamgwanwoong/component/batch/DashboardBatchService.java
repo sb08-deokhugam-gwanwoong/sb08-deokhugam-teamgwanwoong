@@ -17,6 +17,7 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -41,6 +42,7 @@ public class DashboardBatchService {
 
 	/** 인기 도서 랭킹 갱신 (점수 = 리뷰수×0.4 + 평균평점×0.6, SQL Window Function으로 ranking_pos 계산) */
 	@Transactional
+	@CacheEvict(cacheNames = "dashboard:popularBooks", key = "#period.name()", cacheManager = "redisCacheManager")
 	public void refreshPopularBooks(DashboardPeriodEnums period) {
 		Instant since = getSince(period);
 		dashboardRepository.deleteByTargetTypeAndPeriodType(DashboardTargetType.BOOK, period);
@@ -50,6 +52,7 @@ public class DashboardBatchService {
 
 	/** 인기 리뷰 랭킹 갱신 (점수 = 좋아요수×0.3 + 댓글수×0.7, SQL Window Function으로 ranking_pos 계산) */
 	@Transactional
+	@CacheEvict(cacheNames = "dashboard:popularReviews", key = "#period.name()", cacheManager = "redisCacheManager")
 	public void refreshPopularReviews(DashboardPeriodEnums period) {
 		Instant since = getSince(period);
 		dashboardRepository.deleteByTargetTypeAndPeriodType(DashboardTargetType.REVIEW, period);
@@ -97,6 +100,7 @@ public class DashboardBatchService {
 
 	/** 파워 유저 랭킹 갱신 (점수 = 리뷰인기점수합×0.5 + 좋아요×0.2 + 댓글수×0.3, SQL Window Function으로 ranking_pos 계산) */
 	@Transactional
+	@CacheEvict(cacheNames = "dashboard:powerUsers", key = "#period.name()", cacheManager = "redisCacheManager")
 	public void refreshPowerUsers(DashboardPeriodEnums period) {
 		Instant since = getSince(period);
 		dashboardRepository.deleteByTargetTypeAndPeriodType(DashboardTargetType.USER, period);
