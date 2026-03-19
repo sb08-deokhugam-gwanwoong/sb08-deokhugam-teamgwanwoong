@@ -5,8 +5,8 @@ import com.codeit.project.sb08deokhugamteamgwanwoong.entity.Review;
 import com.codeit.project.sb08deokhugamteamgwanwoong.entity.User;
 import com.codeit.project.sb08deokhugamteamgwanwoong.entity.enums.DashboardPeriodEnums;
 import com.codeit.project.sb08deokhugamteamgwanwoong.entity.enums.DashboardTargetType;
+import com.codeit.project.sb08deokhugamteamgwanwoong.dto.notification.NotificationEvent;
 import com.codeit.project.sb08deokhugamteamgwanwoong.repository.DashboardRepository;
-import com.codeit.project.sb08deokhugamteamgwanwoong.service.NotificationService;
 import jakarta.persistence.EntityManager;
 import java.time.Duration;
 import java.time.Instant;
@@ -20,6 +20,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.kafka.core.KafkaTemplate;
 
 @Service
 @RequiredArgsConstructor
@@ -28,7 +29,7 @@ public class DashboardBatchService {
 
 	private final DashboardRepository dashboardRepository;
 	private final EntityManager entityManager;
-	private final NotificationService notificationService;
+	private final KafkaTemplate<String, NotificationEvent> kafkaTemplate;
 
 	/** 기간에 따른 조회 시작 시점 */
 	private static Instant getSince(DashboardPeriodEnums period) {
@@ -85,7 +86,19 @@ public class DashboardBatchService {
 			}
 			User toUser = review.getUser();
 			String message = String.format("[%s]님의 리뷰가 %s 인기 리뷰 %d위에 선정되었습니다!", toUser.getNickname(), periodLabel, d.getRankingPos());
-			notificationService.createNotification(toUser, review, message);
+			NotificationEvent event = new NotificationEvent(toUser.getId(), review.getId(), message);
+
+			// Kafka 비동기 전송 결과를 로그로 남겨 운영에서 추적 가능하게 함.
+			kafkaTemplate.send("notification-topic", event)
+					.whenComplete((result, ex) -> {
+						if (ex == null) {
+							log.info("[알림] 전송 성공! Topic: {}, Offset: {}",
+									result.getRecordMetadata().topic(),
+									result.getRecordMetadata().offset());
+						} else {
+							log.error("[알림] 전송 실패: {}", ex.getMessage());
+						}
+					});
 		}
 	}
 
