@@ -27,7 +27,7 @@ spring:
 
   # kafka 설정 추가
   kafka:
-    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS}
+    bootstrap-servers: deokhugam-kafka:29092
 
   sql:
     init:
