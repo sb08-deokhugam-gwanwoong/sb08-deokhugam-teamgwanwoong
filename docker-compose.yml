@@ -43,7 +43,7 @@ services:
       retries: 5
     networks:
       - deokhugam-network
-      
+
   # 프로메테우스
   prometheus:
     image: prom/prometheus
