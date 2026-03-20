@@ -29,6 +29,8 @@ public class BookRepositoryImpl implements BookRepositoryCustom {
     return queryFactory
         .selectFrom(book)
         .where(
+            // 논리삭제된 도서 제외
+            book.deletedAt.isNull(),
             // 1. 키워드 검색 (제목, 저자, ISBN)
             keywordContains(condition.keyword()),
             // 2. 커서 페이징 조건
