@@ -132,6 +132,8 @@ services:
   deokhugam-kafka:
     image: confluentinc/cp-kafka:7.4.0
     container_name: deokhugam-kafka
+    depends_on:
+      - zookeeper
     ports:
       - "9092:9092"
     environment:
