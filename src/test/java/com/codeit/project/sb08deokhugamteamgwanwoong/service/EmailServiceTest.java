@@ -15,8 +15,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.mail.MailSendException;
-import org.springframework.mail.SimpleMailMessage;
+import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.mail.javamail.JavaMailSender;
 
 @ExtendWith(MockitoExtension.class)
@@ -25,11 +24,14 @@ public class EmailServiceTest {
   @Mock
   private JavaMailSender mailSender;
 
+  @Mock
+  private KafkaTemplate<String, Object> kafkaTemplate;
+
   @InjectMocks
   private EmailServiceImpl emailService;
 
   @Test
-  @DisplayName("메일 발송 성공: SimpleMailMessage를 생성하여 발송을 시도해야 한다.")
+  @DisplayName("메일 발송 성공: 카프카 토픽으로 메시지를 발행해야 한다.")
   void sendVerificationCode_Test() {
     // Given
     String toEmail = "test@test.com";
@@ -39,7 +41,7 @@ public class EmailServiceTest {
     emailService.sendVerificationCode(toEmail, code);
 
     // Then
-    verify(mailSender).send(any(SimpleMailMessage.class));
+    verify(kafkaTemplate).send(any(String.class), any(Object.class));
   }
 
   @Test
@@ -50,9 +52,9 @@ public class EmailServiceTest {
     String code = "123456";
 
     // send()가 예외를 던지도록 설정
-    willThrow(new MailSendException("error"))
-        .given(mailSender)
-        .send(any(SimpleMailMessage.class));
+    willThrow(new RuntimeException("Kafka error"))
+        .given(kafkaTemplate)
+        .send(any(String.class), any(Object.class));
 
     // When & Then
     assertThatThrownBy(() -> emailService.sendVerificationCode(toEmail, code))
