@@ -16,7 +16,7 @@
 ## 프로젝트 소개
 ### 덕후감 (Deokhugam)
 > **독서 기록 및 리뷰 공유 플랫폼 '덕후감'의 백엔드 API 서버입니다.**  
-- 배포링크 : [덕후감](http://gwanwoong.kro.kr/#/) http://gwanwoong.kro.kr/
+- 배포링크 : [덕후감](http://gwanwoong.kro.kr/#/) http://gwanwoong.kro.kr/ (현재는 서비스 중단 상태입니다)
 - 프로젝트 기간 : 2026.02.27(금) - 2026.03.23(월)
 
 ## 🛠 기술 스택  
